@@ -1,7 +1,7 @@
 #backend
 backend/node_modules/
 backend/.env
-backend/docker-compose.yaml
+backend/docker-compose.yml
 
 #frontend
 frontend/node_modules/
