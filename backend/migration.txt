@@ -1,0 +1,62 @@
+PANDUAN SCRIPT SEQUELIZE CLI UNTUK MIGRATION
+
+File ini berisi daftar perintah (script) yang bisa dijalankan di terminal pada folder `backend/` untuk mengatur database schema menggunakan Sequelize CLI.
+
+Karena kita menggunakan npx, pastikan menjalankannya dari dalam folder `backend` atau menggunakan script npm jika di-set di package.json.
+
+---------------------------------------------------------
+1. JALANKAN SEMUA MIGRATION (UP)
+---------------------------------------------------------
+Perintah ini akan mengeksekusi semua file migration yang belum pernah di-run sebelumnya (berdasarkan data di tabel SequelizeMeta).
+
+  npx sequelize-cli db:migrate
+
+
+---------------------------------------------------------
+2. JALANKAN MIGRATION SAMPAI FILE SPESIFIK
+---------------------------------------------------------
+Jika Anda hanya ingin menjalankan migration *sampai* file tertentu saja (berurutan dari yang terlama sampai file yang Anda sebutkan), gunakan parameter --to:
+
+  npx sequelize-cli db:migrate --to 20260221143801-create-stores.js
+
+
+---------------------------------------------------------
+3. CEK STATUS MIGRATION
+---------------------------------------------------------
+Untuk melihat file migration mana saja yang sudah dijalankan dan mana yang masih pending:
+
+  npx sequelize-cli db:migrate:status
+
+
+---------------------------------------------------------
+4. UNDO (ROLLBACK) MIGRATION TERAKHIR
+---------------------------------------------------------
+Mengembalikan / membatalkan 1 eksekusi migration yang paling terakhir dijalankan:
+
+  npx sequelize-cli db:migrate:undo
+
+
+---------------------------------------------------------
+5. UNDO (ROLLBACK) SPESIFIK FILE SAJA
+---------------------------------------------------------
+Jika Anda ingin membatalkan/rollback satu file migration secara spesifik tanpa harus merollback yang lain dari atas:
+
+  npx sequelize-cli db:migrate:undo --name 20260221143801-create-stores.js
+
+
+---------------------------------------------------------
+6. UNDO (ROLLBACK) SEMUA MIGRATION
+---------------------------------------------------------
+Membatalkan seluruh file migration yang ada (menghapus seluruh tabel yang dibuat via migration):
+
+  npx sequelize-cli db:migrate:undo:all
+
+---------------------------------------------------------
+7. UNDO SAMPAI FILE SPESIFIK
+---------------------------------------------------------
+Merollback semua migration berurutan sampai batas file tertentu yang disebutkan:
+
+  npx sequelize-cli db:migrate:undo:all --to 20260221143407-create-transaksi-detail.js
+
+=========================================================
+Catatan: Pastikan database PostgreSQL sudah menyala dan tabel database sudah terbuat sesuai dengan kredensial di file `.env` sebelum menjalankan perintah di atas.

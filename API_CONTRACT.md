@@ -29,10 +29,16 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     "data": {
       "token": "eyJhbGciOiJIUzI1NiIsInR5c...",
       "user": {
-        "id": "uuid-user",
+        "user_id": "uuid",
         "username": "admin123",
-        "role": "Admin",
-        "store_id": "uuid-store-1"
+        "role": "admin",
+        "store_id": "uuid",
+        "permissions": [
+          "customer.view",
+          "customer.add",
+          "product.edit",
+          "transaction.create"
+        ]
       }
     }
   }
