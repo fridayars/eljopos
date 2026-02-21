@@ -376,20 +376,53 @@ Frontend:
 
 ------------------------------------------------------------------------
 
-# 10. Axios Rules
+# 10. Axios Rules & API Integration (MANDATORY)
 
 ------------------------------------------------------------------------
 
-Use base instance.
+## API Base Instance
+
+Gunakan base instance untuk semua call ke Backend.
 
 ``` ts
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api'
+  baseURL: import.meta.env.VITE_API_URL || '/api'
 })
 
 export default api
+```
+
+------------------------------------------------------------------------
+
+## Integrasi Paralel & Mock Data
+
+Karena pengembangan frontend dan backend berjalan secara **paralel**, gunakan **Mock Data berformat JSON** berdasarkan `API_CONTRACT.md` sebelum *endpoint* dari backend riil tersedia.
+
+Gunakan *constant* / variable `USE_MOCK_DATA` (boolean `true` atau `false`) dengan prioritas di tiap file/fungsi *Service Layer* (*folder `services`*). Tujuannya untuk memberikan kemudahan dan kecepatan saat peralihan (*switch*) dari data *mock* (dummy) ke bentuk integrasi API riil dan di set menjadi `false` saat diintegrasikan.
+
+**Contoh Pattern fungsi pada Service API (`USE_MOCK_DATA` vs API riil):**
+
+```ts
+import api from './api';
+import mockProducts from '../mocks/products.json';
+
+// Set false saat endpoint getProducts riil backend untuk diintegrasikan
+const USE_MOCK_DATA_GET_PRODUCTS = true; 
+
+export const getProducts = async () => {
+  if (USE_MOCK_DATA_GET_PRODUCTS) {
+    // Simulasi respons (contoh pattern success res) dan delay jaringan
+    return new Promise((resolve) => {
+      setTimeout(() => resolve({ success: true, data: mockProducts }), 500);
+    });
+  }
+  
+  // Panggilan ke real backend
+  const response = await api.get('/master/products');
+  return response.data;
+}
 ```
 
 ------------------------------------------------------------------------
