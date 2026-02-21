@@ -1,0 +1,2 @@
+// Controllers handle request/response only.
+// Business logic belongs in services.
