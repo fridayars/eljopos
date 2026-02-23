@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
         modelName: 'ProdukLayanan',
         tableName: 'produk_layanan',
         underscored: true,
-        timestamps: false // No created_at/updated_at in this schema
+        paranoid: true
     });
     return ProdukLayanan;
 };

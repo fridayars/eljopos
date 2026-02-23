@@ -45,10 +45,10 @@ app.use(errorHandler)
 // ─── Start Server ───
 const startServer = async () => {
     try {
-        await sequelize.authenticate()
+        await sequelize.sequelize.authenticate()
         logger.info({ message: 'Database connected successfully' })
 
-        await sequelize.sync()
+        await sequelize.sequelize.sync()
         logger.info({ message: 'Database synced' })
 
         app.listen(PORT, () => {

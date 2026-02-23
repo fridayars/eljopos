@@ -4,6 +4,10 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class Layanan extends Model {
         static associate(models) {
+            Layanan.belongsTo(models.Store, {
+                foreignKey: 'store_id',
+                as: 'store'
+            });
             Layanan.belongsTo(models.KategoriLayanan, {
                 foreignKey: 'kategori_layanan_id',
                 as: 'kategori'
@@ -20,16 +24,20 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
+        store_id: DataTypes.UUID,
         kategori_layanan_id: DataTypes.UUID,
         name: DataTypes.STRING,
         price: DataTypes.DECIMAL(15, 2),
+        cost_price: DataTypes.DECIMAL(15, 2),
+        biaya_overhead: DataTypes.INTEGER,
         description: DataTypes.TEXT,
         is_active: DataTypes.BOOLEAN
     }, {
         sequelize,
         modelName: 'Layanan',
         tableName: 'layanan',
-        underscored: true
+        underscored: true,
+        paranoid: true
     });
     return Layanan;
 };

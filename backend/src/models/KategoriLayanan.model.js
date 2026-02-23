@@ -23,7 +23,8 @@ module.exports = (sequelize, DataTypes) => {
         sequelize,
         modelName: 'KategoriLayanan',
         tableName: 'kategori_layanan',
-        underscored: true
+        underscored: true,
+        paranoid: true
     });
     return KategoriLayanan;
 };

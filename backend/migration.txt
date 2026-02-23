@@ -57,6 +57,23 @@ Membatalkan seluruh file migration yang ada (menghapus seluruh tabel yang dibuat
 Merollback semua migration berurutan sampai batas file tertentu yang disebutkan:
 
   npx sequelize-cli db:migrate:undo:all --to 20260221143407-create-transaksi-detail.js
+  
+  
+---------------------------------------------------------
+8. JALANKAN SEEDER (ISI DATA AWAL)
+---------------------------------------------------------
+Perintah ini akan menjalankan semua file seeder yang ada di folder `src/db/seeders`.
+
+  npx sequelize-cli db:seed:all
+
+
+---------------------------------------------------------
+9. UNDO SEMUA SEEDER (HAPUS DATA AWAL)
+---------------------------------------------------------
+Membatalkan seluruh data yang dimasukkan via seeder:
+
+  npx sequelize-cli db:seed:undo:all
+
 
 =========================================================
 Catatan: Pastikan database PostgreSQL sudah menyala dan tabel database sudah terbuat sesuai dengan kredensial di file `.env` sebelum menjalankan perintah di atas.

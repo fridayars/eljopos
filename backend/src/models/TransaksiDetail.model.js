@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
         modelName: 'TransaksiDetail',
         tableName: 'transaksi_detail',
         underscored: true,
-        timestamps: false // It acts as a static snapshot based on logic documentation
+        paranoid: true
     });
     return TransaksiDetail;
 };

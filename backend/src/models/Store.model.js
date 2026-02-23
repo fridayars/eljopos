@@ -4,13 +4,13 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class Store extends Model {
         static associate(models) {
-            Store.hasMany(models.User, {
+            Store.hasMany(models.Product, {
                 foreignKey: 'store_id',
-                as: 'users'
+                as: 'products'
             });
-            Store.hasMany(models.Stok, {
+            Store.hasMany(models.Layanan, {
                 foreignKey: 'store_id',
-                as: 'stok'
+                as: 'layanan'
             });
             Store.hasMany(models.Transaksi, {
                 foreignKey: 'store_id',
@@ -32,7 +32,8 @@ module.exports = (sequelize, DataTypes) => {
         sequelize,
         modelName: 'Store',
         tableName: 'stores',
-        underscored: true
+        underscored: true,
+        paranoid: true
     });
     return Store;
 };

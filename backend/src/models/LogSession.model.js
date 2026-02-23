@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
         modelName: 'LogSession',
         tableName: 'log_session',
         underscored: true,
-        updatedAt: false // Schema mostly focuses on creation and expiration
+        paranoid: true
     });
     return LogSession;
 };

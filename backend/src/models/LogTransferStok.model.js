@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
         modelName: 'LogTransferStok',
         tableName: 'log_transfer_stok',
         underscored: true,
-        updatedAt: false // Only tracks creation timestamp for logs
+        paranoid: true
     });
     return LogTransferStok;
 };

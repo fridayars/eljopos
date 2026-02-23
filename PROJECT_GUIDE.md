@@ -139,7 +139,6 @@ Layanan:
 * kategori_layanan
 * layanan
 * produk_layanan
-* stok
 * log_transfer_stok
 * transaksi
 * transaksi_detail
@@ -182,11 +181,16 @@ Index:
 
 ```sql
 id UUID PK
+store_id UUID FK
 kategori_produk_id UUID FK
 name VARCHAR(255)
-sku VARCHAR(100) UNIQUE
+sku VARCHAR(100) -- Unique per store_id (Partial Index)
+stock INTEGER
 price NUMERIC(15,2)
 cost_price NUMERIC(15,2)
+jasa_pasang INTEGER
+ongkir_asuransi INTEGER
+biaya_overhead INTEGER
 created_at TIMESTAMP
 updated_at TIMESTAMP
 deleted_at TIMESTAMP
@@ -194,8 +198,9 @@ deleted_at TIMESTAMP
 
 Index:
 
-* sku
+* sku + store_id (Unique, Partial Index where deleted_at IS NULL)
 * kategori_produk_id
+* store_id
 
 ---
 
@@ -215,15 +220,22 @@ updated_at TIMESTAMP
 
 ```sql
 id UUID PK
+store_id UUID FK
 kategori_layanan_id UUID FK
 name VARCHAR(255)
 price NUMERIC(15,2)
+cost_price NUMERIC(15,2)
+biaya_overhead INTEGER
 description TEXT
+created_at TIMESTAMP
+updated_at TIMESTAMP
+deleted_at TIMESTAMP
 ```
 
 Index:
 
 * kategori_layanan_id
+* store_id
 
 ---
 
@@ -240,17 +252,12 @@ UNIQUE(layanan_id, product_id)
 
 ---
 
-## 5.6 stok
+---
 
-```sql
-id UUID PK
-product_id UUID FK
-store_id UUID FK
-quantity INTEGER
-updated_at TIMESTAMP
-```
+## 5.6 (Deprecated) stok
 
-UNIQUE(product_id, store_id)
+> [!NOTE]
+> Tabel `stok` telah dihapus. Data stok (quantity) kini menyatu di dalam tabel `products` dan terikat langsung ke `store_id`.
 
 ---
 
@@ -293,10 +300,10 @@ Jika 1 langkah gagal → rollback semua.
 # 7️⃣ Business Rules
 
 * Tidak boleh stok minus
-* SKU unik
+* SKU unik per Store (berlaku untuk data aktif)
 * Layanan tidak boleh dihapus jika sudah pernah transaksi
 * Produk tidak boleh hard delete
-* Transfer stok harus mengurangi & menambah dalam 1 transaction
+* Transfer stok harus mengurangi & menambah dalam 1 transaction (Antar Produk/Store)
 
 ---
 
@@ -312,8 +319,7 @@ Tambahkan index pada:
 
 * transaksi (store_id, created_at)
 * transaksi_detail (transaksi_id)
-* stok (product_id, store_id)
-* products (sku)
+* products (sku, store_id) -- Partial Unique Index
 * customers (phone)
 
 Tujuan:

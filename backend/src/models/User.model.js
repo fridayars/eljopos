@@ -4,10 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class User extends Model {
         static associate(models) {
-            User.belongsTo(models.Store, {
-                foreignKey: 'store_id',
-                as: 'store'
-            });
             User.belongsTo(models.Role, {
                 foreignKey: 'role_id',
                 as: 'role'
@@ -24,7 +20,6 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
-        store_id: DataTypes.UUID,
         role_id: DataTypes.UUID,
         username: {
             type: DataTypes.STRING,
