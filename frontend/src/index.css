@@ -1,1 +1,67 @@
 @import "tailwindcss";
+
+/* ========================================
+   eljoPOS Design Tokens (from figma theme)
+   ======================================== */
+:root {
+  /* Core Colors */
+  --background: #0F0F14;
+  --foreground: #E5E5E7;
+  --card: #1A1A1F;
+  --card-foreground: #E5E5E7;
+
+  /* Brand Colors */
+  --primary: #3B82F6;
+  --primary-foreground: #ffffff;
+  --secondary: #8B5CF6;
+  --secondary-foreground: #ffffff;
+
+  /* UI Colors */
+  --muted: #27272A;
+  --muted-foreground: #71717A;
+  --accent: #06B6D4;
+  --accent-foreground: #ffffff;
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & Inputs */
+  --border: rgba(139, 92, 246, 0.2);
+  --input: rgba(139, 92, 246, 0.2);
+  --input-background: rgba(255, 255, 255, 0.05);
+  --ring: #3B82F6;
+
+  /* Typography */
+  --font-size: 16px;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+
+  /* Radius */
+  --radius: 0.75rem;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
+html {
+  font-size: var(--font-size);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-weight: var(--font-weight-normal);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: var(--font-weight-medium);
+}

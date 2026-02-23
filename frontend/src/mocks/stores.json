@@ -1,0 +1,17 @@
+[
+    {
+        "id": "uuid-store-1",
+        "name": "eljoPOS - Cabang Utama",
+        "address": "Jl. Merdeka No. 10, Jakarta Pusat"
+    },
+    {
+        "id": "uuid-store-2",
+        "name": "eljoPOS - Cabang Selatan",
+        "address": "Jl. Fatmawati No. 25, Jakarta Selatan"
+    },
+    {
+        "id": "uuid-store-3",
+        "name": "eljoPOS - Cabang Timur",
+        "address": "Jl. Jatinegara No. 88, Jakarta Timur"
+    }
+]
