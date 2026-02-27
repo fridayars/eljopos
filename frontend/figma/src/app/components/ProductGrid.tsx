@@ -6,6 +6,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  capitalPrice?: number;
   image: string;
   sku: string;
   stock: number;

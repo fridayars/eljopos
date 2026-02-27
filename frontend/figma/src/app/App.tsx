@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { Dashboard } from './components/Dashboard';
+import { ProductInventoryPage } from './components/ProductInventoryPage';
+import { ServiceInventoryPage } from './components/ServiceInventoryPage';
+import { ReportsPage } from './components/ReportsPage';
 import { ViewToggle } from './components/ViewToggle';
 import { CategoryFilter, CategoryType } from './components/CategoryFilter';
 import { ProductGrid, Product } from './components/ProductGrid';
@@ -131,7 +135,7 @@ const initialCustomers: Customer[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -143,11 +147,12 @@ export default function App() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSelectCustomerModalOpen, setIsSelectCustomerModalOpen] = useState(false);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
 
   // Filter products by category
   const filteredProducts = selectedCategory === 'all'
-    ? mockProducts
-    : mockProducts.filter(product => product.category === selectedCategory);
+    ? products
+    : products.filter(product => product.category === selectedCategory);
 
   const handleAddToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -217,6 +222,16 @@ export default function App() {
     setSelectedCustomer(null);
   };
 
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    setProducts((prev) =>
+      prev.map((product) => (product.id === updatedProduct.id ? updatedProduct : product))
+    );
+  };
+
+  const handleImportProducts = (importedProducts: Product[]) => {
+    setProducts((prev) => [...prev, ...importedProducts]);
+  };
+
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = discountType === '%' 
     ? (subtotal * discountValue) / 100 
@@ -228,63 +243,88 @@ export default function App() {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar />
+        <TopBar showSearchAndScanner={activeTab === 'sales'} />
         
         <main className="flex-1 flex overflow-hidden">
-          {/* Products Section */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* View Toggle */}
-            <div className="p-4 md:p-6 border-b border-purple-500/10 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg md:text-xl text-gray-200">Products</h2>
-                <p className="text-xs md:text-sm text-gray-500 mt-1">Browse and add items to cart</p>
+          {activeTab === 'dashboard' ? (
+            <Dashboard />
+          ) : activeTab === 'product-inventory' ? (
+            <ProductInventoryPage
+              products={products}
+              onUpdateProduct={handleUpdateProduct}
+              onImportProducts={handleImportProducts}
+            />
+          ) : activeTab === 'service-inventory' ? (
+            <ServiceInventoryPage />
+          ) : activeTab === 'sales' ? (
+            <>
+              {/* Products Section */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* View Toggle */}
+                <div className="p-4 md:p-6 border-b border-purple-500/10 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg md:text-xl text-gray-200">Sales</h2>
+                    <p className="text-xs md:text-sm text-gray-500 mt-1">Browse and add items to cart</p>
+                  </div>
+                  <ViewToggle view={view} onViewChange={setView} />
+                </div>
+
+                {/* Category Filter */}
+                <div className="p-4 md:p-6 border-b border-purple-500/10">
+                  <CategoryFilter selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
+                </div>
+
+                {/* Product Display */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 lg:pb-6">
+                  <AnimatePresence mode="wait">
+                    {view === 'grid' ? (
+                      <ProductGrid key="grid" products={filteredProducts} onAddToCart={handleAddToCart} />
+                    ) : (
+                      <ProductList key="list" products={filteredProducts} onAddToCart={handleAddToCart} />
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-              <ViewToggle view={view} onViewChange={setView} />
-            </div>
 
-            {/* Category Filter */}
-            <div className="p-4 md:p-6 border-b border-purple-500/10">
-              <CategoryFilter selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
+              {/* Cart Section */}
+              <Cart
+                items={cart}
+                selectedCustomer={selectedCustomer}
+                discountType={discountType}
+                discountValue={discountValue}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+                onSelectCustomer={() => setIsSelectCustomerModalOpen(true)}
+                onRemoveCustomer={handleRemoveCustomer}
+                onAddNewCustomer={() => setIsAddCustomerModalOpen(true)}
+                onDiscountTypeChange={setDiscountType}
+                onDiscountValueChange={setDiscountValue}
+                onCheckout={handleCheckout}
+                onClear={handleClearCart}
+                isOpen={isCartOpen}
+                onClose={() => setIsCartOpen(false)}
+              />
+            </>
+          ) : activeTab === 'reports' ? (
+            <ReportsPage />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-xl text-gray-400">Coming Soon</p>
+                <p className="text-sm text-gray-600 mt-2">This feature is under development</p>
+              </div>
             </div>
-
-            {/* Product Display */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 lg:pb-6">
-              <AnimatePresence mode="wait">
-                {view === 'grid' ? (
-                  <ProductGrid key="grid" products={filteredProducts} onAddToCart={handleAddToCart} />
-                ) : (
-                  <ProductList key="list" products={filteredProducts} onAddToCart={handleAddToCart} />
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Cart Section */}
-          <Cart
-            items={cart}
-            selectedCustomer={selectedCustomer}
-            discountType={discountType}
-            discountValue={discountValue}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-            onSelectCustomer={() => setIsSelectCustomerModalOpen(true)}
-            onRemoveCustomer={handleRemoveCustomer}
-            onAddNewCustomer={() => setIsAddCustomerModalOpen(true)}
-            onDiscountTypeChange={setDiscountType}
-            onDiscountValueChange={setDiscountValue}
-            onCheckout={handleCheckout}
-            onClear={handleClearCart}
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-          />
+          )}
         </main>
       </div>
 
-      {/* Mobile Cart Button */}
-      <MobileCartButton
-        itemCount={cart.length}
-        onClick={() => setIsCartOpen(true)}
-      />
+      {/* Mobile Cart Button - Only show on sales page */}
+      {activeTab === 'sales' && (
+        <MobileCartButton
+          itemCount={cart.length}
+          onClick={() => setIsCartOpen(true)}
+        />
+      )}
 
       {/* Payment Modal */}
       <PaymentModal
