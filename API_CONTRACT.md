@@ -321,3 +321,53 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     ]
   }
   ```
+
+---
+
+## 5. Dashboard
+
+### 5.1 Ringkasan Statistik Dashboard
+- **URL Route**: `GET /dashboard/summary`
+- **Deskripsi**: API untuk mengambil statistik ringkasan hari ini, digunakan pada halaman Dashboard.
+- **Request Header**: `Authorization: Bearer <token>`
+- **Request Query**: Tidak ada
+- **Request Body**: Tidak ada
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "today_sales": 2450000,
+      "total_transactions": 48,
+      "total_customers": 32,
+      "low_stock_items": 7,
+      "sales_change": "+12.5%",
+      "transactions_change": "+8.2%",
+      "customers_change": "+5.1%",
+      "low_stock_change": "-2"
+    }
+  }
+  ```
+
+### 5.2 Transaksi Terbaru
+- **URL Route**: `GET /dashboard/recent-transactions`
+- **Deskripsi**: API untuk mengambil 5 transaksi terbaru untuk ditampilkan di Dashboard.
+- **Request Header**: `Authorization: Bearer <token>`
+- **Request Query**: Tidak ada
+- **Request Body**: Tidak ada
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "invoice_number": "INV/20260228/048",
+        "created_at": "2026-02-28T10:30:00Z",
+        "customer_name": "Sarah Williams",
+        "total_amount": 750000,
+        "payment_method": "CASH",
+        "items_count": 3
+      }
+    ]
+  }
+  ```

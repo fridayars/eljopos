@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { getStores, login } from '../services/authService'
 import type { Store } from '../services/authService'
 
-const LoginPage = () => {
+interface LoginPageProps {
+    onLoginSuccess: () => void
+}
+
+const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     // ---------- State ----------
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
@@ -68,11 +72,16 @@ const LoginPage = () => {
             const res = await login({ username, password, store_id: storeId })
 
             if (res.success && res.data) {
-                // Simpan token (TODO: integrasikan dengan auth state management)
+                // Simpan token dan info user
                 localStorage.setItem('token', res.data.token)
                 localStorage.setItem('user', JSON.stringify(res.data.user))
-                console.log('Login berhasil:', res.data)
-                // TODO: redirect ke dashboard
+                // Simpan nama store yang dipilih
+                const selectedStore = stores.find(s => s.id === storeId)
+                if (selectedStore) {
+                    localStorage.setItem('store_name', selectedStore.name)
+                }
+                // Redirect ke dashboard
+                onLoginSuccess()
             } else {
                 setErrorMessage(res.message || 'Login gagal')
             }

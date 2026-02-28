@@ -1,0 +1,362 @@
+{
+    "salesReport": {
+        "daily": [
+            {
+                "time": "00:00",
+                "sales": 4500000
+            },
+            {
+                "time": "03:00",
+                "sales": 2300000
+            },
+            {
+                "time": "06:00",
+                "sales": 5600000
+            },
+            {
+                "time": "09:00",
+                "sales": 12800000
+            },
+            {
+                "time": "12:00",
+                "sales": 18500000
+            },
+            {
+                "time": "15:00",
+                "sales": 15200000
+            },
+            {
+                "time": "18:00",
+                "sales": 21300000
+            },
+            {
+                "time": "21:00",
+                "sales": 14700000
+            }
+        ],
+        "monthly": [
+            {
+                "date": "Feb 1",
+                "sales": 45000000
+            },
+            {
+                "date": "Feb 5",
+                "sales": 52000000
+            },
+            {
+                "date": "Feb 10",
+                "sales": 48000000
+            },
+            {
+                "date": "Feb 15",
+                "sales": 61000000
+            },
+            {
+                "date": "Feb 20",
+                "sales": 58000000
+            },
+            {
+                "date": "Feb 25",
+                "sales": 67000000
+            },
+            {
+                "date": "Feb 28",
+                "sales": 71000000
+            }
+        ],
+        "yearly": [
+            {
+                "month": "Jan",
+                "sales": 450000000
+            },
+            {
+                "month": "Feb",
+                "sales": 520000000
+            },
+            {
+                "month": "Mar",
+                "sales": 580000000
+            },
+            {
+                "month": "Apr",
+                "sales": 610000000
+            },
+            {
+                "month": "May",
+                "sales": 670000000
+            },
+            {
+                "month": "Jun",
+                "sales": 710000000
+            },
+            {
+                "month": "Jul",
+                "sales": 690000000
+            },
+            {
+                "month": "Aug",
+                "sales": 720000000
+            },
+            {
+                "month": "Sep",
+                "sales": 680000000
+            },
+            {
+                "month": "Oct",
+                "sales": 750000000
+            },
+            {
+                "month": "Nov",
+                "sales": 780000000
+            },
+            {
+                "month": "Dec",
+                "sales": 820000000
+            }
+        ]
+    },
+    "cashFlow": {
+        "daily": [
+            {
+                "no": 1,
+                "description": "Penjualan Produk",
+                "income": 94800000,
+                "outcome": 0
+            },
+            {
+                "no": 2,
+                "description": "Pembelian Stok",
+                "income": 0,
+                "outcome": 45000000
+            },
+            {
+                "no": 3,
+                "description": "Biaya Operasional",
+                "income": 0,
+                "outcome": 8500000
+            },
+            {
+                "no": 4,
+                "description": "Pembayaran Gaji",
+                "income": 0,
+                "outcome": 15000000
+            },
+            {
+                "no": 5,
+                "description": "Biaya Listrik & Air",
+                "income": 0,
+                "outcome": 3200000
+            }
+        ],
+        "monthly": [
+            {
+                "no": 1,
+                "description": "Penjualan Produk",
+                "income": 402000000,
+                "outcome": 0
+            },
+            {
+                "no": 2,
+                "description": "Pembelian Stok",
+                "income": 0,
+                "outcome": 185000000
+            },
+            {
+                "no": 3,
+                "description": "Biaya Operasional",
+                "income": 0,
+                "outcome": 35000000
+            },
+            {
+                "no": 4,
+                "description": "Pembayaran Gaji",
+                "income": 0,
+                "outcome": 65000000
+            },
+            {
+                "no": 5,
+                "description": "Biaya Listrik & Air",
+                "income": 0,
+                "outcome": 12000000
+            },
+            {
+                "no": 6,
+                "description": "Marketing & Promosi",
+                "income": 0,
+                "outcome": 15000000
+            }
+        ],
+        "yearly": [
+            {
+                "no": 1,
+                "description": "Penjualan Produk",
+                "income": 7990000000,
+                "outcome": 0
+            },
+            {
+                "no": 2,
+                "description": "Pembelian Stok",
+                "income": 0,
+                "outcome": 3500000000
+            },
+            {
+                "no": 3,
+                "description": "Biaya Operasional",
+                "income": 0,
+                "outcome": 420000000
+            },
+            {
+                "no": 4,
+                "description": "Pembayaran Gaji",
+                "income": 0,
+                "outcome": 780000000
+            },
+            {
+                "no": 5,
+                "description": "Biaya Listrik & Air",
+                "income": 0,
+                "outcome": 145000000
+            },
+            {
+                "no": 6,
+                "description": "Marketing & Promosi",
+                "income": 0,
+                "outcome": 180000000
+            },
+            {
+                "no": 7,
+                "description": "Pajak",
+                "income": 0,
+                "outcome": 650000000
+            }
+        ]
+    },
+    "salesTable": {
+        "daily": [
+            {
+                "date": "2026-02-23 08:00",
+                "profit": 2500000,
+                "revenue": 12400000
+            },
+            {
+                "date": "2026-02-23 10:00",
+                "profit": 3200000,
+                "revenue": 15800000
+            },
+            {
+                "date": "2026-02-23 12:00",
+                "profit": 4100000,
+                "revenue": 18500000
+            },
+            {
+                "date": "2026-02-23 14:00",
+                "profit": 3800000,
+                "revenue": 16200000
+            },
+            {
+                "date": "2026-02-23 16:00",
+                "profit": 4500000,
+                "revenue": 19300000
+            },
+            {
+                "date": "2026-02-23 18:00",
+                "profit": 5200000,
+                "revenue": 21300000
+            }
+        ],
+        "monthly": [
+            {
+                "date": "2026-02-01",
+                "profit": 15200000,
+                "revenue": 45000000
+            },
+            {
+                "date": "2026-02-05",
+                "profit": 18500000,
+                "revenue": 52000000
+            },
+            {
+                "date": "2026-02-10",
+                "profit": 16800000,
+                "revenue": 48000000
+            },
+            {
+                "date": "2026-02-15",
+                "profit": 21200000,
+                "revenue": 61000000
+            },
+            {
+                "date": "2026-02-20",
+                "profit": 19800000,
+                "revenue": 58000000
+            },
+            {
+                "date": "2026-02-25",
+                "profit": 23400000,
+                "revenue": 67000000
+            }
+        ],
+        "yearly": [
+            {
+                "date": "January 2026",
+                "profit": 152000000,
+                "revenue": 450000000
+            },
+            {
+                "date": "February 2026",
+                "profit": 176000000,
+                "revenue": 520000000
+            },
+            {
+                "date": "March 2026",
+                "profit": 196000000,
+                "revenue": 580000000
+            },
+            {
+                "date": "April 2026",
+                "profit": 207000000,
+                "revenue": 610000000
+            },
+            {
+                "date": "May 2026",
+                "profit": 227000000,
+                "revenue": 670000000
+            },
+            {
+                "date": "June 2026",
+                "profit": 240000000,
+                "revenue": 710000000
+            },
+            {
+                "date": "July 2026",
+                "profit": 234000000,
+                "revenue": 690000000
+            },
+            {
+                "date": "August 2026",
+                "profit": 244000000,
+                "revenue": 720000000
+            },
+            {
+                "date": "September 2026",
+                "profit": 230000000,
+                "revenue": 680000000
+            },
+            {
+                "date": "October 2026",
+                "profit": 254000000,
+                "revenue": 750000000
+            },
+            {
+                "date": "November 2026",
+                "profit": 264000000,
+                "revenue": 780000000
+            },
+            {
+                "date": "December 2026",
+                "profit": 278000000,
+                "revenue": 820000000
+            }
+        ]
+    }
+}

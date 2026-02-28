@@ -1,0 +1,54 @@
+{
+    "summary": {
+        "today_sales": 2450000,
+        "total_transactions": 48,
+        "total_customers": 32,
+        "low_stock_items": 7,
+        "sales_change": "+12.5%",
+        "transactions_change": "+8.2%",
+        "customers_change": "+5.1%",
+        "low_stock_change": "-2"
+    },
+    "recent_transactions": [
+        {
+            "invoice_number": "INV/20260228/048",
+            "created_at": "2026-02-28T10:30:00Z",
+            "customer_name": "Sarah Williams",
+            "total_amount": 750000,
+            "payment_method": "CASH",
+            "items_count": 3
+        },
+        {
+            "invoice_number": "INV/20260228/047",
+            "created_at": "2026-02-28T10:15:00Z",
+            "customer_name": "Michael Chen",
+            "total_amount": 1250000,
+            "payment_method": "TRANSFER",
+            "items_count": 5
+        },
+        {
+            "invoice_number": "INV/20260228/046",
+            "created_at": "2026-02-28T09:45:00Z",
+            "customer_name": "Amanda Rodriguez",
+            "total_amount": 450000,
+            "payment_method": "CASH",
+            "items_count": 2
+        },
+        {
+            "invoice_number": "INV/20260228/045",
+            "created_at": "2026-02-28T09:20:00Z",
+            "customer_name": "David Kim",
+            "total_amount": 980000,
+            "payment_method": "TRANSFER",
+            "items_count": 4
+        },
+        {
+            "invoice_number": "INV/20260228/044",
+            "created_at": "2026-02-28T08:55:00Z",
+            "customer_name": "Walk-in Customer",
+            "total_amount": 520000,
+            "payment_method": "CASH",
+            "items_count": 2
+        }
+    ]
+}

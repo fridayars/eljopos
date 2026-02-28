@@ -1,0 +1,122 @@
+{
+    "products": [
+        {
+            "id": "prod-001",
+            "kategori_produk_id": "cat-hardware",
+            "name": "LCD iPhone X Original",
+            "sku": "IPX-LCD-01",
+            "price": 500000,
+            "cost_price": 350000,
+            "stok": 12,
+            "category_name": "hardware",
+            "image": "https://images.unsplash.com/photo-1512054502232-10a0a035d672?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "product"
+        },
+        {
+            "id": "prod-002",
+            "kategori_produk_id": "cat-hardware",
+            "name": "Baterai iPhone 11 Pro",
+            "sku": "IP11P-BAT-01",
+            "price": 350000,
+            "cost_price": 200000,
+            "stok": 8,
+            "category_name": "hardware",
+            "image": "https://images.unsplash.com/photo-1585298723682-7115561c51b7?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "product"
+        },
+        {
+            "id": "prod-003",
+            "kategori_produk_id": "cat-accessories",
+            "name": "Kabel Data Type-C to Lightning",
+            "sku": "ACC-CBL-01",
+            "price": 75000,
+            "cost_price": 35000,
+            "stok": 50,
+            "category_name": "accessories",
+            "image": "https://images.unsplash.com/photo-1542487354-feaf93476caa?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "product"
+        },
+        {
+            "id": "prod-004",
+            "kategori_produk_id": "cat-accessories",
+            "name": "Tempered Glass Anti Spy",
+            "sku": "ACC-TG-02",
+            "price": 45000,
+            "cost_price": 15000,
+            "stok": 100,
+            "category_name": "accessories",
+            "image": "https://plus.unsplash.com/premium_photo-1681313824743-dd59c03ddbf0?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "product"
+        },
+        {
+            "id": "serv-001",
+            "kategori_produk_id": "cat-services",
+            "name": "Jasa Pasang LCD iPhone",
+            "sku": "SRV-LCD-01",
+            "price": 150000,
+            "cost_price": 0,
+            "stok": 999,
+            "category_name": "services",
+            "image": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "layanan"
+        },
+        {
+            "id": "serv-002",
+            "kategori_produk_id": "cat-services",
+            "name": "Cleaning & Maintenance AC",
+            "sku": "SRV-CLN-01",
+            "price": 75000,
+            "cost_price": 0,
+            "stok": 999,
+            "category_name": "services",
+            "image": "https://images.unsplash.com/photo-1580983575916-2b4ad1828cb3?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "layanan"
+        },
+        {
+            "id": "prod-005",
+            "kategori_produk_id": "cat-software",
+            "name": "Lisensi Microsoft Office 365",
+            "sku": "SFT-MS-01",
+            "price": 850000,
+            "cost_price": 700000,
+            "stok": 15,
+            "category_name": "software",
+            "image": "https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "product"
+        },
+        {
+            "id": "serv-003",
+            "kategori_produk_id": "cat-software",
+            "name": "Jasa Install Ulang OS",
+            "sku": "SRV-OS-01",
+            "price": 100000,
+            "cost_price": 0,
+            "stok": 999,
+            "category_name": "services",
+            "image": "https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&q=80&w=300&h=300",
+            "item_type": "layanan"
+        }
+    ],
+    "categories": [
+        {
+            "id": "all",
+            "label": "Semua Items"
+        },
+        {
+            "id": "hardware",
+            "label": "Hardware / Sparepart"
+        },
+        {
+            "id": "accessories",
+            "label": "Aksesoris"
+        },
+        {
+            "id": "software",
+            "label": "Software"
+        },
+        {
+            "id": "services",
+            "label": "Jasa Layanan"
+        }
+    ]
+}
