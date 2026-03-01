@@ -1,0 +1,356 @@
+import { useState, useEffect } from 'react'
+import { Search, Plus, Edit, Trash2, Package, Box } from 'lucide-react'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'motion/react'
+import { getProducts, getCategories, addProduct, updateProduct, deleteProduct, importProducts } from '../services/productService'
+import { getBranches } from '../services/branchService'
+import type { ProductItem, Category } from '../services/productService'
+import type { Branch } from '../services/branchService'
+
+import { ProductsPage } from '../components/inventory/ProductsPage'
+import { EditProductModal } from '../components/inventory/EditProductModal'
+import { StockTransferModal } from '../components/inventory/StockTransferModal'
+import { AddCategoryModal } from '../components/inventory/AddCategoryModal'
+import { EditCategoryModal } from '../components/inventory/EditCategoryModal'
+
+type InventoryTab = 'product-category' | 'produk-barang'
+
+export function ProductInventoryPage() {
+    const [activeTab, setActiveTab] = useState<InventoryTab>('product-category')
+
+    // Data States
+    const [products, setProducts] = useState<ProductItem[]>([])
+    const [categories, setCategories] = useState<Category[]>([])
+    const [branches, setBranches] = useState<Branch[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    // Category States
+    const [searchCategory, setSearchCategory] = useState('')
+    const [isAddCatOpen, setIsAddCatOpen] = useState(false)
+    const [isEditCatOpen, setIsEditCatOpen] = useState(false)
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+
+    // Product States
+    const [isEditProdOpen, setIsEditProdOpen] = useState(false)
+    const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null)
+    const [isTransferOpen, setIsTransferOpen] = useState(false)
+
+    useEffect(() => {
+        const loadData = async () => {
+            setIsLoading(true)
+            try {
+                const [prodRes, catRes, branchRes] = await Promise.all([
+                    getProducts(),
+                    getCategories(),
+                    getBranches()
+                ])
+
+                if (prodRes.success) setProducts(prodRes.data.items)
+                if (catRes.success) setCategories(catRes.data)
+                if (branchRes.success) setBranches(branchRes.data)
+            } catch (error) {
+                toast.error('Gagal memuat data inventaris')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadData()
+    }, [])
+
+    /* --- Category Handlers --- */
+    const filteredCategories = categories.filter((cat) =>
+        cat.label.toLowerCase().includes(searchCategory.toLowerCase())
+    )
+
+    const handleAddCategory = (newCat: { name: string; description: string }) => {
+        const cat: Category = {
+            id: `cat-${Date.now()}`,
+            label: newCat.name,
+            description: newCat.description
+        }
+        // Save to state and mock localstorage
+        const updatedCats = [...categories, cat]
+        setCategories(updatedCats)
+        localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
+        toast.success('Kategori berhasil ditambahkan')
+    }
+
+    const handleEditCategory = (id: string, updates: { label: string; description?: string }) => {
+        const updatedCats = categories.map(c => c.id === id ? { ...c, ...updates } : c)
+        setCategories(updatedCats)
+        localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
+        toast.success('Kategori berhasil diperbarui')
+    }
+
+    const handleDeleteCategory = (id: string) => {
+        const updatedCats = categories.filter(c => c.id !== id)
+        setCategories(updatedCats)
+        localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
+        toast.success('Kategori berhasil dihapus')
+    }
+
+    const openEditCategory = (cat: Category) => {
+        setEditingCategory(cat)
+        setIsEditCatOpen(true)
+    }
+
+    /* --- Product Handlers --- */
+    const saveProduct = async (id: string, updates: Partial<ProductItem>) => {
+        if (editingProduct === null) {
+            // It's a new product
+            const res = await addProduct(updates as any)
+            if (res.success && res.data) {
+                setProducts([...products, res.data])
+                toast.success('Produk berhasil ditambahkan')
+            } else {
+                toast.error('Gagal menambahkan produk')
+            }
+        } else {
+            // It's an update
+            const res = await updateProduct(id, updates)
+            if (res.success && res.data) {
+                setProducts(products.map(p => p.id === id ? res.data! : p))
+                toast.success('Produk berhasil diperbarui')
+            } else {
+                toast.error('Gagal memperbarui produk')
+            }
+        }
+    }
+
+    const startAddProduct = () => {
+        setEditingProduct(null)
+        setIsEditProdOpen(true)
+    }
+
+    const startEditProduct = (prod: ProductItem) => {
+        setEditingProduct(prod)
+        setIsEditProdOpen(true)
+    }
+
+    const handleDeleteProduct = async (prod: ProductItem) => {
+        if (!confirm(`Yakin ingin menghapus ${prod.name}?`)) return
+        const res = await deleteProduct(prod.id)
+        if (res.success) {
+            setProducts(products.filter(p => p.id !== prod.id))
+            toast.success('Produk berhasil dihapus')
+        } else {
+            toast.error('Gagal menghapus produk')
+        }
+    }
+
+    const handleImportProducts = async (newProducts: Omit<ProductItem, 'id'>[]) => {
+        const res = await importProducts(newProducts)
+        if (res.success && res.data) {
+            setProducts([...products, ...res.data])
+        }
+    }
+
+    const handleTransferStock = (data: any) => {
+        const sourceName = branches.find((b) => b.id === data.sourceBranch)?.name
+        const destName = branches.find((b) => b.id === data.destinationBranch)?.name
+
+        const itemsList = data.items.map((item: any) => `${item.quantity}x ${item.productName}`).join(', ')
+        toast.success(`Berhasil transfer dari ${sourceName} ke ${destName}: ${itemsList}`)
+
+        // Update local mock stock for logic realism
+        let updatedProducts = [...products]
+        data.items.forEach((item: any) => {
+            const index = updatedProducts.findIndex(p => p.id === item.productId)
+            if (index !== -1) {
+                updatedProducts[index] = {
+                    ...updatedProducts[index],
+                    stok: updatedProducts[index].stok - item.quantity
+                }
+            }
+        })
+        setProducts(updatedProducts)
+        localStorage.setItem('mock_products_data', JSON.stringify(updatedProducts))
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-4 border-purple-500/20 border-t-purple-500 animate-spin" />
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex-1 flex flex-col overflow-hidden h-full">
+            {/* Header / Tabs Container */}
+            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0 bg-[#0F0F14]/50">
+                <div className="flex flex-col gap-4">
+                    <div>
+                        <h2 className="text-lg md:text-xl text-gray-200">Manajemen Inventaris</h2>
+                        <p className="text-xs md:text-sm text-gray-500 mt-1">
+                            Kelola kategori, daftar barang, dan perpindahan stok
+                        </p>
+                    </div>
+
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+                        <button
+                            onClick={() => setActiveTab('product-category')}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'product-category'
+                                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                }`}
+                        >
+                            <Package className="w-4 h-4" />
+                            Kategori Produk
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('produk-barang')}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'produk-barang'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                }`}
+                        >
+                            <Box className="w-4 h-4" />
+                            Produk Barang
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-hidden relative">
+                <AnimatePresence mode="wait">
+                    {/* --- CATEGORY TAB --- */}
+                    {activeTab === 'product-category' && (
+                        <motion.div
+                            key="category-tab"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute inset-0 flex flex-col"
+                        >
+                            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
+                                <div className="flex flex-col md:flex-row gap-4">
+                                    <div className="flex-1 relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                                        <input
+                                            type="text"
+                                            placeholder="Cari kategori produk..."
+                                            value={searchCategory}
+                                            onChange={(e) => setSearchCategory(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => setIsAddCatOpen(true)}
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all cursor-pointer"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        Tambah Kategori
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                    {filteredCategories.length === 0 ? (
+                                        <div className="col-span-full py-12 text-center text-gray-500">
+                                            Tidak ada kategori ditemukan.
+                                        </div>
+                                    ) : (
+                                        filteredCategories.map((category) => (
+                                            <motion.div
+                                                layout
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                key={category.id}
+                                                className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-5 hover:border-blue-500/40 transition-all group"
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h3 className="text-lg font-medium text-gray-200">
+                                                                {category.label}
+                                                            </h3>
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 line-clamp-2">
+                                                            {category.description || 'Tidak ada deskripsi spesifik.'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => openEditCategory(category)}
+                                                            className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm(`Hapus kategori ${category.label}?`)) handleDeleteCategory(category.id)
+                                                            }}
+                                                            className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* --- PRODUCTS TAB --- */}
+                    {activeTab === 'produk-barang' && (
+                        <motion.div
+                            key="product-tab"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute inset-0"
+                        >
+                            <ProductsPage
+                                products={products}
+                                onEditProduct={startEditProduct}
+                                onDeleteProduct={handleDeleteProduct}
+                                onImportProducts={handleImportProducts}
+                                onOpenTransfer={() => setIsTransferOpen(true)}
+                                onOpenAdd={startAddProduct}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* Modals */}
+            <AddCategoryModal
+                isOpen={isAddCatOpen}
+                onClose={() => setIsAddCatOpen(false)}
+                onAdd={handleAddCategory}
+            />
+
+            <EditCategoryModal
+                isOpen={isEditCatOpen}
+                onClose={() => setIsEditCatOpen(false)}
+                category={editingCategory}
+                onSave={handleEditCategory}
+            />
+
+            <EditProductModal
+                isOpen={isEditProdOpen}
+                onClose={() => setIsEditProdOpen(false)}
+                product={editingProduct}
+                onSave={saveProduct}
+            />
+
+            <StockTransferModal
+                isOpen={isTransferOpen}
+                onClose={() => setIsTransferOpen(false)}
+                products={products}
+                branches={branches}
+                onTransfer={handleTransferStock}
+            />
+        </div>
+    )
+}
