@@ -225,9 +225,21 @@ export const createProduct = async (req, res) => {
 
 ``` js
 export const create = async (payload) => {
-  return await Product.create(payload)
+  try {
+    const result = await Product.create(payload)
+    return result
+  } catch (error) {
+    if (error instanceof AppError) throw error
+    throw new AppError('Service Error: ' + error.message, 500)
+  }
 }
 ```
+
+**Rules:**
+- All service methods MUST be wrapped in a `try-catch` block.
+- Throw `AppError` for known business logic failures.
+- Log failures using the `logger` utility before throwing/re-throwing.
+- Always return processed data or model instances.
 
 ------------------------------------------------------------------------
 
