@@ -375,7 +375,16 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     "store_id": "uuid-store",
     "customer_id": "uuid-customer",
     "total_amount": 750000,
-    "payment_method": "CASH",
+    "payment_method": [
+      {
+        "method": "CASH",
+        "amount": 750000
+      },
+      {
+        "method": "TRANSFER",
+        "amount": 750000
+      }
+    ],
     "items": [
       {
         "item_type": "product",
@@ -437,10 +446,14 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
       },
       "items": [
         {
+          "id": "uuid-transaksi",
           "invoice_number": "INV/20260221/001",
           "created_at": "2026-02-21T10:00:00Z",
           "customer_name": "John Doe",
-          "total_amount": 750000
+          "total_amount": 750000,
+          "type": "product",
+          "kasir": "jon",
+          "store": "Jombang"
         }
       ],
       "meta": {

@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'transaksi_id',
                 as: 'details'
             });
+            Transaksi.hasMany(models.TransaksiPayment, {
+                foreignKey: 'transaksi_id',
+                as: 'payments'
+            });
         }
     }
     Transaksi.init({
@@ -36,7 +40,6 @@ module.exports = (sequelize, DataTypes) => {
             unique: true
         },
         total_amount: DataTypes.DECIMAL(15, 2),
-        payment_method: DataTypes.STRING,
         payment_status: DataTypes.STRING
     }, {
         sequelize,
