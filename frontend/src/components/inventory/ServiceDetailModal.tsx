@@ -1,4 +1,4 @@
-import { X, Edit } from 'lucide-react';
+import { X, Edit, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ServiceProduct } from '../../services/productService';
 
@@ -88,30 +88,22 @@ export function ServiceDetailModal({
                             </div>
                         </div>
 
-                        {/* Linked Items */}
+                        {/* Linked Items Info */}
                         <div>
-                            <h3 className="text-sm text-gray-400 mb-3">
-                                Produk Tertaut ({service.linkedItems.length})
-                            </h3>
-                            {service.linkedItems.length > 0 ? (
-                                <div className="space-y-2">
-                                    {service.linkedItems.map((item, index) => (
-                                        <div
-                                            key={index}
-                                            className="flex items-center justify-between bg-white/5 border border-purple-500/20 rounded-lg p-3"
-                                        >
-                                            <p className="text-sm text-gray-200">{item.productName}</p>
-                                            <span className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs">
-                                                Qty: {item.quantity}
-                                            </span>
-                                        </div>
-                                    ))}
+                            <h3 className="text-sm text-gray-400 mb-2">Produk Tertaut</h3>
+                            <div className="flex items-center gap-3 bg-white/5 border border-purple-500/20 rounded-xl p-4">
+                                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                    <Package className="w-5 h-5 text-cyan-400" />
                                 </div>
-                            ) : (
-                                <p className="text-sm text-gray-500 italic">
-                                    Tidak ada produk fisik yang ditautkan ke layanan ini.
-                                </p>
-                            )}
+                                <div>
+                                    <p className="text-sm text-gray-200 font-medium">
+                                        {service.count_product} Produk Fisik
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        Barang yang tertaut otomatis saat layanan ini dipilih.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

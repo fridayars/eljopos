@@ -1,4 +1,4 @@
-import { X, Save, Image as ImageIcon } from 'lucide-react'
+import { X, Save, Image as ImageIcon, Wrench } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useState, useEffect } from 'react'
 import type { ProductItem } from '../../services/productService'
@@ -180,15 +180,32 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                         </div>
                                         {formData.image && (
                                             <div className="mt-3">
-                                                <img
-                                                    src={formData.image}
-                                                    alt="Preview"
-                                                    className="w-24 h-24 rounded-lg object-cover border border-purple-500/20"
-                                                    onError={(e) => {
-                                                        e.currentTarget.src =
-                                                            'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop'
-                                                    }}
-                                                />
+                                                {/* Image Preview with Fallback */}
+                                                <div className="w-24 h-24 rounded-lg overflow-hidden border border-purple-500/20 bg-purple-500/5 flex items-center justify-center">
+                                                    <img
+                                                        src={formData.image}
+                                                        alt="Preview"
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none'
+                                                            const parent = e.currentTarget.parentElement
+                                                            if (parent) {
+                                                                const fallback = parent.querySelector('.fallback-preview') as HTMLElement
+                                                                if (fallback) fallback.style.display = 'flex'
+                                                            }
+                                                        }}
+                                                        onLoad={(e) => {
+                                                            const parent = e.currentTarget.parentElement
+                                                            if (parent) {
+                                                                const fallback = parent.querySelector('.fallback-preview') as HTMLElement
+                                                                if (fallback) fallback.style.display = 'none'
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="fallback-preview w-full h-full hidden items-center justify-center">
+                                                        <Wrench className="w-8 h-8 text-purple-500/40" />
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

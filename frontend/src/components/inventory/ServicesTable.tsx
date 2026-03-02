@@ -14,6 +14,9 @@ interface ServicesTableProps {
     onDetail: (service: ServiceProduct) => void;
     onExport: () => void;
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
 }
 
 export function ServicesTable({
@@ -29,19 +32,15 @@ export function ServicesTable({
     onDetail,
     onExport,
     onImport,
+    currentPage,
+    totalPages,
+    onPageChange,
 }: ServicesTableProps) {
-    // Filter logic
-    const filteredServices = services.filter((service) => {
-        const matchesSearch =
-            service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            service.sku.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory =
-            selectedCategoryId === 'all' || service.categoryId === selectedCategoryId;
-        return matchesSearch && matchesCategory;
-    });
+    // Backend handles filtering, so we use services directly
+    const displayServices = services;
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col overflow-hidden">
             {/* Category Filter, Search and Toolbar */}
             <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
                 <div className="flex flex-col gap-4">
@@ -111,8 +110,8 @@ export function ServicesTable({
             {/* Service List / Table */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
                 <div className="grid gap-4">
-                    {filteredServices.length > 0 ? (
-                        filteredServices.map((service) => (
+                    {displayServices.length > 0 ? (
+                        displayServices.map((service) => (
                             <div
                                 key={service.id}
                                 className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all"
@@ -157,7 +156,7 @@ export function ServicesTable({
                                             <div>
                                                 <p className="text-xs text-gray-500">Produk Tertaut</p>
                                                 <p className="text-sm text-gray-300">
-                                                    {service.linkedItems.length} item
+                                                    {service.count_product} item
                                                 </p>
                                             </div>
                                         </div>
@@ -197,6 +196,49 @@ export function ServicesTable({
                     )}
                 </div>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="px-4 md:px-6 py-4 border-t border-purple-500/10 flex items-center justify-between bg-black/20 shrink-0">
+                    <p className="text-sm text-gray-500">
+                        Halaman <span className="text-gray-300 font-medium">{currentPage}</span> dari <span className="text-gray-300 font-medium">{totalPages}</span>
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => onPageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${currentPage === 1
+                                ? 'border-purple-500/10 text-gray-600 cursor-not-allowed'
+                                : 'border-purple-500/20 text-gray-400 hover:text-white hover:border-blue-500/50'
+                                }`}
+                        >
+                            Sebelumnya
+                        </button>
+                        {[...Array(totalPages)].map((_, i) => (
+                            <button
+                                key={i + 1}
+                                onClick={() => onPageChange(i + 1)}
+                                className={`w-9 h-9 rounded-lg border text-sm transition-all flex items-center justify-center ${currentPage === i + 1
+                                    ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+                                    : 'border-purple-500/20 text-gray-400 hover:text-white hover:border-blue-500/50'
+                                    }`}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => onPageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${currentPage === totalPages
+                                ? 'border-purple-500/10 text-gray-600 cursor-not-allowed'
+                                : 'border-purple-500/20 text-gray-400 hover:text-white hover:border-blue-500/50'
+                                }`}
+                        >
+                            Berikutnya
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

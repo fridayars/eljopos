@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Coffee, Croissant, Sandwich, IceCream, Salad, UtensilsCrossed, Monitor, Cpu } from 'lucide-react'
+import { Coffee, Croissant, UtensilsCrossed, Monitor, Cpu } from 'lucide-react'
 
 // Menyesuaikan kategori dengan data mock kita
 export type CategoryType = 'all' | 'hardware' | 'accessories' | 'software' | 'services' | 'beverages' | 'pastries' | 'meals' | 'desserts' | 'healthy'

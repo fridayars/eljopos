@@ -33,7 +33,7 @@ export interface ServiceProduct {
     name: string
     detailService: string
     sku: string
-    linkedItems: { productId: string; productName: string; quantity: number }[]
+    count_product: number
     capitalPrice: number
     price: number
     categoryId: string
@@ -92,9 +92,7 @@ const initialServiceProducts: ServiceProduct[] = [
         name: 'Deep Cleaning Service',
         detailService: 'Complete deep cleaning for home or office including floor, windows, and furniture',
         sku: 'SVC-001',
-        linkedItems: [
-            { productId: 'mock-1', productName: 'LCD iPhone X Original', quantity: 1 }
-        ],
+        count_product: 1,
         capitalPrice: 350000,
         price: 500000,
         categoryId: '1',
@@ -105,7 +103,7 @@ const initialServiceProducts: ServiceProduct[] = [
         name: 'Regular Cleaning',
         detailService: 'Standard cleaning service for regular maintenance',
         sku: 'SVC-002',
-        linkedItems: [],
+        count_product: 0,
         capitalPrice: 150000,
         price: 250000,
         categoryId: '1',
@@ -376,12 +374,13 @@ export const exportProductsFile = async (storeId?: string): Promise<{ success: b
 
 export const getServiceCategories = async (): Promise<{ success: boolean; data: ServiceCategory[] }> => {
     try {
-        const response = await api.get('/master/products/categories')
+        const response = await api.get('/master/layanan/categories')
         const items = response.data?.data?.items || []
         const mapped: ServiceCategory[] = items.map((cat: any) => ({
             id: cat.id,
             name: cat.name,
-            description: cat.description || ''
+            description: cat.description || '',
+            is_active: cat.is_active
         }))
         return { success: true, data: mapped }
     } catch (error: any) {
@@ -441,15 +440,83 @@ export const deleteServiceCategory = async (id: string): Promise<{ success: bool
     })
 }
 
-export const getServiceProducts = async (): Promise<{ success: boolean; data: ServiceProduct[] }> => {
-    initMockData()
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const itemsStr = localStorage.getItem(LOCAL_STORAGE_SERVICE_PRODUCTS_KEY) || '[]'
-            const items: ServiceProduct[] = JSON.parse(itemsStr)
-            resolve({ success: true, data: items })
-        }, 500)
-    })
+interface GetServiceProductsParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: string;
+    kategori_layanan_id?: string;
+    store_id?: string;
+}
+
+export interface GetServiceProductsResponse {
+    success: boolean
+    data: {
+        items: ServiceProduct[]
+        pagination: {
+            page: number
+            limit: number
+            total: number
+            total_pages: number
+            has_next: boolean
+            has_prev: boolean
+        }
+    }
+    message?: string
+}
+
+export const getServiceProducts = async (params: GetServiceProductsParams = {}): Promise<GetServiceProductsResponse> => {
+    try {
+        const storeId = params.store_id || getCurrentStoreId()
+        const searchParams = new URLSearchParams()
+        if (params.page) searchParams.append('page', params.page.toString())
+        if (params.limit) searchParams.append('limit', params.limit.toString())
+        if (params.search) searchParams.append('search', params.search)
+        if (params.sort) searchParams.append('sort', params.sort)
+        if (params.kategori_layanan_id && params.kategori_layanan_id !== 'all') {
+            searchParams.append('kategori_layanan_id', params.kategori_layanan_id)
+        }
+        if (storeId) searchParams.append('store_id', storeId)
+
+        const queryStr = searchParams.toString()
+        const url = `/master/layanan${queryStr ? `?${queryStr}` : ''}`
+
+        const response = await api.get(url)
+        const items = response.data?.data?.items || []
+        const mapped: ServiceProduct[] = items.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            detailService: s.description || '',
+            sku: s.sku || '', // Backend might not return SKU if not linked
+            count_product: s.count_product || 0,
+            capitalPrice: s.cost_price || 0,
+            price: s.price || 0,
+            categoryId: s.kategori_layanan_id || '',
+            categoryName: s.kategori_name || '',
+            is_active: s.is_active
+        }))
+
+        return {
+            success: true,
+            data: {
+                items: mapped,
+                pagination: response.data?.data?.pagination || {
+                    page: 1,
+                    limit: 10,
+                    total: 0,
+                    total_pages: 0,
+                    has_next: false,
+                    has_prev: false
+                }
+            }
+        }
+    } catch (error: any) {
+        return {
+            success: false,
+            data: { items: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0, has_next: false, has_prev: false } },
+            message: error.response?.data?.message || 'Gagal memuat layanan',
+        }
+    }
 }
 
 export const addServiceProduct = async (product: Omit<ServiceProduct, 'id'>): Promise<{ success: boolean; data?: ServiceProduct }> => {
@@ -504,21 +571,12 @@ export const deleteServiceProduct = async (id: string): Promise<{ success: boole
     })
 }
 
-export const importServiceProducts = async (products: Omit<ServiceProduct, 'id'>[]): Promise<{ success: boolean; data?: ServiceProduct[] }> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const itemsStr = localStorage.getItem(LOCAL_STORAGE_SERVICE_PRODUCTS_KEY) || '[]'
-            const items: ServiceProduct[] = JSON.parse(itemsStr)
+export const importServiceProducts = async (file: File): Promise<{ success: boolean, message?: string }> => {
+    // Reuse importProductsFile logic as requested
+    return importProductsFile(file)
+}
 
-            const newProducts = products.map((p, index) => ({
-                ...p,
-                id: `imported-svc-${Date.now()}-${index}`
-            }))
-
-            const updatedItems = [...items, ...newProducts]
-            localStorage.setItem(LOCAL_STORAGE_SERVICE_PRODUCTS_KEY, JSON.stringify(updatedItems))
-
-            resolve({ success: true, data: newProducts })
-        }, 800)
-    })
+export const exportServiceProducts = async (): Promise<{ success: boolean, message?: string }> => {
+    // Reuse exportProductsFile logic as requested
+    return exportProductsFile()
 }

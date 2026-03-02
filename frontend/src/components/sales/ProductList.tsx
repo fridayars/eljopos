@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Plus } from 'lucide-react'
+import { Plus, Wrench } from 'lucide-react'
 import type { ProductItem } from '../../services/productService'
 
 interface ProductListProps {
@@ -24,11 +24,17 @@ export function ProductList({ products, onAddToCart }: ProductListProps) {
                     <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4">
                         {/* Product Image */}
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg md:rounded-xl overflow-hidden bg-gradient-to-br from-blue-500/10 to-purple-600/10 shrink-0">
-                            <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
+                            {product.image ? (
+                                <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-purple-500/5 group-hover:scale-110 transition-transform duration-500">
+                                    <Wrench className="w-8 h-8 text-purple-500/40" />
+                                </div>
+                            )}
                         </div>
 
                         {/* Product Info */}

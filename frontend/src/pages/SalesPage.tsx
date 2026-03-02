@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { Toaster } from 'sonner'
 
 import { ViewToggle } from '../components/sales/ViewToggle'
-import { CategoryFilter, type CategoryType } from '../components/sales/CategoryFilter'
 import { ProductGrid } from '../components/sales/ProductGrid'
 import { ProductList } from '../components/sales/ProductList'
 import { Cart, type CartItem } from '../components/sales/Cart'
@@ -12,10 +11,12 @@ import { MobileCartButton } from '../components/sales/MobileCartButton'
 import { PaymentModal } from '../components/sales/PaymentModal'
 import { SelectCustomerModal } from '../components/sales/SelectCustomerModal'
 import { AddCustomerModal } from '../components/sales/AddCustomerModal'
+import { Search, Loader2 } from 'lucide-react'
 
-import { getProducts, type ProductItem } from '../services/productService'
+import { getProducts, getServiceProducts, type ProductItem } from '../services/productService'
 import { getCustomers, createCustomer, type Customer } from '../services/customerService'
 import { createTransaction, type CreateTransactionPayload, type TransactionItemPayload } from '../services/transactionService'
+
 // Define basic user data structure from login
 interface UserData {
     store_id: string
@@ -23,7 +24,8 @@ interface UserData {
 
 export function SalesPage() {
     const [view, setView] = useState<'grid' | 'list'>('grid')
-    const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all')
+    const [activeTab, setActiveTab] = useState<'produk' | 'layanan'>('produk')
+    const [searchQuery, setSearchQuery] = useState('')
     const [cart, setCart] = useState<CartItem[]>([])
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -36,35 +38,89 @@ export function SalesPage() {
     const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false)
 
     // Data State
-    const [products, setProducts] = useState<ProductItem[]>([])
+    const [displayItems, setDisplayItems] = useState<ProductItem[]>([])
     const [customers, setCustomers] = useState<Customer[]>([])
-    const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const [isTransacting, setIsTransacting] = useState(false)
+
+    // Pagination
+    const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(true)
+    const ITEMS_PER_PAGE = 20
 
     // Auth Info for transaction payload
     const [storeId, setStoreId] = useState('')
 
-    // Fetch Initial Data
-    useEffect(() => {
-        const loadInitialData = async () => {
-            const [productsRes, customersRes] = await Promise.all([getProducts(), getCustomers()])
+    // Fetch Items with Pagination and Search
+    const fetchItems = async (targetPage: number, reset: boolean = false) => {
+        if (isLoading) return
+        setIsLoading(true)
 
-            if (productsRes.success) {
-                setProducts(productsRes.data.items)
+        try {
+            if (activeTab === 'produk') {
+                const response = await getProducts({
+                    page: targetPage,
+                    limit: ITEMS_PER_PAGE,
+                    search: searchQuery,
+                    store_id: storeId || undefined
+                })
+
+                if (response.success) {
+                    const newItems = response.data.items
+                    setDisplayItems(prev => reset ? newItems : [...prev, ...newItems])
+                    setHasMore(response.data.pagination.has_next)
+                    setPage(targetPage)
+                }
             } else {
-                toast.error(productsRes.message || 'Gagal mengambil produk')
-            }
+                const response = await getServiceProducts({
+                    page: targetPage,
+                    limit: ITEMS_PER_PAGE,
+                    search: searchQuery,
+                    store_id: storeId || undefined
+                })
 
+                if (response.success) {
+                    const mappedServices: ProductItem[] = response.data.items.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        sku: s.sku,
+                        price: s.price,
+                        cost_price: s.capitalPrice,
+                        stok: 0,
+                        kategori_produk_id: s.categoryId,
+                        kategori_name: s.categoryName,
+                        image: '', // Services usually don't have images in current schema
+                        item_type: 'layanan'
+                    }))
+                    setDisplayItems(prev => reset ? mappedServices : [...prev, ...mappedServices])
+                    setHasMore(response.data.pagination.has_next)
+                    setPage(targetPage)
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching items:', error)
+            toast.error('Gagal memuat data')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Effect for activeTab or searchQuery changes
+    useEffect(() => {
+        setDisplayItems([])
+        fetchItems(1, true)
+    }, [activeTab, searchQuery, storeId])
+
+    // Load Customers
+    useEffect(() => {
+        const loadCustomers = async () => {
+            const customersRes = await getCustomers()
             if (customersRes.success) {
                 setCustomers(customersRes.data)
             }
-
-            setIsLoadingProducts(false)
         }
+        loadCustomers()
 
-        loadInitialData()
-
-        // Get store ID from localStorage
         const userStr = localStorage.getItem('user')
         if (userStr) {
             try {
@@ -76,9 +132,27 @@ export function SalesPage() {
         }
     }, [])
 
-    // Filter products by category
-    const filteredProducts =
-        selectedCategory === 'all' ? products : products.filter((product) => product.kategori_name === selectedCategory)
+    // Intersection Observer for Infinite Scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                    fetchItems(page + 1)
+                }
+            },
+            { threshold: 0.1 }
+        )
+
+        const loadMoreTrigger = document.getElementById('load-more-trigger')
+        if (loadMoreTrigger) observer.observe(loadMoreTrigger)
+
+        return () => observer.disconnect()
+    }, [hasMore, isLoading, page])
+
+    const handleTabChange = (tab: 'produk' | 'layanan') => {
+        setActiveTab(tab)
+        setSearchQuery('') // Reset keyword as requested
+    }
 
     // Cart Actions
     const handleAddToCart = (product: ProductItem) => {
@@ -144,15 +218,14 @@ export function SalesPage() {
         setIsPaymentModalOpen(true)
     }
 
-    const handleConfirmPayment = async (data: { date: string; cashbox: string; cashPaid: number }) => {
+    const handleConfirmPayment = async (data: { date: string; cashbox: string; cashPaid: number; payments: { method: string; amount: number }[] }) => {
+        console.log('Confirm payment with data:', data)
         setIsTransacting(true)
 
-        // Hitung Grand Total
         const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
         const discountAmount = discountType === '%' ? (subtotal * discountValue) / 100 : discountValue
         const grandTotal = Math.max(0, subtotal - discountAmount)
 
-        // Siapkan Payload Transaksi
         const transactionItems: TransactionItemPayload[] = cart.map((item) => ({
             item_type: item.item_type,
             item_id: item.id,
@@ -163,11 +236,14 @@ export function SalesPage() {
             subtotal: item.price * item.quantity,
         }))
 
+        // Join multiple payment methods for display/legacy storage
+        const combinedMethod = data.payments.map(p => p.method).join(', ')
+
         const payload: CreateTransactionPayload = {
             store_id: storeId,
-            customer_id: selectedCustomer?.id, // undefined kalau walk-in
+            customer_id: selectedCustomer?.id,
             total_amount: grandTotal,
-            payment_method: 'CASH', // Saat ini statis dari props (TODO: ambil dari modal)
+            payment_method: combinedMethod as any, // Cast as any since backend expects one of the enums, but we are splitting
             items: transactionItems,
         }
 
@@ -188,45 +264,83 @@ export function SalesPage() {
 
     return (
         <div className="flex-1 flex overflow-hidden">
-            {/* Main Content (Products) */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
-                {/* View Toggle */}
                 <div className="p-4 md:p-6 border-b border-purple-500/10 flex items-center justify-between">
                     <div>
                         <h2 className="text-lg md:text-xl text-gray-200">Kasir / Penjualan</h2>
-                        <p className="text-xs md:text-sm text-gray-500 mt-1">Pilih dan tambahkan produk ke keranjang</p>
+                        <p className="text-xs md:text-sm text-gray-500 mt-1">Pilih dan tambahkan produk/layanan ke keranjang</p>
                     </div>
                     <ViewToggle view={view} onViewChange={setView} />
                 </div>
 
-                {/* Category Filter */}
-                <div className="p-4 md:p-6 border-b border-purple-500/10">
-                    <CategoryFilter selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
+                <div className="p-4 md:p-6 border-b border-purple-500/10 space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex p-1 bg-white/5 border border-purple-500/20 rounded-xl w-full sm:w-auto">
+                            <button
+                                onClick={() => handleTabChange('produk')}
+                                className={`flex-1 sm:w-32 py-2 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'produk'
+                                    ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                                    : 'text-gray-400 hover:text-gray-200'
+                                    }`}
+                            >
+                                Produk
+                            </button>
+                            <button
+                                onClick={() => handleTabChange('layanan')}
+                                className={`flex-1 sm:w-32 py-2 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'layanan'
+                                    ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                                    : 'text-gray-400 hover:text-gray-200'
+                                    }`}
+                            >
+                                Layanan
+                            </button>
+                        </div>
+
+                        <div className="relative w-full sm:w-64 md:w-80">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={`Cari ${activeTab === 'produk' ? 'produk...' : 'layanan...'}`}
+                                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all"
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                {/* Product Display */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 lg:pb-6">
-                    {isLoadingProducts ? (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-gray-400">Memuat katalog...</p>
-                        </div>
-                    ) : filteredProducts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                            <p>Tidak ada produk untuk kategori ini.</p>
+                    {displayItems.length === 0 && !isLoading ? (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-2">
+                            <Search className="w-12 h-12 opacity-20" />
+                            <p>Tidak ada {activeTab} yang ditemukan.</p>
                         </div>
                     ) : (
-                        <AnimatePresence mode="wait">
-                            {view === 'grid' ? (
-                                <ProductGrid key="grid" products={filteredProducts} onAddToCart={handleAddToCart} />
-                            ) : (
-                                <ProductList key="list" products={filteredProducts} onAddToCart={handleAddToCart} />
-                            )}
-                        </AnimatePresence>
+                        <>
+                            <AnimatePresence mode="wait">
+                                {view === 'grid' ? (
+                                    <ProductGrid key="grid" products={displayItems} onAddToCart={handleAddToCart} />
+                                ) : (
+                                    <ProductList key="list" products={displayItems} onAddToCart={handleAddToCart} />
+                                )}
+                            </AnimatePresence>
+
+                            <div id="load-more-trigger" className="h-20 flex items-center justify-center">
+                                {isLoading && (
+                                    <div className="flex items-center gap-2 text-purple-400">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span className="text-sm">Memuat lebih banyak...</span>
+                                    </div>
+                                )}
+                                {!hasMore && displayItems.length > 0 && (
+                                    <p className="text-xs text-gray-600 italic">Semua data telah dimuat</p>
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
 
-            {/* Cart Section */}
             <Cart
                 items={cart}
                 selectedCustomer={selectedCustomer}
@@ -246,10 +360,8 @@ export function SalesPage() {
                 isLoading={isTransacting}
             />
 
-            {/* Mobile Cart Button */}
             <MobileCartButton itemCount={cart.length} onClick={() => setIsCartOpen(true)} />
 
-            {/* Modals */}
             <PaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}

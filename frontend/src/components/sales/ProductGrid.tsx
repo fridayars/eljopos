@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Plus } from 'lucide-react'
+import { Plus, Wrench } from 'lucide-react'
 import type { ProductItem } from '../../services/productService'
 
 interface ProductGridProps {
@@ -28,11 +28,17 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
                 >
                     {/* Product Image */}
                     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-500/10 to-purple-600/10 shrink-0">
-                        <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
+                        {product.image ? (
+                            <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-purple-500/5 group-hover:scale-110 transition-transform duration-500">
+                                <Wrench className="w-12 h-12 text-purple-500/40" />
+                            </div>
+                        )}
                         <div className="absolute top-2 md:top-3 right-2 md:right-3 px-2 md:px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-cyan-400/30">
                             <span className="text-xs md:text-sm text-cyan-400">
                                 {product.item_type === 'layanan' ? 'Jasa' : `${product.stok} left`}
