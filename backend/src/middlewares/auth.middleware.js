@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const AppError = require('../utils/AppError')
+const AppError = require('../utils/app.error')
 const db = require('../models')
 
 const { User, LogSession } = db

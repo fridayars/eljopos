@@ -156,8 +156,8 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                         <label className="block text-sm text-gray-400 mb-2">Nama Kategori</label>
                                         <input
                                             type="text"
-                                            value={formData.category_name || ''}
-                                            onChange={(e) => handleChange('category_name', e.target.value)}
+                                            value={formData.kategori_name || ''}
+                                            onChange={(e) => handleChange('kategori_name', e.target.value)}
                                             className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 transition-all"
                                             placeholder="Contoh: Hardware, Minuman"
                                         />

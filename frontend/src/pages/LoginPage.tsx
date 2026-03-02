@@ -494,14 +494,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                         </button>
                     </form>
 
-                    {/* Footer hint */}
-                    <p
-                        className="text-xs text-center mt-6"
-                        style={{ color: 'var(--muted-foreground)' }}
-                    >
-                        Mock login: <span style={{ color: 'var(--accent)' }}>admin</span> /{' '}
-                        <span style={{ color: 'var(--accent)' }}>admin123</span>
-                    </p>
+                    {/* Footer removed: login is integrated with backend API */}
                 </div>
             </div>
 

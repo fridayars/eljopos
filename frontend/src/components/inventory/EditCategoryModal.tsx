@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 interface Category {
     id: string
-    label: string
+    name: string
     description?: string
 }
 
@@ -12,7 +12,7 @@ interface EditCategoryModalProps {
     isOpen: boolean
     onClose: () => void
     category: Category | null
-    onSave: (id: string, updates: { label: string; description?: string }) => void
+    onSave: (id: string, updates: { name: string; description?: string }) => void
     modalTitle?: string
 }
 
@@ -23,7 +23,7 @@ export function EditCategoryModal({ isOpen, onClose, category, onSave, modalTitl
 
     useEffect(() => {
         if (category && isOpen) {
-            setName(category.label || '')
+            setName(category.name || '')
             setDescription(category.description || '')
             setError('')
         }
@@ -36,7 +36,7 @@ export function EditCategoryModal({ isOpen, onClose, category, onSave, modalTitl
             return
         }
         // If category exists, it's an edit. If not, it's a new one.
-        onSave(category?.id || '', { label: name, description })
+        onSave(category?.id || '', { name, description })
         onClose()
     }
 

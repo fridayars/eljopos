@@ -7,8 +7,8 @@ const morgan = require('morgan')
 const compression = require('compression')
 
 const routes = require('./routes')
-const errorHandler = require('./middlewares/errorHandler')
-const logger = require('./utils/logger')
+const errorHandler = require('./middlewares/error.handler')
+const logger = require('./utils/logger.util')
 const sequelize = require('./models')
 
 const app = express()

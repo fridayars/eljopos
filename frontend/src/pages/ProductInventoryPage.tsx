@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, Edit, Trash2, Package, Box } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
-import { getProducts, getCategories, addProduct, updateProduct, deleteProduct, importProducts } from '../services/productService'
+import { getProducts, getCategories, addProduct, updateProduct, deleteProduct, importProductsFile, exportProductsFile } from '../services/productService'
 import { getBranches } from '../services/branchService'
 import type { ProductItem, Category } from '../services/productService'
 import type { Branch } from '../services/branchService'
 
 import { ProductsPage } from '../components/inventory/ProductsPage'
+import type { SortConfig } from '../components/inventory/ProductsPage'
 import { EditProductModal } from '../components/inventory/EditProductModal'
 import { StockTransferModal } from '../components/inventory/StockTransferModal'
 import { AddCategoryModal } from '../components/inventory/AddCategoryModal'
@@ -35,37 +36,71 @@ export function ProductInventoryPage() {
     const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null)
     const [isTransferOpen, setIsTransferOpen] = useState(false)
 
-    useEffect(() => {
-        const loadData = async () => {
-            setIsLoading(true)
-            try {
-                const [prodRes, catRes, branchRes] = await Promise.all([
-                    getProducts(),
-                    getCategories(),
-                    getBranches()
-                ])
+    // Product Pagination & Sorting States
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
+    const pageSize = 10
 
-                if (prodRes.success) setProducts(prodRes.data.items)
-                if (catRes.success) setCategories(catRes.data)
-                if (branchRes.success) setBranches(branchRes.data)
-            } catch (error) {
-                toast.error('Gagal memuat data inventaris')
-            } finally {
-                setIsLoading(false)
+    const loadData = useCallback(async () => {
+        console.log('DEBUG: loadData dipanggil!');
+        setIsLoading(true)
+        try {
+            const params = {
+                page: currentPage,
+                limit: pageSize,
+                search: searchQuery || undefined,
+                sort: sortConfig ? `${sortConfig.key}:${sortConfig.direction}` : undefined
             }
+
+            const [prodRes, catRes, branchRes] = await Promise.all([
+                getProducts(params),
+                getCategories(),
+                getBranches()
+            ])
+
+            console.log('DEBUG: Promise.all selesai', { catResData: catRes.data, isArray: Array.isArray(catRes.data) });
+
+            if (prodRes.success) {
+                setProducts(prodRes.data.items)
+                setTotalPages(Math.ceil(prodRes.data.meta.total / prodRes.data.meta.limit) || 1)
+            }
+            if (catRes.success) {
+                setCategories(catRes.data)
+                toast.info(`DEBUG LOAD: ${catRes.data.length} kategori`)
+            } else {
+                toast.error(`DEBUG: Gagal load kategori dari server`)
+            }
+            if (branchRes.success) setBranches(branchRes.data)
+        } catch (error) {
+            toast.error('Gagal memuat data inventaris')
+        } finally {
+            setIsLoading(false)
         }
+    }, [currentPage, searchQuery, sortConfig])
+
+    useEffect(() => {
         loadData()
-    }, [])
+    }, [loadData])
+
+    const handleSortChange = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc'
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc'
+        }
+        setSortConfig({ key, direction })
+    }
 
     /* --- Category Handlers --- */
     const filteredCategories = categories.filter((cat) =>
-        cat.label.toLowerCase().includes(searchCategory.toLowerCase())
+        cat.name.toLowerCase().includes(searchCategory.toLowerCase())
     )
 
     const handleAddCategory = (newCat: { name: string; description: string }) => {
         const cat: Category = {
             id: `cat-${Date.now()}`,
-            label: newCat.name,
+            name: newCat.name,
             description: newCat.description
         }
         // Save to state and mock localstorage
@@ -75,7 +110,7 @@ export function ProductInventoryPage() {
         toast.success('Kategori berhasil ditambahkan')
     }
 
-    const handleEditCategory = (id: string, updates: { label: string; description?: string }) => {
+    const handleEditCategory = (id: string, updates: { name: string; description?: string }) => {
         const updatedCats = categories.map(c => c.id === id ? { ...c, ...updates } : c)
         setCategories(updatedCats)
         localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
@@ -100,8 +135,8 @@ export function ProductInventoryPage() {
             // It's a new product
             const res = await addProduct(updates as any)
             if (res.success && res.data) {
-                setProducts([...products, res.data])
                 toast.success('Produk berhasil ditambahkan')
+                loadData()
             } else {
                 toast.error('Gagal menambahkan produk')
             }
@@ -109,8 +144,8 @@ export function ProductInventoryPage() {
             // It's an update
             const res = await updateProduct(id, updates)
             if (res.success && res.data) {
-                setProducts(products.map(p => p.id === id ? res.data! : p))
                 toast.success('Produk berhasil diperbarui')
+                loadData()
             } else {
                 toast.error('Gagal memperbarui produk')
             }
@@ -131,17 +166,30 @@ export function ProductInventoryPage() {
         if (!confirm(`Yakin ingin menghapus ${prod.name}?`)) return
         const res = await deleteProduct(prod.id)
         if (res.success) {
-            setProducts(products.filter(p => p.id !== prod.id))
             toast.success('Produk berhasil dihapus')
+            loadData()
         } else {
             toast.error('Gagal menghapus produk')
         }
     }
 
-    const handleImportProducts = async (newProducts: Omit<ProductItem, 'id'>[]) => {
-        const res = await importProducts(newProducts)
-        if (res.success && res.data) {
-            setProducts([...products, ...res.data])
+    const handleImportProducts = async (file: File) => {
+        const response = await importProductsFile(file)
+        if (response.success) {
+            toast.success(response.message || 'Produk berhasil diimport')
+            loadData()
+        } else {
+            toast.error(response.message || 'Gagal mengimport produk')
+        }
+    }
+
+    const handleExportProducts = async () => {
+        const toastId = toast.loading('Sedang mengunduh file export...')
+        const response = await exportProductsFile()
+        if (response.success) {
+            toast.success('Berhasil mengekspor produk', { id: toastId })
+        } else {
+            toast.error(response.message || 'Gagal mengekspor data produk', { id: toastId })
         }
     }
 
@@ -175,6 +223,8 @@ export function ProductInventoryPage() {
         )
     }
 
+    console.log('DEBUG RENDER:', { categories, filteredCategories, searchCategory });
+
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
             {/* Header / Tabs Container */}
@@ -191,8 +241,8 @@ export function ProductInventoryPage() {
                         <button
                             onClick={() => setActiveTab('product-category')}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'product-category'
-                                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
                                 }`}
                         >
                             <Package className="w-4 h-4" />
@@ -201,8 +251,8 @@ export function ProductInventoryPage() {
                         <button
                             onClick={() => setActiveTab('produk-barang')}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'produk-barang'
-                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]'
+                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
                                 }`}
                         >
                             <Box className="w-4 h-4" />
@@ -266,7 +316,7 @@ export function ProductInventoryPage() {
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-3 mb-2">
                                                             <h3 className="text-lg font-medium text-gray-200">
-                                                                {category.label}
+                                                                {category.name}
                                                             </h3>
                                                         </div>
                                                         <p className="text-sm text-gray-500 line-clamp-2">
@@ -283,7 +333,7 @@ export function ProductInventoryPage() {
                                                         </button>
                                                         <button
                                                             onClick={() => {
-                                                                if (confirm(`Hapus kategori ${category.label}?`)) handleDeleteCategory(category.id)
+                                                                if (confirm(`Hapus kategori ${category.name}?`)) handleDeleteCategory(category.id)
                                                             }}
                                                             className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
                                                             title="Hapus"
@@ -315,8 +365,16 @@ export function ProductInventoryPage() {
                                 onEditProduct={startEditProduct}
                                 onDeleteProduct={handleDeleteProduct}
                                 onImportProducts={handleImportProducts}
+                                onExportProducts={handleExportProducts}
                                 onOpenTransfer={() => setIsTransferOpen(true)}
                                 onOpenAdd={startAddProduct}
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                sortConfig={sortConfig}
+                                onSortChange={handleSortChange}
+                                searchQuery={searchQuery}
+                                onSearchChange={setSearchQuery}
                             />
                         </motion.div>
                     )}

@@ -88,10 +88,17 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
 - **Deskripsi**: API untuk mengambil daftar produk (sparepart) dengan dukungan pagination dan filter pencarian.
 - **Request Header**: `Authorization: Bearer <token>`
 - **Request Query**: 
+  - `store_id` (opsional)
   - `page=1`
   - `limit=10`
   - `search=lcd` (opsional)
-  - `kategori_id=uuid` (opsional)
+  - `sort=name:asc` (opsional)
+  - `sort=price:asc` (opsional)
+  - `sort=stock:asc` (opsional)
+  - `sort=created_at:desc` (default sort)
+  - `sort=is_active:asc` (opsional)
+  - `sort=kategori_name:asc` (opsional)
+  - `sort=sku:asc` (opsional)
 - **Request Body**: Tidak ada
 - **Response 200 (Success)**:
   ```json
@@ -101,18 +108,22 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
       "items": [
         {
           "id": "uuid",
-          "kategori_produk_id": "uuid-kategori",
+          "kategori_name": "LCD",
           "name": "LCD iPhone X",
           "sku": "IPX-LCD-01",
+          "image_url": "https://example.com/image.jpg",
           "price": 500000,
-          "cost_price": 350000,
-          "stok": 10
+          "stok": 10,
+          "is_active": true
         }
       ],
-      "meta": {
+      "pagination": {
         "page": 1,
         "limit": 10,
-        "total": 50
+        "total": 50,
+        "total_pages": 5,
+        "has_next": true,
+        "has_prev": false
       }
     }
   }
@@ -173,6 +184,133 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
       "message": "Product deleted successfully"
     }
   }
+
+### 2.5 Service (Layanan) & Service Categories (Kategori Layanan)
+> *Catatan: Struktur dan pola respons mengikuti modul Produk. Endpoint layanan mengelola data layanan yang dapat memiliki relasi ke produk melalui tabel produk_layanan.*
+
+### 2.5 Get All Service Categories
+- **URL Route**: `GET /master/layanan/categories`
+- **Deskripsi**: Mengambil daftar kategori layanan. Mengembalikan daftar penuh (tanpa pagination) untuk keperluan dropdown di UI.
+- **Request Header**: `Authorization: Bearer <token>`
+- **Request Query**:
+  - `search` (opsional)
+  - `sort=name:asc` (opsional)
+- **Request Body**: Tidak ada
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        { "id": "uuid", "name": "Hardware", "description": "Service kategori hardware", "is_active": true }
+      ]
+    }
+  }
+  ```
+
+### 2.6 Get All Services
+- **URL Route**: `GET /master/layanan`
+- **Deskripsi**: Mengambil daftar layanan dengan dukungan pagination, pencarian, dan sorting.
+- **Request Header**: `Authorization: Bearer <token>`
+- **Request Query**:
+  - `store_id` (opsional)
+  - `page=1`
+  - `limit=10`
+  - `search=pasang` (opsional)
+  - `sort=name:asc` (opsional)
+  - `sort=price:asc` (opsional)
+  - `sort=created_at:desc` (default sort)
+  - `sort=is_active:asc` (opsional)
+  - `sort=kategori_name:asc` (opsional)
+- **Request Body**: Tidak ada
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": "uuid",
+          "kategori_name": "Hardware",
+          "name": "Pasang LCD",
+          "price": 250000,
+          "cost_price": 100000,
+          "biaya_overhead": 10000,
+          "is_active": true
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "limit": 10,
+        "total": 25,
+        "total_pages": 3,
+        "has_next": true,
+        "has_prev": false
+      }
+    }
+  }
+  ```
+
+### 2.7 Create Service
+- **URL Route**: `POST /master/layanan`
+- **Deskripsi**: Menambahkan layanan baru. Layanan dapat dikaitkan dengan produk melalui relasi produk_layanan (opsional).
+- **Request Header**: `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Request Body**:
+  ```json
+  {
+    "kategori_layanan_id": "uuid",
+    "name": "Pasang LCD",
+    "price": 250000,
+    "cost_price": 100000,
+    "biaya_overhead": 10000,
+    "description": "Jasa pemasangan LCD",
+    "is_active": true,
+    "products": [
+      { "sku": "IPX-LCD-01" },
+      { "sku": "IP11-BAT-01" }
+    ]
+  }
+  ```
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "name": "Pasang LCD"
+    }
+  }
+  ```
+- **Response 400 (Validation Error)**:
+  ```json
+  {
+    "success": false,
+    "message": "Validation error",
+    "errors": [
+      { "field": "name", "message": "Name is required" }
+    ]
+  }
+  ```
+
+### 2.8 Update Service
+- **URL Route**: `PUT /master/layanan/:id`
+- **Deskripsi**: Mengubah data layanan yang sudah ada. Body sama seperti Create Service.
+- **Request Param**: `id` (UUID layanan)
+- **Response 200 (Success)**: Sama pola respons sukses.
+
+### 2.9 Delete Service (Soft Delete)
+- **URL Route**: `DELETE /master/layanan/:id`
+- **Deskripsi**: Melakukan soft delete pada layanan.
+- **Request Param**: `id` (UUID layanan)
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": { "message": "Service deleted successfully" }
+  }
+  ```
+
+(Catatan: Export/Import untuk layanan tersedia di `/master/layanan/export` dan `/master/layanan/import`, menggunakan pola dan header yang sama seperti Produk Import/Export.)
   ```
 
 ---
@@ -195,8 +333,9 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
 
 ### 3.2 Import Produk
 - **URL Route**: `POST /master/products/import`
-- **Deskripsi**: API untuk mengunggah dan memproses file Excel berisi data produk (Bulk Insert menggunakan DB Transaction).
+- **Deskripsi**: API untuk mengunggah dan memproses file Excel berisi data produk dan layanan (Bulk Insert menggunakan DB Transaction).
 - **Request Header**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+- **Request Query**: `store_id` (opsional)
 - **Request Body**: Param form data dengan key `file` (File Excel .xlsx)
 - **Response 200 (Success)**:
   ```json
@@ -204,7 +343,10 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     "success": true,
     "data": {
       "message": "Products imported successfully",
-      "total_inserted": 150
+      "total_inserted": 150,
+      "total_updated": 0,
+      "total_deleted": 0,
+      "total_skipped": 0
     }
   }
   ```

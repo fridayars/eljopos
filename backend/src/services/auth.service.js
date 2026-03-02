@@ -2,8 +2,8 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { Op } = require('sequelize')
 const db = require('../models')
-const AppError = require('../utils/AppError')
-const logger = require('../utils/logger')
+const AppError = require('../utils/app.error')
+const logger = require('../utils/logger.util')
 
 const { User, Role, AksesRole, Store, LogSession } = db
 

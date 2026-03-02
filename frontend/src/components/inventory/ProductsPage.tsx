@@ -1,17 +1,28 @@
-import { useState } from 'react'
-import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2 } from 'lucide-react'
+import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX } from 'lucide-react'
 import { motion } from 'motion/react'
-import * as XLSX from 'xlsx'
-import { toast } from 'sonner'
 import type { ProductItem } from '../../services/productService'
+
+export interface SortConfig {
+    key: string;
+    direction: 'asc' | 'desc';
+}
 
 interface ProductsPageProps {
     products: ProductItem[]
     onEditProduct: (product: ProductItem) => void
     onDeleteProduct: (product: ProductItem) => void
-    onImportProducts: (products: Omit<ProductItem, 'id'>[]) => void
+    onImportProducts: (file: File) => void
+    onExportProducts: () => void
     onOpenTransfer: () => void
     onOpenAdd: () => void
+    // Pagination & Sorting props
+    currentPage: number
+    totalPages: number
+    onPageChange: (page: number) => void
+    sortConfig: SortConfig | null
+    onSortChange: (key: string) => void
+    searchQuery: string
+    onSearchChange: (query: string) => void
 }
 
 export function ProductsPage({
@@ -19,87 +30,34 @@ export function ProductsPage({
     onEditProduct,
     onDeleteProduct,
     onImportProducts,
+    onExportProducts,
     onOpenTransfer,
     onOpenAdd,
+    currentPage,
+    totalPages,
+    onPageChange,
+    sortConfig,
+    onSortChange,
+    searchQuery,
+    onSearchChange
 }: ProductsPageProps) {
-    const [searchQuery, setSearchQuery] = useState('')
-
-    // Filter products
-    const filteredProducts = products.filter(
-        (product) =>
-            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.sku.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-
-    const handleExport = () => {
-        const exportData = products.map((product) => ({
-            SKU: product.sku,
-            Name: product.name,
-            Category: product.category_name,
-            Type: product.item_type,
-            'Cost Price': product.cost_price,
-            'Sale Price': product.price,
-            Stock: product.item_type === 'product' ? product.stok : '-',
-            'Image URL': product.image,
-        }))
-
-        const worksheet = XLSX.utils.json_to_sheet(exportData)
-        const workbook = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Products')
-
-        try {
-            XLSX.writeFile(workbook, `products_export_${new Date().toISOString().split('T')[0]}.xlsx`)
-            toast.success('Berhasil mengekspor produk')
-        } catch (error) {
-            console.error('Export error', error)
-            toast.error('Gagal mengekspor data produk')
-        }
-    }
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-
-        const reader = new FileReader()
-        reader.onload = (event) => {
-            try {
-                const data = event.target?.result
-                const workbook = XLSX.read(data, { type: 'binary' })
-                const sheetName = workbook.SheetNames[0]
-                const worksheet = workbook.Sheets[sheetName]
-                const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-                const importedProducts: Omit<ProductItem, 'id'>[] = jsonData.map((row: any) => ({
-                    kategori_produk_id: 'imported', // dummy for mock
-                    sku: row.SKU || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                    name: row.Name || 'Unnamed Product',
-                    category_name: row.Category || 'Unknown',
-                    item_type: (row.Type && String(row.Type).toLowerCase() === 'layanan') ? 'layanan' : 'product',
-                    cost_price: Number(row['Cost Price']) || 0,
-                    price: Number(row['Sale Price']) || 0,
-                    stok: Number(row.Stock) || 0,
-                    image: row['Image URL'] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop',
-                }))
-
-                onImportProducts(importedProducts)
-                toast.success(`${importedProducts.length} produk berhasil diimport`)
-            } catch (error) {
-                console.error('Import error:', error)
-                toast.error('Gagal mengimport produk. Periksa format file Excel.')
-            }
-        }
-
-        reader.readAsBinaryString(file)
+        onImportProducts(file)
         e.target.value = '' // Reset input
     }
 
-    // Stats
-    const physicalProducts = products.filter((p) => p.item_type === 'product')
-    const totalPhysical = physicalProducts.length
-    const totalServices = products.length - totalPhysical
-    const totalStock = physicalProducts.reduce((sum, p) => sum + p.stok, 0)
-    const lowStockCount = physicalProducts.filter((p) => p.stok < 10).length
-    const totalValue = physicalProducts.reduce((sum, p) => sum + p.price * p.stok, 0)
+    // Helper to render sort icon
+    const renderSortIcon = (columnKey: string) => {
+        if (sortConfig?.key !== columnKey) {
+            return <span className="ml-1 opacity-20 text-[10px]">▼</span>
+        }
+        return sortConfig.direction === 'asc'
+            ? <span className="ml-1 text-blue-400 text-[10px]">▲</span>
+            : <span className="ml-1 text-blue-400 text-[10px]">▼</span>
+    }
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
@@ -108,7 +66,7 @@ export function ProductsPage({
                     {/* Header & Actions */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h2 className="text-xl md:text-2xl text-gray-200">Daftar Produk & Layanan</h2>
+                            <h2 className="text-xl md:text-2xl text-gray-200">Daftar Produk</h2>
                             <p className="text-sm text-gray-500 mt-1">Kelola data item yang ditawarkan</p>
                         </div>
 
@@ -120,7 +78,7 @@ export function ProductsPage({
                             </label>
 
                             <button
-                                onClick={handleExport}
+                                onClick={onExportProducts}
                                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer"
                             >
                                 <Download className="w-4 h-4" />
@@ -145,30 +103,6 @@ export function ProductsPage({
                         </div>
                     </div>
 
-                    {/* Stats Layout */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-                            <p className="text-sm text-gray-400 mb-1">Total Produk Fisik</p>
-                            <p className="text-2xl text-gray-200">{totalPhysical}</p>
-                            <p className="text-xs text-gray-500 mt-1">Total {totalStock} item stok</p>
-                        </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-                            <p className="text-sm text-gray-400 mb-1">Total Layanan</p>
-                            <p className="text-2xl text-cyan-400">{totalServices}</p>
-                            <p className="text-xs text-gray-500 mt-1">Non-fisik (jasa, dll)</p>
-                        </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-                            <p className="text-sm text-gray-400 mb-1">Stok Menipis</p>
-                            <p className="text-2xl text-red-400">{lowStockCount}</p>
-                            <p className="text-xs text-gray-500 mt-1">Di bawah 10 unit</p>
-                        </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-                            <p className="text-sm text-gray-400 mb-1">Total Valuasi Stok</p>
-                            <p className="text-2xl text-green-400">Rp {totalValue.toLocaleString('id-ID')}</p>
-                            <p className="text-xs text-gray-500 mt-1">Estimasi berds. harga jual</p>
-                        </div>
-                    </div>
-
                     {/* Search Bar */}
                     <div className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -176,26 +110,47 @@ export function ProductsPage({
                             type="text"
                             placeholder="Cari berdasarkan nama atau kode SKU..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => onSearchChange(e.target.value)}
                             className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl pl-12 pr-4 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
                         />
                     </div>
 
                     {/* Products Table */}
-                    <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl overflow-hidden">
-                        <div className="overflow-x-auto min-h-[300px]">
+                    <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl overflow-hidden flex flex-col min-h-[400px]">
+                        <div className="overflow-x-auto flex-1">
                             <table className="w-full text-left whitespace-nowrap">
                                 <thead className="bg-white/5 border-b border-purple-500/20">
                                     <tr>
                                         <th className="px-4 py-4 text-sm font-medium text-gray-400 w-16">Foto</th>
-                                        <th className="px-4 py-4 text-sm font-medium text-gray-400">SKU</th>
-                                        <th className="px-4 py-4 text-sm font-medium text-gray-400">Nama Item</th>
-                                        <th className="px-4 py-4 text-sm font-medium text-gray-400">Tipe / Kategori</th>
-                                        <th className="px-4 py-4 text-sm font-medium text-gray-400 text-right">
-                                            Harga Jual
+                                        <th
+                                            className="px-4 py-4 text-sm font-medium text-gray-400 cursor-pointer hover:text-blue-400 transition-colors select-none"
+                                            onClick={() => onSortChange('sku')}
+                                        >
+                                            SKU {renderSortIcon('sku')}
                                         </th>
-                                        <th className="px-4 py-4 text-sm font-medium text-gray-400 text-right w-24">
-                                            Stok
+                                        <th
+                                            className="px-4 py-4 text-sm font-medium text-gray-400 cursor-pointer hover:text-blue-400 transition-colors select-none"
+                                            onClick={() => onSortChange('name')}
+                                        >
+                                            Nama Item {renderSortIcon('name')}
+                                        </th>
+                                        <th
+                                            className="px-4 py-4 text-sm font-medium text-gray-400 cursor-pointer hover:text-blue-400 transition-colors select-none"
+                                            onClick={() => onSortChange('kategori_name')}
+                                        >
+                                            Kategori {renderSortIcon('kategori_name')}
+                                        </th>
+                                        <th
+                                            className="px-4 py-4 text-sm font-medium text-gray-400 text-right cursor-pointer hover:text-blue-400 transition-colors select-none"
+                                            onClick={() => onSortChange('price')}
+                                        >
+                                            Harga Jual {renderSortIcon('price')}
+                                        </th>
+                                        <th
+                                            className="px-4 py-4 text-sm font-medium text-gray-400 text-right w-24 cursor-pointer hover:text-blue-400 transition-colors select-none"
+                                            onClick={() => onSortChange('stock')}
+                                        >
+                                            Stok {renderSortIcon('stock')}
                                         </th>
                                         <th className="px-4 py-4 text-sm font-medium text-gray-400 text-center w-24">
                                             Aksi
@@ -203,17 +158,18 @@ export function ProductsPage({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-purple-500/10">
-                                    {filteredProducts.length === 0 ? (
+                                    {products.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-12 text-center">
+                                            <td colSpan={7} className="px-4 py-20 text-center">
                                                 <div className="flex flex-col items-center justify-center text-gray-500">
-                                                    <Search className="w-10 h-10 mb-3 opacity-20" />
+                                                    <FileX className="w-12 h-12 mb-3 opacity-20" />
                                                     <p>Tidak ada produk ditemukan</p>
+                                                    <p className="text-sm mt-1">Coba sesuaikan filter pencarian atau tambah data baru.</p>
                                                 </div>
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredProducts.map((product) => (
+                                        products.map((product) => (
                                             <motion.tr
                                                 key={product.id}
                                                 initial={{ opacity: 0 }}
@@ -223,7 +179,7 @@ export function ProductsPage({
                                                 <td className="px-4 py-3">
                                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
                                                         <img
-                                                            src={product.image}
+                                                            src={product.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=100&h=100&fit=crop'}
                                                             alt={product.name}
                                                             className="w-full h-full object-cover"
                                                             onError={(e) => {
@@ -240,15 +196,7 @@ export function ProductsPage({
                                                     {product.name}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm">
-                                                    <span
-                                                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium mr-2 ${product.item_type === 'layanan'
-                                                                ? 'bg-cyan-500/10 text-cyan-400'
-                                                                : 'bg-blue-500/10 text-blue-400'
-                                                            }`}
-                                                    >
-                                                        {product.item_type === 'layanan' ? 'Layanan' : 'Produk'}
-                                                    </span>
-                                                    <span className="text-gray-500">{product.category_name}</span>
+                                                    <span className="text-gray-500">{product.kategori_name}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-200 text-right">
                                                     Rp {product.price.toLocaleString('id-ID')}
@@ -259,10 +207,10 @@ export function ProductsPage({
                                                     ) : (
                                                         <span
                                                             className={`font-medium ${product.stok < 10
-                                                                    ? 'text-red-400'
-                                                                    : product.stok < 20
-                                                                        ? 'text-orange-400'
-                                                                        : 'text-green-400'
+                                                                ? 'text-red-400'
+                                                                : product.stok < 20
+                                                                    ? 'text-orange-400'
+                                                                    : 'text-green-400'
                                                                 }`}
                                                         >
                                                             {product.stok}
@@ -293,6 +241,56 @@ export function ProductsPage({
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Footer */}
+                        {totalPages > 0 && (
+                            <div className="flex items-center justify-between px-6 py-4 border-t border-purple-500/20 bg-black/20">
+                                <p className="text-sm text-gray-400">
+                                    Halaman <span className="font-medium text-gray-200">{currentPage}</span> dari <span className="font-medium text-gray-200">{totalPages}</span>
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => onPageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-lg border border-purple-500/20 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+                                            // Simple pagination logic focusing around current page
+                                            let pageNum = i + 1;
+                                            if (totalPages > 5 && currentPage > 3) {
+                                                pageNum = currentPage - 2 + i;
+                                                if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => onPageChange(pageNum)}
+                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all ${currentPage === pageNum
+                                                        ? 'bg-blue-500 text-white font-medium shadow-[0_0_10px_rgba(59,130,246,0.3)]'
+                                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                        }`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <button
+                                        onClick={() => onPageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 rounded-lg border border-purple-500/20 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

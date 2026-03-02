@@ -5,8 +5,8 @@ import mockAuthResponse from '../mocks/auth.json'
 // =============================================
 // Mock data flags — set false saat integrasi
 // =============================================
-const USE_MOCK_DATA_GET_STORES = true
-const USE_MOCK_DATA_LOGIN = true
+const USE_MOCK_DATA_GET_STORES = false
+const USE_MOCK_DATA_LOGIN = false
 
 // =============================================
 // Types

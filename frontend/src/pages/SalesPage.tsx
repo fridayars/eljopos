@@ -78,7 +78,7 @@ export function SalesPage() {
 
     // Filter products by category
     const filteredProducts =
-        selectedCategory === 'all' ? products : products.filter((product) => product.category_name === selectedCategory)
+        selectedCategory === 'all' ? products : products.filter((product) => product.kategori_name === selectedCategory)
 
     // Cart Actions
     const handleAddToCart = (product: ProductItem) => {
@@ -95,7 +95,7 @@ export function SalesPage() {
                     price: product.price,
                     quantity: 1,
                     item_type: product.item_type,
-                    kategori_name: product.category_name,
+                    kategori_name: product.kategori_name,
                 },
             ]
         })

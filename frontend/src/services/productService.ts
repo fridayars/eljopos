@@ -1,7 +1,7 @@
 import api from './api'
 import mockData from '../mocks/products.json'
 
-const USE_MOCK_DATA_GET_PRODUCTS = true
+const USE_MOCK_DATA_GET_PRODUCTS = false
 
 export interface ProductItem {
     id: string
@@ -11,14 +11,14 @@ export interface ProductItem {
     price: number
     cost_price: number
     stok: number
-    category_name: string
+    kategori_name: string
     image: string
     item_type: 'product' | 'layanan'
 }
 
 export interface Category {
     id: string
-    label: string
+    name: string
     description?: string
 }
 
@@ -110,7 +110,15 @@ const initMockData = () => {
     }
 }
 
-export const getProducts = async (): Promise<GetProductsResponse> => {
+interface GetProductsParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: string;
+    store_id?: string;
+}
+
+export const getProducts = async (params: GetProductsParams = {}): Promise<GetProductsResponse> => {
     if (USE_MOCK_DATA_GET_PRODUCTS) {
         initMockData()
         return new Promise((resolve) => {
@@ -138,7 +146,18 @@ export const getProducts = async (): Promise<GetProductsResponse> => {
     }
 
     try {
-        const response = await api.get('/master/products')
+        // Create query string manually for simplicity or pass obj directly
+        const searchParams = new URLSearchParams()
+        if (params.page) searchParams.append('page', params.page.toString())
+        if (params.limit) searchParams.append('limit', params.limit.toString())
+        if (params.search) searchParams.append('search', params.search)
+        if (params.sort) searchParams.append('sort', params.sort)
+        if (params.store_id) searchParams.append('store_id', params.store_id)
+
+        const queryStr = searchParams.toString()
+        const url = `/master/products${queryStr ? `?${queryStr}` : ''}`
+
+        const response = await api.get(url)
         return response.data
     } catch (error: any) {
         return {
@@ -169,9 +188,19 @@ export const getCategories = async (): Promise<{ success: boolean; data: Categor
     }
 
     try {
-        const response = await api.get('/master/categories')
-        return response.data
+        const response = await api.get('/master/products/categories')
+
+        // Map backend response matching `items` into the `data` array expected by frontend
+        const items = response.data?.data?.items || []
+        const mappedCategories: Category[] = items.map((cat: any) => ({
+            id: cat.id,
+            name: cat.name,
+            description: cat.description || ''
+        }))
+
+        return { success: true, data: mappedCategories }
     } catch (error: any) {
+        console.error('DEBUG CATCH getCategories:', error.response?.data || error.message);
         return { success: false, data: [] }
     }
 }
@@ -255,31 +284,61 @@ export const deleteProduct = async (id: string): Promise<{ success: boolean }> =
     }
 }
 
-export const importProducts = async (products: Omit<ProductItem, 'id'>[]): Promise<{ success: boolean; data?: ProductItem[] }> => {
-    if (USE_MOCK_DATA_GET_PRODUCTS) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const itemsStr = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY) || '[]'
-                const items: ProductItem[] = JSON.parse(itemsStr)
-
-                const newProducts = products.map((p, index) => ({
-                    ...p,
-                    id: `mock-prod-import-${Date.now()}-${index}`
-                }))
-
-                const updatedItems = [...items, ...newProducts]
-                localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(updatedItems))
-
-                resolve({ success: true, data: newProducts })
-            }, 800)
-        })
-    }
-
+export const importProductsFile = async (file: File): Promise<{ success: boolean, message?: string }> => {
     try {
-        const response = await api.post('/master/products/import', { products })
-        return response.data
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await api.post('/master/products/import', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        })
+
+        if (response.data && response.data.success) {
+            return { success: true, message: response.data.data?.message || 'Produk berhasil diimport' }
+        }
+        return { success: false, message: response.data?.message || 'Gagal import produk' }
     } catch (error: any) {
-        return { success: false }
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Terjadi kesalahan saat mengimport Excel'
+        }
+    }
+}
+
+export const exportProductsFile = async (storeId?: string): Promise<{ success: boolean, message?: string }> => {
+    try {
+        const url = storeId ? `/master/products/export?store_id=${storeId}` : '/master/products/export'
+        const response = await api.get(url, {
+            responseType: 'blob', // Important: tell Axios to handle binary data
+        })
+
+        // Extract filename from content-disposition header if present
+        let filename = 'products_export.xlsx'
+        const contentDisposition = response.headers['content-disposition']
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
+            if (filenameMatch && filenameMatch.length > 1) {
+                filename = filenameMatch[1]
+            }
+        }
+
+        // Create download link and click it
+        const downloadUrl = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+
+        // Cleanup
+        link.parentNode?.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, message: 'Gagal mengekspor file produk' }
     }
 }
 
@@ -288,14 +347,18 @@ export const importProducts = async (products: Omit<ProductItem, 'id'>[]): Promi
 // ============================
 
 export const getServiceCategories = async (): Promise<{ success: boolean; data: ServiceCategory[] }> => {
-    initMockData()
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const itemsStr = localStorage.getItem(LOCAL_STORAGE_SERVICE_CATEGORIES_KEY) || '[]'
-            const items: ServiceCategory[] = JSON.parse(itemsStr)
-            resolve({ success: true, data: items })
-        }, 300)
-    })
+    try {
+        const response = await api.get('/master/products/categories')
+        const items = response.data?.data?.items || []
+        const mapped: ServiceCategory[] = items.map((cat: any) => ({
+            id: cat.id,
+            name: cat.name,
+            description: cat.description || ''
+        }))
+        return { success: true, data: mapped }
+    } catch (error: any) {
+        return { success: false, data: [] }
+    }
 }
 
 export const addServiceCategory = async (category: Omit<ServiceCategory, 'id'>): Promise<{ success: boolean; data?: ServiceCategory }> => {

@@ -22,7 +22,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         layanan_id: DataTypes.UUID,
         product_id: DataTypes.UUID,
-        quantity: DataTypes.INTEGER
+        quantity: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 1
+        }
     }, {
         sequelize,
         modelName: 'ProdukLayanan',

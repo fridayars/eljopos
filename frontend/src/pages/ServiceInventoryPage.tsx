@@ -97,10 +97,10 @@ export function ServiceInventoryPage() {
         setIsCategoryModalOpen(true);
     };
 
-    const handleSaveCategory = async (id: string, updates: { label: string; description?: string }) => {
+    const handleSaveCategory = async (id: string, updates: { name: string; description?: string }) => {
         try {
             if (id) {
-                const res = await updateServiceCategory(id, { name: updates.label, description: updates.description || '' });
+                const res = await updateServiceCategory(id, { name: updates.name, description: updates.description || '' });
                 if (res.success && res.data) {
                     setCategories(categories.map((c) => (c.id === id ? res.data! : c)));
                     toast.success('Kategori layanan berhasil diperbarui');
@@ -108,7 +108,7 @@ export function ServiceInventoryPage() {
                     toast.error(res.data?.name ? 'Gagal memperbarui kategori' : 'Kategori tidak ditemukan');
                 }
             } else {
-                const res = await addServiceCategory({ name: updates.label, description: updates.description || '' });
+                const res = await addServiceCategory({ name: updates.name, description: updates.description || '' });
                 if (res.success && res.data) {
                     setCategories([...categories, res.data]);
                     toast.success('Kategori layanan berhasil ditambahkan');
@@ -319,7 +319,7 @@ export function ServiceInventoryPage() {
             <EditCategoryModal
                 isOpen={isCategoryModalOpen}
                 onClose={() => setIsCategoryModalOpen(false)}
-                category={selectedCategory ? { id: selectedCategory.id, label: selectedCategory.name, description: selectedCategory.description } : null}
+                category={selectedCategory ? { id: selectedCategory.id, name: selectedCategory.name, description: selectedCategory.description } : null}
                 onSave={handleSaveCategory}
                 modalTitle={selectedCategory ? "Edit Kategori Layanan" : "Tambah Kategori Layanan"}
             />

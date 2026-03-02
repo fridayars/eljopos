@@ -75,5 +75,27 @@ Membatalkan seluruh data yang dimasukkan via seeder:
   npx sequelize-cli db:seed:undo:all
 
 
+---------------------------------------------------------
+10. JALANKAN SEEDER SPESIFIK FILE SAJA
+---------------------------------------------------------
+Perintah ini akan menjalankan file seeder tertentu saja yang ada di folder `src/db/seeders`.
+
+  npx sequelize-cli db:seed --seed <nama_file_seeder>
+
+Contoh:
+  npx sequelize-cli db:seed --seed 20260301093000-product-layanan-seed.js
+
+
+---------------------------------------------------------
+11. UNDO SEEDER SPESIFIK FILE SAJA
+---------------------------------------------------------
+Perintah ini akan membatalkan/rollback file seeder tertentu saja yang ada di folder `src/db/seeders`.
+
+  npx sequelize-cli db:seed:undo --seed <nama_file_seeder>
+
+Contoh:
+  npx sequelize-cli db:seed:undo --seed 20260301093000-product-layanan-seed.js
+
+
 =========================================================
 Catatan: Pastikan database PostgreSQL sudah menyala dan tabel database sudah terbuat sesuai dengan kredensial di file `.env` sebelum menjalankan perintah di atas.

@@ -13,7 +13,8 @@ router.get('/health', (req, res) => {
 })
 
 // Register routes here
-router.use('/auth', require('./authRoutes'))
-router.use('/master/products', require('./productRoutes'))
+router.use('/auth', require('./auth.route'))
+router.use('/master/products', require('./product.route'))
+router.use('/master/stores', require('./store.route'))
 
 module.exports = router
