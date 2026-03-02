@@ -1,8 +1,11 @@
-import { Bell, ChevronDown, Store, LogOut, User } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Bell, ChevronDown, Store as StoreIcon, LogOut, User, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { logout as logoutApi, getStores } from '../services/authService'
+import type { Store } from '../services/authService'
 
 interface TopBarProps {
     onLogout: () => void
+    onStoreChange?: (storeId: string, storeName: string) => void
 }
 
 interface StoredUser {
@@ -12,17 +15,25 @@ interface StoredUser {
     store_id: string
 }
 
-export function TopBar({ onLogout }: TopBarProps) {
+export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
+    const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false)
     const [user, setUser] = useState<StoredUser | null>(null)
     const [storeName, setStoreName] = useState<string>('')
+    const [stores, setStores] = useState<Store[]>([])
+    const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+    const storeDropdownRef = useRef<HTMLDivElement>(null)
+
+    const isAdmin = user?.role === 'Administrator'
 
     useEffect(() => {
         // Load user from localStorage
         const userRaw = localStorage.getItem('user')
         if (userRaw) {
             try {
-                setUser(JSON.parse(userRaw))
+                const parsed = JSON.parse(userRaw)
+                setUser(parsed)
             } catch {
                 // ignore
             }
@@ -33,16 +44,68 @@ export function TopBar({ onLogout }: TopBarProps) {
         if (storeNameRaw) setStoreName(storeNameRaw)
     }, [])
 
+    // Fetch store list for administrator
+    useEffect(() => {
+        if (!isAdmin) return
+        const fetchStores = async () => {
+            try {
+                const res = await getStores()
+                if (res.success && res.data) {
+                    setStores(res.data)
+                }
+            } catch {
+                // ignore — admin just won't see the dropdown
+            }
+        }
+        fetchStores()
+    }, [isAdmin])
+
+    // Close store dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (storeDropdownRef.current && !storeDropdownRef.current.contains(e.target as Node)) {
+                setIsStoreDropdownOpen(false)
+            }
+        }
+        if (isStoreDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [isStoreDropdownOpen])
+
     const initials = user?.username
         ? user.username.slice(0, 2).toUpperCase()
         : 'AU'
 
-    const handleLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        localStorage.removeItem('store_name')
-        setIsUserDropdownOpen(false)
-        onLogout()
+    const handleLogout = async () => {
+        setIsLoggingOut(true)
+        try {
+            await logoutApi()
+        } finally {
+            setIsLoggingOut(false)
+            setIsUserDropdownOpen(false)
+            onLogout()
+        }
+    }
+
+    const handleStoreSwitch = (store: Store) => {
+        if (store.id === user?.store_id) {
+            setIsStoreDropdownOpen(false)
+            return
+        }
+
+        // Update localStorage
+        const updatedUser = { ...user!, store_id: store.id }
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+        localStorage.setItem('store_name', store.name)
+
+        setStoreName(store.name)
+        setUser(updatedUser)
+        setIsStoreDropdownOpen(false)
+
+        if (onStoreChange) {
+            onStoreChange(store.id, store.name)
+        }
     }
 
     return (
@@ -110,28 +173,103 @@ export function TopBar({ onLogout }: TopBarProps) {
                     />
                 </button>
 
-                {/* Store info */}
+                {/* Store info — Admin: dropdown, Others: static */}
                 {storeName && (
-                    <div
-                        className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl"
-                        style={{
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(139, 92, 246, 0.2)',
-                        }}
-                    >
-                        <div
-                            className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    <div className="hidden md:block relative" ref={storeDropdownRef}>
+                        <button
+                            onClick={() => { if (isAdmin && stores.length > 1) setIsStoreDropdownOpen(!isStoreDropdownOpen) }}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 ${isAdmin && stores.length > 1 ? 'cursor-pointer' : 'cursor-default'}`}
                             style={{
-                                background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.25))',
-                                border: '1px solid rgba(139,92,246,0.3)',
+                                background: isStoreDropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
+                                border: isStoreDropdownOpen
+                                    ? '1px solid rgba(139, 92, 246, 0.4)'
+                                    : '1px solid rgba(139, 92, 246, 0.2)',
                             }}
                         >
-                            <Store className="w-4 h-4" style={{ color: '#A78BFA' }} />
-                        </div>
-                        <div className="text-left max-w-[140px]">
-                            <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>Store</p>
-                            <p className="text-xs font-medium truncate" style={{ color: 'var(--foreground)' }}>{storeName}</p>
-                        </div>
+                            <div
+                                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.25))',
+                                    border: '1px solid rgba(139,92,246,0.3)',
+                                }}
+                            >
+                                <StoreIcon className="w-4 h-4" style={{ color: '#A78BFA' }} />
+                            </div>
+                            <div className="text-left max-w-[140px]">
+                                <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>Store</p>
+                                <p className="text-xs font-medium truncate" style={{ color: 'var(--foreground)' }}>{storeName}</p>
+                            </div>
+                            {isAdmin && stores.length > 1 && (
+                                <ChevronDown
+                                    className="w-3.5 h-3.5 transition-transform duration-200"
+                                    style={{
+                                        color: 'var(--muted-foreground)',
+                                        transform: isStoreDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    }}
+                                />
+                            )}
+                        </button>
+
+                        {/* Store dropdown */}
+                        {isStoreDropdownOpen && isAdmin && (
+                            <div
+                                className="absolute top-full right-0 mt-2 w-56 rounded-xl overflow-hidden z-50"
+                                style={{
+                                    background: 'rgba(18, 18, 24, 0.97)',
+                                    backdropFilter: 'blur(20px)',
+                                    WebkitBackdropFilter: 'blur(20px)',
+                                    border: '1px solid rgba(139, 92, 246, 0.25)',
+                                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139,92,246,0.1)',
+                                    animation: 'fadeInDown 0.15s ease-out',
+                                }}
+                            >
+                                <div
+                                    className="px-4 py-2.5"
+                                    style={{ borderBottom: '1px solid rgba(139, 92, 246, 0.15)' }}
+                                >
+                                    <p className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                                        Pilih Store
+                                    </p>
+                                </div>
+                                <div className="p-1.5 max-h-48 overflow-y-auto">
+                                    {stores.map((store) => {
+                                        const isActive = store.id === user?.store_id
+                                        return (
+                                            <button
+                                                key={store.id}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 cursor-pointer text-left"
+                                                style={{
+                                                    color: isActive ? '#A78BFA' : 'var(--muted-foreground)',
+                                                    background: isActive ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isActive) {
+                                                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                                        e.currentTarget.style.color = 'var(--foreground)'
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isActive) {
+                                                        e.currentTarget.style.background = 'transparent'
+                                                        e.currentTarget.style.color = 'var(--muted-foreground)'
+                                                    }
+                                                }}
+                                                onClick={() => handleStoreSwitch(store)}
+                                            >
+                                                <StoreIcon className="w-4 h-4 shrink-0" />
+                                                <span className="text-sm truncate">{store.name}</span>
+                                                {isActive && (
+                                                    <span
+                                                        className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
+                                                        style={{ background: '#A78BFA', boxShadow: '0 0 6px rgba(167, 139, 250, 0.6)' }}
+                                                    />
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -245,6 +383,7 @@ export function TopBar({ onLogout }: TopBarProps) {
                                         id="logout-btn"
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 cursor-pointer text-left"
                                         style={{ color: '#EF4444' }}
+                                        disabled={isLoggingOut}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
                                         }}
@@ -253,8 +392,14 @@ export function TopBar({ onLogout }: TopBarProps) {
                                         }}
                                         onClick={handleLogout}
                                     >
-                                        <LogOut className="w-4 h-4 shrink-0" />
-                                        <span className="text-sm font-medium">Keluar</span>
+                                        {isLoggingOut ? (
+                                            <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                                        ) : (
+                                            <LogOut className="w-4 h-4 shrink-0" />
+                                        )}
+                                        <span className="text-sm font-medium">
+                                            {isLoggingOut ? 'Keluar...' : 'Keluar'}
+                                        </span>
                                     </button>
                                 </div>
                             </div>

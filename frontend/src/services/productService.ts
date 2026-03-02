@@ -44,10 +44,13 @@ export interface GetProductsResponse {
     success: boolean
     data: {
         items: ProductItem[]
-        meta: {
+        pagination: {
             page: number
             limit: number
             total: number
+            total_pages: number
+            has_next: boolean
+            has_prev: boolean
         }
     }
     message?: string
@@ -57,6 +60,22 @@ const LOCAL_STORAGE_PRODUCTS_KEY = 'mock_products_data'
 const LOCAL_STORAGE_CATEGORIES_KEY = 'mock_categories_data'
 const LOCAL_STORAGE_SERVICE_CATEGORIES_KEY = 'mock_service_categories_data'
 const LOCAL_STORAGE_SERVICE_PRODUCTS_KEY = 'mock_service_products_data'
+
+/**
+ * Get the current store_id from localStorage (reflects admin store switching)
+ */
+const getCurrentStoreId = (): string | undefined => {
+    try {
+        const userRaw = localStorage.getItem('user')
+        if (userRaw) {
+            const user = JSON.parse(userRaw)
+            return user.store_id || undefined
+        }
+    } catch {
+        // ignore
+    }
+    return undefined
+}
 
 // Mock service categories
 const initialServiceCategories: ServiceCategory[] = [
@@ -134,10 +153,13 @@ export const getProducts = async (params: GetProductsParams = {}): Promise<GetPr
                     success: true,
                     data: {
                         items,
-                        meta: {
+                        pagination: {
                             page: 1,
                             limit: 100,
                             total: items.length,
+                            total_pages: 1,
+                            has_next: false,
+                            has_prev: false,
                         },
                     },
                 })
@@ -146,13 +168,14 @@ export const getProducts = async (params: GetProductsParams = {}): Promise<GetPr
     }
 
     try {
-        // Create query string manually for simplicity or pass obj directly
+        const storeId = params.store_id || getCurrentStoreId()
+
         const searchParams = new URLSearchParams()
         if (params.page) searchParams.append('page', params.page.toString())
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.search) searchParams.append('search', params.search)
         if (params.sort) searchParams.append('sort', params.sort)
-        if (params.store_id) searchParams.append('store_id', params.store_id)
+        if (storeId) searchParams.append('store_id', storeId)
 
         const queryStr = searchParams.toString()
         const url = `/master/products${queryStr ? `?${queryStr}` : ''}`
@@ -162,7 +185,7 @@ export const getProducts = async (params: GetProductsParams = {}): Promise<GetPr
     } catch (error: any) {
         return {
             success: false,
-            data: { items: [], meta: { page: 1, limit: 10, total: 0 } },
+            data: { items: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0, has_next: false, has_prev: false } },
             message: error.response?.data?.message || 'Gagal memuat produk',
         }
     }
@@ -289,7 +312,10 @@ export const importProductsFile = async (file: File): Promise<{ success: boolean
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await api.post('/master/products/import', formData, {
+        const storeId = getCurrentStoreId()
+        const url = storeId ? `/master/products/import?store_id=${storeId}` : '/master/products/import'
+
+        const response = await api.post(url, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -309,13 +335,15 @@ export const importProductsFile = async (file: File): Promise<{ success: boolean
 
 export const exportProductsFile = async (storeId?: string): Promise<{ success: boolean, message?: string }> => {
     try {
-        const url = storeId ? `/master/products/export?store_id=${storeId}` : '/master/products/export'
+        const effectiveStoreId = storeId || getCurrentStoreId()
+        const url = effectiveStoreId ? `/master/products/export?store_id=${effectiveStoreId}` : '/master/products/export'
         const response = await api.get(url, {
             responseType: 'blob', // Important: tell Axios to handle binary data
         })
 
         // Extract filename from content-disposition header if present
-        let filename = 'products_export.xlsx'
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        let filename = `product_${timestamp}.xlsx`
         const contentDisposition = response.headers['content-disposition']
         if (contentDisposition) {
             const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
