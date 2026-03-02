@@ -217,11 +217,8 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
   - `page=1`
   - `limit=10`
   - `search=pasang` (opsional)
-  - `sort=name:asc` (opsional)
-  - `sort=price:asc` (opsional)
+  - `kategori_layanan_id` (opsional)
   - `sort=created_at:desc` (default sort)
-  - `sort=is_active:asc` (opsional)
-  - `sort=kategori_name:asc` (opsional)
 - **Request Body**: Tidak ada
 - **Response 200 (Success)**:
   ```json
@@ -235,7 +232,8 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
           "name": "Pasang LCD",
           "price": 250000,
           "cost_price": 100000,
-          "biaya_overhead": 10000,
+          "description": "Jasa pemasangan LCD",
+          "count_product": 2,
           "is_active": true
         }
       ],

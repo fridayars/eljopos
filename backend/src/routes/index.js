@@ -16,5 +16,6 @@ router.get('/health', (req, res) => {
 router.use('/auth', require('./auth.route'))
 router.use('/master/products', require('./product.route'))
 router.use('/master/stores', require('./store.route'))
+router.use('/master/layanan', require('./layanan.route'))
 
 module.exports = router
