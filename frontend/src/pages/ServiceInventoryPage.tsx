@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Package, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
 
 import {
     getServiceCategories,
@@ -13,6 +12,7 @@ import {
     updateServiceProduct,
     deleteServiceProduct,
     importServiceProducts,
+    exportServiceProducts,
     getProducts,
 } from '../services/productService';
 import type {
@@ -43,7 +43,11 @@ export function ServiceInventoryPage() {
     const [searchCategory, setSearchCategory] = useState('');
     const [searchService, setSearchService] = useState('');
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
-    const [productSearchQuery, setProductSearchQuery] = useState('');
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageSize] = useState(10);
 
     // Modals visibility
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -57,7 +61,7 @@ export function ServiceInventoryPage() {
         name: '',
         detailService: '',
         sku: '',
-        linkedItems: [],
+        count_product: 0,
         capitalPrice: 0,
         price: 0,
         categoryId: '',
@@ -67,22 +71,42 @@ export function ServiceInventoryPage() {
 
     // Initial load
     useEffect(() => {
-        fetchData();
+        fetchInitialData();
     }, []);
 
-    const fetchData = async () => {
+    useEffect(() => {
+        fetchServices();
+    }, [currentPage, searchService, selectedCategoryFilter]);
+
+    const fetchInitialData = async () => {
         try {
-            const [catsRes, servRes, prodRes] = await Promise.all([
+            const [catsRes, prodRes] = await Promise.all([
                 getServiceCategories(),
-                getServiceProducts(),
                 getProducts(),
             ]);
 
             if (catsRes.success) setCategories(catsRes.data);
-            if (servRes.success) setServices(servRes.data);
             if (prodRes.success) setProducts(prodRes.data.items);
         } catch (error) {
-            toast.error('Gagal memuat data inventaris layanan');
+            toast.error('Gagal memuat data awal');
+        }
+    };
+
+    const fetchServices = async () => {
+        try {
+            const servRes = await getServiceProducts({
+                page: currentPage,
+                limit: pageSize,
+                search: searchService,
+                kategori_layanan_id: selectedCategoryFilter === 'all' ? undefined : selectedCategoryFilter,
+            });
+
+            if (servRes.success) {
+                setServices(servRes.data.items);
+                setTotalPages(servRes.data.pagination.total_pages);
+            }
+        } catch (error) {
+            toast.error('Gagal memuat data layanan');
         }
     };
 
@@ -105,7 +129,7 @@ export function ServiceInventoryPage() {
                     setCategories(categories.map((c) => (c.id === id ? res.data! : c)));
                     toast.success('Kategori layanan berhasil diperbarui');
                 } else {
-                    toast.error(res.data?.name ? 'Gagal memperbarui kategori' : 'Kategori tidak ditemukan');
+                    toast.error('Gagal memperbarui kategori');
                 }
             } else {
                 const res = await addServiceCategory({ name: updates.name, description: updates.description || '' });
@@ -140,19 +164,17 @@ export function ServiceInventoryPage() {
             name: '',
             detailService: '',
             sku: '',
-            linkedItems: [],
+            count_product: 0,
             capitalPrice: 0,
             price: 0,
             categoryId: categories[0]?.id || '',
             categoryName: categories[0]?.name || '',
         });
-        setProductSearchQuery('');
         setIsEditServiceModalOpen(true);
     };
 
     const handleOpenEditService = (service: ServiceProduct) => {
         setSelectedService({ ...service });
-        setProductSearchQuery('');
         setIsEditServiceModalOpen(true);
     };
 
@@ -195,55 +217,36 @@ export function ServiceInventoryPage() {
     };
 
     // --- File Import / Export ---
-    const handleExportServices = () => {
-        const exportData = services.map(s => ({
-            ...s,
-            linkedItems: JSON.stringify(s.linkedItems)
-        }));
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Service Products');
-        XLSX.writeFile(workbook, 'service_products.xlsx');
-        toast.success('Data layanan berhasil diekspor');
+    const handleExportServices = async () => {
+        try {
+            const res = await exportServiceProducts();
+            if (res.success) {
+                toast.success('Data layanan berhasil diekspor');
+            } else {
+                toast.error(res.message || 'Gagal mengekspor data layanan');
+            }
+        } catch {
+            toast.error('Terjadi kesalahan saat mengekspor data layanan');
+        }
     };
 
     const handleImportServices = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json<any>(worksheet);
-
-                const parsedServices: Omit<ServiceProduct, 'id'>[] = json.map((row) => ({
-                    name: row.name || 'Unknown',
-                    detailService: row.detailService || '',
-                    sku: row.sku || '',
-                    linkedItems: row.linkedItems ? JSON.parse(row.linkedItems) : [],
-                    capitalPrice: Number(row.capitalPrice) || 0,
-                    price: Number(row.price) || 0,
-                    categoryId: row.categoryId || categories[0]?.id || '',
-                    categoryName: row.categoryName || categories[0]?.name || '',
-                }));
-
-                const res = await importServiceProducts(parsedServices);
-                if (res.success && res.data) {
-                    setServices([...services, ...res.data]);
-                    toast.success(`${res.data.length} layanan berhasil diimpor`);
-                } else {
-                    toast.error('Gagal mengimpor layanan');
-                }
-            } catch (error) {
-                toast.error('Format file excel tidak valid');
+        try {
+            const res = await importServiceProducts(file);
+            if (res.success) {
+                toast.success(res.message || 'Layanan berhasil diimpor');
+                fetchServices(); // Refresh list
+            } else {
+                toast.error(res.message || 'Gagal mengimpor layanan');
             }
-        };
-        reader.readAsArrayBuffer(file);
-        event.target.value = ''; // Reset input
+        } catch (error) {
+            toast.error('Terjadi kesalahan saat mengimpor layanan');
+        } finally {
+            event.target.value = ''; // Reset input
+        }
     };
 
     return (
@@ -299,9 +302,15 @@ export function ServiceInventoryPage() {
                         services={services}
                         categories={categories}
                         searchQuery={searchService}
-                        onSearchChange={setSearchService}
+                        onSearchChange={(val) => {
+                            setSearchService(val);
+                            setCurrentPage(1);
+                        }}
                         selectedCategoryId={selectedCategoryFilter}
-                        onCategoryChange={setSelectedCategoryFilter}
+                        onCategoryChange={(val) => {
+                            setSelectedCategoryFilter(val);
+                            setCurrentPage(1);
+                        }}
                         onAdd={handleOpenAddService}
                         onEdit={handleOpenEditService}
                         onDelete={handleDeleteService}
@@ -311,6 +320,9 @@ export function ServiceInventoryPage() {
                         }}
                         onExport={handleExportServices}
                         onImport={handleImportServices}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
                     />
                 )}
             </div>
@@ -332,8 +344,6 @@ export function ServiceInventoryPage() {
                 products={products}
                 onChange={setSelectedService}
                 onSave={handleSaveService}
-                productSearchQuery={productSearchQuery}
-                onProductSearchChange={setProductSearchQuery}
             />
 
             {serviceToView && (

@@ -24,7 +24,7 @@ const exportProducts = async (req, res, next) => {
         const buffer = await productService.exportProducts(storeId);
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `products_${storeName}_${timestamp}.xlsx`;
+        const filename = `product_${storeName}_${timestamp}.xlsx`;
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

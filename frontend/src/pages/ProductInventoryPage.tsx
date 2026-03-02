@@ -64,7 +64,7 @@ export function ProductInventoryPage() {
 
             if (prodRes.success) {
                 setProducts(prodRes.data.items)
-                setTotalPages(Math.ceil(prodRes.data.meta.total / prodRes.data.meta.limit) || 1)
+                setTotalPages(prodRes.data.pagination?.total_pages || 1)
             }
             if (catRes.success) {
                 setCategories(catRes.data)

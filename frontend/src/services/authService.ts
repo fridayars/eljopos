@@ -95,3 +95,21 @@ export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
   const response = await api.post('/auth/login', payload)
   return response.data
 }
+
+/**
+ * Logout user — invalidate session on backend, then clear local state
+ */
+export const logout = async (): Promise<{ success: boolean }> => {
+  try {
+    await api.post('/auth/logout')
+  } catch (error) {
+    // Ignore API errors — still clear local state
+    console.warn('Logout API call failed, clearing local state anyway')
+  }
+
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('store_name')
+
+  return { success: true }
+}

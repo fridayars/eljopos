@@ -63,6 +63,11 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
         }
     }
 
+    const handleStoreChange = (_storeId: string, _storeName: string) => {
+        // Reload the page so all data-fetching components pick up the new store
+        window.location.reload()
+    }
+
     return (
         <div
             className="h-screen flex overflow-hidden"
@@ -81,7 +86,7 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
             <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
             <div className="flex-1 flex flex-col overflow-hidden relative">
-                <TopBar onLogout={onLogout} />
+                <TopBar onLogout={onLogout} onStoreChange={handleStoreChange} />
                 <main className="flex-1 flex overflow-hidden">
                     {renderContent()}
                 </main>

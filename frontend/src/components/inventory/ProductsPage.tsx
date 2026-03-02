@@ -1,4 +1,4 @@
-import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX } from 'lucide-react'
+import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX, Wrench } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { ProductItem } from '../../services/productService'
 
@@ -178,15 +178,27 @@ export function ProductsPage({
                                             >
                                                 <td className="px-4 py-3">
                                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
-                                                        <img
-                                                            src={product.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=100&h=100&fit=crop'}
-                                                            alt={product.name}
-                                                            className="w-full h-full object-cover"
-                                                            onError={(e) => {
-                                                                e.currentTarget.src =
-                                                                    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=100&h=100&fit=crop'
-                                                            }}
-                                                        />
+                                                        {product.image ? (
+                                                            <img
+                                                                src={product.image}
+                                                                alt={product.name}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.currentTarget.style.display = 'none'
+                                                                    const parent = e.currentTarget.parentElement
+                                                                    if (parent) {
+                                                                        const icon = document.createElement('div')
+                                                                        icon.className = "w-full h-full flex items-center justify-center bg-purple-500/5"
+                                                                        icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wrench text-purple-500/40"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`
+                                                                        parent.appendChild(icon)
+                                                                    }
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-purple-500/5">
+                                                                <Wrench className="w-5 h-5 text-purple-500/40" />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-400 font-mono">
