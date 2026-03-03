@@ -3,7 +3,8 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface, Sequelize) {
-        if (await queryInterface.checkTableExists('transaksi_payments')) {
+        const tables = await queryInterface.showAllTables();
+        if (tables.includes('transaksi_payments')) {
             return;
         }
         // 1. Buat tabel transaksi_payments untuk split payment
@@ -53,7 +54,8 @@ module.exports = {
     },
 
     async down(queryInterface, Sequelize) {
-        if (await queryInterface.checkTableExists('transaksi_payments')) {
+        const tables = await queryInterface.showAllTables();
+        if (!tables.includes('transaksi_payments')) {
             return;
         }
         // 1. Tambahkan kembali kolom payment_method ke tabel transaksi

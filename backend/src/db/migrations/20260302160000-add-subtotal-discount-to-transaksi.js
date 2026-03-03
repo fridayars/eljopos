@@ -3,7 +3,8 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface, Sequelize) {
-        if (await queryInterface.checkColumnExists('transaksi', 'subtotal')) {
+        const tableDescription = await queryInterface.describeTable('transaksi');
+        if (tableDescription.subtotal) {
             return;
         }
         await queryInterface.addColumn('transaksi', 'subtotal', {
@@ -26,13 +27,14 @@ module.exports = {
     },
 
     async down(queryInterface, Sequelize) {
-        if (await queryInterface.checkColumnExists('transaksi', 'subtotal')) {
+        const tableDescription = await queryInterface.describeTable('transaksi');
+        if (tableDescription.subtotal) {
             await queryInterface.removeColumn('transaksi', 'subtotal');
         }
-        if (await queryInterface.checkColumnExists('transaksi', 'discount_type')) {
+        if (tableDescription.discount_type) {
             await queryInterface.removeColumn('transaksi', 'discount_type');
         }
-        if (await queryInterface.checkColumnExists('transaksi', 'discount')) {
+        if (tableDescription.discount) {
             await queryInterface.removeColumn('transaksi', 'discount');
         }
 
