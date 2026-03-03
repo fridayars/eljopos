@@ -6,7 +6,24 @@ const authMiddleware = require('../middlewares/auth.middleware');
 // GET /api/master/layanan/categories
 router.get('/categories', authMiddleware, layananController.getServiceCategories);
 
+// POST /api/master/layanan/categories
+router.post('/categories', authMiddleware, layananController.createServiceCategory);
 // GET /api/master/layanan
 router.get('/', authMiddleware, layananController.getAllServices);
+
+// POST /api/master/layanan
+router.post('/', authMiddleware, layananController.createService);
+
+// GET /api/master/layanan/:id
+router.get('/:id', authMiddleware, layananController.getServiceById);
+
+// PUT /api/master/layanan/:id
+router.put('/:id', authMiddleware, layananController.updateService);
+
+// PUT /api/master/layanan/:id/status
+router.put('/:id/status', authMiddleware, layananController.updateServiceStatus);
+
+// DELETE /api/master/layanan/:id
+router.delete('/:id', authMiddleware, layananController.deleteService);
 
 module.exports = router;

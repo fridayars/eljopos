@@ -98,8 +98,7 @@ export function SalesPage() {
                 if (response.success) {
                     const mappedServices: ProductItem[] = response.data.items.map(s => ({
                         id: s.id,
-                        name: s.name,
-                        sku: s.sku,
+                        name: s.name, sku: "",
                         price: s.price,
                         cost_price: s.capitalPrice,
                         stok: s.count_product,

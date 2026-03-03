@@ -7,14 +7,14 @@ import {
     getServiceCategories,
     getServiceProducts,
     addServiceCategory,
-    updateServiceCategory,
-    deleteServiceCategory,
+    deleteServiceProduct,
     addServiceProduct,
     updateServiceProduct,
-    deleteServiceProduct,
     importServiceProducts,
     exportServiceProducts,
     getProducts,
+    updateServiceStatus,
+    getServiceDetail,
 } from '../services/productService';
 import type {
     ServiceCategory,
@@ -26,6 +26,7 @@ import { ServiceCategoriesList } from '../components/inventory/ServiceCategories
 import { ServicesTable } from '../components/inventory/ServicesTable';
 import { EditServiceModal } from '../components/inventory/EditServiceModal';
 import { ServiceDetailModal } from '../components/inventory/ServiceDetailModal';
+import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmationModal';
 
 // Reusing EditCategoryModal from Product Inventory
 import { EditCategoryModal } from '../components/inventory/EditCategoryModal';
@@ -54,6 +55,7 @@ export function ServiceInventoryPage() {
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
     const [isServiceDetailModalOpen, setIsServiceDetailModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // Selected editable data
     const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
@@ -61,14 +63,16 @@ export function ServiceInventoryPage() {
         id: '',
         name: '',
         detailService: '',
-        sku: '',
         count_product: 0,
         capitalPrice: 0,
+        biaya_overhead: 0,
         price: 0,
         categoryId: '',
         categoryName: '',
+        linkedProducts: [],
     });
     const [serviceToView, setServiceToView] = useState<ServiceProduct | null>(null);
+    const [serviceToDelete, setServiceToDelete] = useState<{ id: string; name: string } | null>(null);
 
     // Initial load
     useEffect(() => {
@@ -88,7 +92,7 @@ export function ServiceInventoryPage() {
 
             if (catsRes.success) setCategories(catsRes.data);
             if (prodRes.success) setProducts(prodRes.data.items);
-        } catch (error) {
+        } catch {
             toast.error('Gagal memuat data awal');
         }
     };
@@ -106,7 +110,7 @@ export function ServiceInventoryPage() {
                 setServices(servRes.data.items);
                 setTotalPages(servRes.data.pagination.total_pages);
             }
-        } catch (error) {
+        } catch {
             toast.error('Gagal memuat data layanan');
         }
     };
@@ -125,13 +129,8 @@ export function ServiceInventoryPage() {
     const handleSaveCategory = async (id: string, updates: { name: string; description?: string }) => {
         try {
             if (id) {
-                const res = await updateServiceCategory(id, { name: updates.name, description: updates.description || '' });
-                if (res.success && res.data) {
-                    setCategories(categories.map((c) => (c.id === id ? res.data! : c)));
-                    toast.success('Kategori layanan berhasil diperbarui');
-                } else {
-                    toast.error('Gagal memperbarui kategori');
-                }
+                // TODO: backend update not implemented yet
+                toast.error('Update kategori belum tersedia');
             } else {
                 const res = await addServiceCategory({ name: updates.name, description: updates.description || '' });
                 if (res.success && res.data) {
@@ -146,16 +145,8 @@ export function ServiceInventoryPage() {
         }
     };
 
-    const handleDeleteCategory = async (id: string) => {
-        if (window.confirm('Apakah Anda yakin ingin menghapus kategori layanan ini?')) {
-            const res = await deleteServiceCategory(id);
-            if (res.success) {
-                setCategories(categories.filter((c) => c.id !== id));
-                toast.success('Kategori layanan dihapus');
-            } else {
-                toast.error('Gagal menghapus kategori layanan');
-            }
-        }
+    const handleDeleteCategory = async () => {
+        toast.error('Hapus kategori belum tersedia');
     };
 
     // --- Service Actions ---
@@ -164,39 +155,54 @@ export function ServiceInventoryPage() {
             id: '',
             name: '',
             detailService: '',
-            sku: '',
             count_product: 0,
             capitalPrice: 0,
+            biaya_overhead: 0,
             price: 0,
             categoryId: categories[0]?.id || '',
             categoryName: categories[0]?.name || '',
+            linkedProducts: [],
         });
         setIsEditServiceModalOpen(true);
     };
 
-    const handleOpenEditService = (service: ServiceProduct) => {
-        setSelectedService({ ...service });
+    const handleOpenEditService = async (service: ServiceProduct) => {
+        // Show loading state or at least prevent double clicks here if necessary
+        try {
+            const res = await getServiceDetail(service.id);
+            if (res.success && res.data) {
+                setSelectedService(res.data);
+            } else {
+                setSelectedService({ ...service, linkedProducts: [] });
+            }
+        } catch {
+            setSelectedService({ ...service, linkedProducts: [] });
+        }
         setIsEditServiceModalOpen(true);
     };
 
     const handleSaveService = async () => {
-        if (!selectedService.name || !selectedService.sku || !selectedService.categoryId) {
-            toast.error('Mohon lengkapi kolom wajib (Nama Layanan, SKU, Kategori)');
+        if (!selectedService.name) {
+            toast.error('Mohon lengkapi nama layanan');
             return;
         }
 
         try {
             if (selectedService.id) {
                 const res = await updateServiceProduct(selectedService.id, selectedService);
-                if (res.success && res.data) {
-                    setServices(services.map((s) => (s.id === selectedService.id ? res.data! : s)));
+                if (res.success) {
                     toast.success('Layanan berhasil diperbarui');
+                    fetchServices();
+                } else {
+                    toast.error('Gagal memperbarui layanan');
                 }
             } else {
                 const res = await addServiceProduct(selectedService);
-                if (res.success && res.data) {
-                    setServices([...services, res.data]);
+                if (res.success) {
                     toast.success('Layanan berhasil ditambahkan');
+                    fetchServices();
+                } else {
+                    toast.error('Gagal menambahkan layanan');
                 }
             }
             setIsEditServiceModalOpen(false);
@@ -205,16 +211,55 @@ export function ServiceInventoryPage() {
         }
     };
 
-    const handleDeleteService = async (id: string) => {
-        if (window.confirm('Apakah Anda yakin ingin menghapus layanan ini?')) {
-            const res = await deleteServiceProduct(id);
+    const handleRequestDelete = (id: string) => {
+        const svc = services.find(s => s.id === id);
+        setServiceToDelete({ id, name: svc?.name || 'Layanan ini' });
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!serviceToDelete) return;
+        try {
+            const res = await deleteServiceProduct(serviceToDelete.id);
             if (res.success) {
-                setServices(services.filter((s) => s.id !== id));
-                toast.success('Layanan dihapus');
+                setServices(services.filter((s) => s.id !== serviceToDelete.id));
+                toast.success('Layanan berhasil dihapus');
             } else {
                 toast.error('Gagal menghapus layanan');
             }
+        } catch {
+            toast.error('Gagal menghapus layanan');
         }
+        setIsDeleteModalOpen(false);
+        setServiceToDelete(null);
+    };
+
+    const handleToggleStatus = async (id: string, newStatus: boolean) => {
+        try {
+            const res = await updateServiceStatus(id, newStatus);
+            if (res.success) {
+                setServices(services.map(s => s.id === id ? { ...s, is_active: newStatus } : s));
+                toast.success(`Layanan ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`);
+            } else {
+                toast.error('Gagal mengubah status');
+            }
+        } catch {
+            toast.error('Gagal mengubah status');
+        }
+    };
+
+    const handleViewDetail = async (service: ServiceProduct) => {
+        try {
+            const res = await getServiceDetail(service.id);
+            if (res.success && res.data) {
+                setServiceToView(res.data);
+            } else {
+                setServiceToView(service);
+            }
+        } catch {
+            setServiceToView(service);
+        }
+        setIsServiceDetailModalOpen(true);
     };
 
     // --- File Import / Export ---
@@ -243,7 +288,7 @@ export function ServiceInventoryPage() {
             } else {
                 toast.error(res.message || 'Gagal mengimpor layanan');
             }
-        } catch (error) {
+        } catch {
             toast.error('Terjadi kesalahan saat mengimpor layanan');
         } finally {
             event.target.value = ''; // Reset input
@@ -336,11 +381,9 @@ export function ServiceInventoryPage() {
                                 }}
                                 onAdd={handleOpenAddService}
                                 onEdit={handleOpenEditService}
-                                onDelete={handleDeleteService}
-                                onDetail={(s) => {
-                                    setServiceToView(s);
-                                    setIsServiceDetailModalOpen(true);
-                                }}
+                                onDelete={handleRequestDelete}
+                                onDetail={handleViewDetail}
+                                onToggleStatus={handleToggleStatus}
                                 onExport={handleExportServices}
                                 onImport={handleImportServices}
                                 currentPage={currentPage}
@@ -382,6 +425,13 @@ export function ServiceInventoryPage() {
                     }}
                 />
             )}
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => { setIsDeleteModalOpen(false); setServiceToDelete(null); }}
+                onConfirm={handleConfirmDelete}
+                itemName={serviceToDelete?.name || ''}
+            />
         </div>
     );
 }

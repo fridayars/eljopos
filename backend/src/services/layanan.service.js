@@ -1,7 +1,7 @@
 const db = require('../models');
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
-const { Layanan, KategoriLayanan, ProdukLayanan } = db;
+const { Layanan, KategoriLayanan, ProdukLayanan, Product, Store } = db;
 
 /**
  * Get all services with pagination, search, filter and sorting
@@ -139,7 +139,283 @@ const getServiceCategoriesList = async (opts = {}) => {
     }
 };
 
+/**
+ * Create a new service category
+ * @param {object} data {name, description}
+ */
+const createServiceCategory = async (data) => {
+    try {
+        const errors = [];
+        if (!data.name) errors.push({ field: 'name', message: 'Name is required' });
+        if (errors.length > 0) throw new AppError('Validation error', 400, errors);
+
+        const category = await KategoriLayanan.create({
+            name: data.name,
+            description: data.description || null,
+            is_active: true
+        });
+
+        return { id: category.id, name: category.name, description: category.description, is_active: category.is_active };
+    } catch (error) {
+        logger.error({ type: 'create_service_category_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to create service category: ' + error.message, 500);
+    }
+};
+
+/**
+ * Helper: link products to a service by SKU array
+ * @param {string} layananId
+ * @param {Array} products - [{sku: 'xxx'}, ...]
+ * @param {string} storeId
+ * @param {object} transaction
+ */
+const linkProductsToService = async (layananId, products, storeId, transaction) => {
+    const warnings = [];
+
+    for (const p of products) {
+        if (!p.sku) continue;
+
+        const prod = await Product.findOne({ where: { sku: p.sku, store_id: storeId }, transaction });
+        if (!prod) {
+            warnings.push(`Product SKU '${p.sku}' not found`);
+            continue;
+        }
+
+        // Check for existing link (including soft-deleted)
+        const existingLink = await ProdukLayanan.findOne({
+            where: { layanan_id: layananId, product_id: prod.id },
+            paranoid: false,
+            transaction
+        });
+
+        if (existingLink) {
+            if (existingLink.deletedAt) {
+                await existingLink.restore({ transaction });
+            }
+            // already linked, skip
+        } else {
+            await ProdukLayanan.create({ layanan_id: layananId, product_id: prod.id }, { transaction });
+        }
+    }
+
+    return warnings;
+};
+
+/**
+ * Create a new service
+ * @param {object} data
+ * @param {string} storeId
+ */
+const createService = async (data, storeId) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const errors = [];
+
+        if (!data.name) errors.push({ field: 'name', message: 'Name is required' });
+        if (!data.price && data.price !== 0) errors.push({ field: 'price', message: 'Price is required' });
+
+        if (errors.length > 0) {
+            throw new AppError('Validation error', 400, errors);
+        }
+
+        const service = await Layanan.create({
+            store_id: storeId,
+            kategori_layanan_id: data.kategori_layanan_id || null,
+            name: data.name,
+            price: data.price,
+            cost_price: data.cost_price || 0,
+            biaya_overhead: data.biaya_overhead || 0,
+            description: data.description || null,
+            is_active: data.is_active !== undefined ? data.is_active : true
+        }, { transaction });
+
+        // Link products by SKU
+        if (data.products && data.products.length > 0) {
+            const warnings = await linkProductsToService(service.id, data.products, storeId, transaction);
+            if (warnings.length > 0) {
+                logger.warn({ type: 'create_service_product_warnings', service_id: service.id, warnings });
+            }
+        }
+
+        await transaction.commit();
+
+        return { id: service.id, name: service.name };
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'create_service_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to create service: ' + error.message, 500);
+    }
+};
+
+/**
+ * Update an existing service
+ * @param {string} id
+ * @param {object} data
+ * @param {string} storeId
+ */
+const updateService = async (id, data, storeId) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const service = await Layanan.findOne({ where: { id, store_id: storeId }, transaction });
+
+        if (!service) {
+            throw new AppError('Service not found', 404);
+        }
+
+        const errors = [];
+        if (!data.name) errors.push({ field: 'name', message: 'Name is required' });
+        if (!data.price && data.price !== 0) errors.push({ field: 'price', message: 'Price is required' });
+
+        if (errors.length > 0) {
+            throw new AppError('Validation error', 400, errors);
+        }
+
+        await service.update({
+            kategori_layanan_id: data.kategori_layanan_id || null,
+            name: data.name,
+            price: data.price,
+            cost_price: data.cost_price || 0,
+            biaya_overhead: data.biaya_overhead || 0,
+            description: data.description || null,
+            is_active: data.is_active !== undefined ? data.is_active : service.is_active
+        }, { transaction });
+
+        // Replace product links: remove existing then re-link from request
+        if (data.products !== undefined) {
+            await ProdukLayanan.destroy({ where: { layanan_id: id }, transaction });
+
+            if (data.products && data.products.length > 0) {
+                const warnings = await linkProductsToService(id, data.products, storeId, transaction);
+                if (warnings.length > 0) {
+                    logger.warn({ type: 'update_service_product_warnings', service_id: id, warnings });
+                }
+            }
+        }
+
+        await transaction.commit();
+
+        return { id: service.id, name: service.name };
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'update_service_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to update service: ' + error.message, 500);
+    }
+};
+
+/**
+ * Soft delete a service
+ * @param {string} id
+ * @param {string} storeId
+ */
+const deleteService = async (id, storeId) => {
+    try {
+        const service = await Layanan.findOne({ where: { id, store_id: storeId } });
+
+        if (!service) {
+            throw new AppError('Service not found', 404);
+        }
+
+        await service.destroy(); // paranoid soft delete
+
+        return { message: 'Service deleted successfully' };
+    } catch (error) {
+        logger.error({ type: 'delete_service_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to delete service: ' + error.message, 500);
+    }
+};
+
+/**
+ * Update service active status
+ * @param {string} id
+ * @param {boolean} isActive
+ * @param {string} storeId
+ */
+const updateServiceStatus = async (id, isActive, storeId) => {
+    try {
+        const service = await Layanan.findOne({ where: { id, store_id: storeId } });
+
+        if (!service) {
+            throw new AppError('Service not found', 404);
+        }
+
+        await service.update({ is_active: isActive });
+
+        return { message: `Service ${isActive ? 'activated' : 'deactivated'} successfully` };
+    } catch (error) {
+        logger.error({ type: 'update_service_status_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to update service status: ' + error.message, 500);
+    }
+};
+
+/**
+ * Get service detail by ID
+ * @param {string} id
+ * @param {string} storeId
+ */
+const getServiceById = async (id, storeId) => {
+    try {
+        const service = await Layanan.findOne({
+            where: { id, store_id: storeId },
+            include: [
+                { model: Store, as: 'store', attributes: ['name'] },
+                { model: KategoriLayanan, as: 'kategori', attributes: ['id', 'name'] },
+                {
+                    model: ProdukLayanan,
+                    as: 'produkLayanan',
+                    include: [
+                        { model: Product, as: 'product', attributes: ['id', 'sku', 'name'] }
+                    ]
+                }
+            ]
+        });
+
+        if (!service) {
+            throw new AppError('Service not found', 404);
+        }
+
+        return {
+            id: service.id,
+            name: service.name,
+            price: Number(service.price),
+            cost_price: Number(service.cost_price),
+            biaya_overhead: service.biaya_overhead || 0,
+            description: service.description || null,
+            store_id: service.store_id,
+            store_name: service.store?.name || '',
+            kategori_layanan_id: service.kategori_layanan_id,
+            kategori_name: service.kategori?.name || '',
+            is_active: service.is_active,
+            created_at: service.created_at,
+            updated_at: service.updated_at,
+            deleted_at: service.deleted_at,
+            produkLayanan: (service.produkLayanan || []).map(pl => {
+                const prod = pl.product || pl;
+                return {
+                    id: prod.id || pl.product_id,
+                    sku: prod.sku || '',
+                    name: prod.name || ''
+                };
+            })
+        };
+    } catch (error) {
+        logger.error({ type: 'get_service_detail_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to fetch service detail: ' + error.message, 500);
+    }
+};
+
 module.exports = {
     getAllServices,
-    getServiceCategoriesList
+    getServiceCategoriesList,
+    createServiceCategory,
+    createService,
+    updateService,
+    deleteService,
+    updateServiceStatus,
+    getServiceById
 };

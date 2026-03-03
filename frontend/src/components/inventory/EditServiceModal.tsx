@@ -1,4 +1,5 @@
-import { X, Save } from 'lucide-react';
+import { useState } from 'react';
+import { X, Save, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ServiceProduct, ServiceCategory, ProductItem } from '../../services/productService';
 
@@ -17,9 +18,13 @@ export function EditServiceModal({
     onClose,
     service,
     categories,
+    products,
     onChange,
     onSave,
 }: EditServiceModalProps) {
+    const [productSearch, setProductSearch] = useState('');
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+
     if (!isOpen) return null;
 
     const handleCategoryChange = (categoryId: string) => {
@@ -28,6 +33,32 @@ export function EditServiceModal({
             ...service,
             categoryId,
             categoryName: category?.name || '',
+        });
+    };
+
+    const filteredProducts = products.filter((p) => {
+        const search = productSearch.toLowerCase();
+        const matchesSearch = !search || p.name.toLowerCase().includes(search) || p.sku.toLowerCase().includes(search);
+        // Don't show products already linked
+        const alreadyLinked = (service.linkedProducts || []).some(lp => lp.sku === p.sku);
+        return matchesSearch && !alreadyLinked;
+    });
+
+    const handleAddProduct = (product: ProductItem) => {
+        const current = service.linkedProducts || [];
+        onChange({
+            ...service,
+            linkedProducts: [...current, { id: product.id, sku: product.sku, name: product.name }],
+        });
+        setProductSearch('');
+        setShowProductDropdown(false);
+    };
+
+    const handleRemoveProduct = (sku: string) => {
+        const current = service.linkedProducts || [];
+        onChange({
+            ...service,
+            linkedProducts: current.filter(p => p.sku !== sku),
         });
     };
 
@@ -81,23 +112,13 @@ export function EditServiceModal({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">SKU / Kode *</label>
-                                    <input
-                                        type="text"
-                                        value={service.sku}
-                                        onChange={(e) => onChange({ ...service, sku: e.target.value })}
-                                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                                        placeholder="SVC-001"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm text-gray-400 mb-2">Kategori Layanan *</label>
+                                    <label className="block text-sm text-gray-400 mb-2">Kategori Layanan</label>
                                     <select
                                         value={service.categoryId}
                                         onChange={(e) => handleCategoryChange(e.target.value)}
                                         className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 focus:outline-none focus:border-blue-500/50"
                                     >
-                                        <option value="" disabled>Pilih kategori...</option>
+                                        <option value="">Pilih kategori...</option>
                                         {categories.map((cat) => (
                                             <option key={cat.id} value={cat.id}>
                                                 {cat.name}
@@ -115,7 +136,7 @@ export function EditServiceModal({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">Harga Modal / Biaya Dasar (Rp) *</label>
+                                    <label className="block text-sm text-gray-400 mb-2">Harga Modal (Rp) *</label>
                                     <input
                                         type="number"
                                         value={service.capitalPrice}
@@ -133,6 +154,104 @@ export function EditServiceModal({
                                         className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
                                         min="0"
                                     />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm text-gray-400 mb-2">Biaya Overhead (Rp)</label>
+                                    <input
+                                        type="number"
+                                        value={service.biaya_overhead}
+                                        onChange={(e) => onChange({ ...service, biaya_overhead: Number(e.target.value) })}
+                                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                                        min="0"
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Linked Products Section */}
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-3">Produk Tertaut</label>
+
+                                {/* Linked product list */}
+                                {(service.linkedProducts || []).length > 0 && (
+                                    <div className="space-y-2 mb-3">
+                                        {(service.linkedProducts || []).map((lp) => (
+                                            <div
+                                                key={lp.sku}
+                                                className="flex items-center justify-between bg-white/5 border border-purple-500/20 rounded-xl px-4 py-3"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                                                        <span className="text-cyan-400 text-xs font-bold">P</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-200">{lp.name}</p>
+                                                        <p className="text-xs text-gray-500">SKU: {lp.sku}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemoveProduct(lp.sku)}
+                                                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/20 transition-all"
+                                                    title="Hapus produk"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Add product dropdown */}
+                                <div className="relative">
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 relative">
+                                            <input
+                                                type="text"
+                                                value={productSearch}
+                                                onChange={(e) => {
+                                                    setProductSearch(e.target.value);
+                                                    setShowProductDropdown(true);
+                                                }}
+                                                onFocus={() => setShowProductDropdown(true)}
+                                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl pl-4 pr-10 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                                                placeholder="Cari produk untuk ditautkan..."
+                                            />
+                                            <Plus className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                                        </div>
+                                    </div>
+
+                                    {/* Dropdown list */}
+                                    {showProductDropdown && (
+                                        <div className="absolute z-10 w-full mt-2 bg-[#1a1a24] border border-purple-500/30 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                                            {filteredProducts.length > 0 ? (
+                                                filteredProducts.slice(0, 10).map((p) => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => handleAddProduct(p)}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-all text-left"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                                                            <span className="text-blue-400 text-xs font-bold">P</span>
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm text-gray-200 truncate">{p.name}</p>
+                                                            <p className="text-xs text-gray-500">SKU: {p.sku}</p>
+                                                        </div>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-3 text-sm text-gray-500">
+                                                    Tidak ada produk ditemukan
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => setShowProductDropdown(false)}
+                                                className="w-full px-4 py-2 text-xs text-gray-500 hover:text-gray-300 border-t border-purple-500/10"
+                                            >
+                                                Tutup
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

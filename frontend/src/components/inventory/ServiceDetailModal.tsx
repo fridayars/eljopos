@@ -17,6 +17,13 @@ export function ServiceDetailModal({
 }: ServiceDetailModalProps) {
     if (!isOpen) return null;
 
+    const formatCurrency = (val: number) =>
+        new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+        }).format(val);
+
     return (
         <AnimatePresence>
             <motion.div
@@ -39,10 +46,10 @@ export function ServiceDetailModal({
                             <h2 className="text-xl md:text-2xl text-gray-200">{service.name}</h2>
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-xs">
-                                    {service.categoryName}
+                                    {service.categoryName || 'Tidak ada kategori'}
                                 </span>
-                                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs">
-                                    {service.sku}
+                                <span className={`px-2 py-1 rounded-lg text-xs ${service.is_active !== false ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-500'}`}>
+                                    {service.is_active !== false ? 'Aktif' : 'Nonaktif'}
                                 </span>
                             </div>
                         </div>
@@ -65,45 +72,56 @@ export function ServiceDetailModal({
                         </div>
 
                         {/* Price Info */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                             <div className="bg-white/5 border border-purple-500/20 rounded-xl p-4">
                                 <p className="text-xs text-gray-500 mb-1">Harga Modal</p>
-                                <p className="text-lg text-gray-300">
-                                    {new Intl.NumberFormat('id-ID', {
-                                        style: 'currency',
-                                        currency: 'IDR',
-                                        minimumFractionDigits: 0,
-                                    }).format(service.capitalPrice)}
-                                </p>
+                                <p className="text-lg text-gray-300">{formatCurrency(service.capitalPrice)}</p>
                             </div>
                             <div className="bg-white/5 border border-purple-500/20 rounded-xl p-4">
                                 <p className="text-xs text-gray-500 mb-1">Harga Jual</p>
-                                <p className="text-lg text-cyan-400">
-                                    {new Intl.NumberFormat('id-ID', {
-                                        style: 'currency',
-                                        currency: 'IDR',
-                                        minimumFractionDigits: 0,
-                                    }).format(service.price)}
-                                </p>
+                                <p className="text-lg text-cyan-400">{formatCurrency(service.price)}</p>
+                            </div>
+                            <div className="bg-white/5 border border-purple-500/20 rounded-xl p-4">
+                                <p className="text-xs text-gray-500 mb-1">Biaya Overhead</p>
+                                <p className="text-lg text-amber-400">{formatCurrency(service.biaya_overhead || 0)}</p>
                             </div>
                         </div>
 
-                        {/* Linked Items Info */}
+                        {/* Linked Products */}
                         <div>
-                            <h3 className="text-sm text-gray-400 mb-2">Produk Tertaut</h3>
-                            <div className="flex items-center gap-3 bg-white/5 border border-purple-500/20 rounded-xl p-4">
-                                <div className="p-2 bg-cyan-500/10 rounded-lg">
-                                    <Package className="w-5 h-5 text-cyan-400" />
+                            <h3 className="text-sm text-gray-400 mb-3">Produk Tertaut</h3>
+                            {service.linkedProducts && service.linkedProducts.length > 0 ? (
+                                <div className="space-y-2">
+                                    {service.linkedProducts.map((lp) => (
+                                        <div
+                                            key={lp.sku || lp.id}
+                                            className="flex items-center gap-3 bg-white/5 border border-purple-500/20 rounded-xl p-4"
+                                        >
+                                            <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                                <Package className="w-5 h-5 text-cyan-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-200 font-medium">{lp.name}</p>
+                                                <p className="text-xs text-gray-500">SKU: {lp.sku}</p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-200 font-medium">
-                                        {service.count_product} Produk Fisik
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                        Barang yang tertaut otomatis saat layanan ini dipilih.
-                                    </p>
+                            ) : (
+                                <div className="flex items-center gap-3 bg-white/5 border border-purple-500/20 rounded-xl p-4">
+                                    <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                        <Package className="w-5 h-5 text-cyan-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-200 font-medium">
+                                            {service.count_product} Produk Fisik
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            Barang yang tertaut otomatis saat layanan ini dipilih.
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 

@@ -257,11 +257,12 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
   ```json
   {
     "kategori_layanan_id": "uuid",
+    "store_id": "uuid",
     "name": "Pasang LCD",
     "price": 250000,
     "cost_price": 100000,
-    "biaya_overhead": 10000,
-    "description": "Jasa pemasangan LCD",
+    "biaya_overhead": 10000, // optional
+    "description": "Jasa pemasangan LCD", // optional
     "is_active": true,
     "products": [
       { "sku": "IPX-LCD-01" },
@@ -305,6 +306,57 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
   {
     "success": true,
     "data": { "message": "Service deleted successfully" }
+  }
+  ```
+
+### 2.10 Update Status Service
+- **URL Route**: `PUT /master/layanan/:id/status`
+- **Deskripsi**: Mengubah status layanan (aktif/tidak aktif).
+- **Request Param**: `id` (UUID layanan)
+- **Request Body**:
+  ```json
+  {
+    "is_active": true
+  }
+  ```
+- **Response 200 (Success)**:
+  ```json
+    "success": true,
+    "data": { "message": "Service deleted successfully" }
+  }
+  ```
+
+### 2.11 Detail Service
+- **URL Route**: `GET /master/layanan/:id`
+- **Deskripsi**: Mengambil detail layanan berdasarkan ID.
+- **Request Param**: `id` (UUID layanan)
+- **Response 200 (Success)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "name": "Pasang LCD",
+      "price": 250000,
+      "cost_price": 100000,
+      "biaya_overhead": 10000,
+      "description": "Jasa pemasangan LCD",
+      "store_id": "uuid",
+      "store_name": "Store 1",
+      "kategori_layanan_id": "uuid",
+      "kategori_name": "Hardware",
+      "is_active": true,
+      "created_at": "2023-01-01T00:00:00.000Z",
+      "updated_at": "2023-01-01T00:00:00.000Z",
+      "deleted_at": null,
+      "produkLayanan": [
+        {
+          "id": "uuid",
+          "sku": "IPX-LCD-01",
+          "name": "LCD 14"
+        }
+      ]
+    }
   }
   ```
 

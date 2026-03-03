@@ -12,6 +12,7 @@ interface ServicesTableProps {
     onEdit: (service: ServiceProduct) => void;
     onDelete: (id: string) => void;
     onDetail: (service: ServiceProduct) => void;
+    onToggleStatus: (id: string, newStatus: boolean) => void;
     onExport: () => void;
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
     currentPage: number;
@@ -30,13 +31,13 @@ export function ServicesTable({
     onEdit,
     onDelete,
     onDetail,
+    onToggleStatus,
     onExport,
     onImport,
     currentPage,
     totalPages,
     onPageChange,
 }: ServicesTableProps) {
-    // Backend handles filtering, so we use services directly
     const displayServices = services;
 
     return (
@@ -69,7 +70,7 @@ export function ServicesTable({
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                             <input
                                 type="text"
-                                placeholder="Cari layanan berdasarkan nama atau SKU..."
+                                placeholder="Cari layanan berdasarkan nama dan deskripsi"
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
@@ -122,10 +123,10 @@ export function ServicesTable({
                                             <h3 className="text-lg text-gray-200">{service.name}</h3>
                                             <div className="flex items-center gap-2">
                                                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-xs">
-                                                    {service.categoryName}
+                                                    {service.categoryName || 'Tidak ada kategori'}
                                                 </span>
-                                                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs">
-                                                    {service.sku}
+                                                <span className={`px-2 py-1 rounded-lg text-xs ${service.is_active !== false ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-500'}`}>
+                                                    {service.is_active !== false ? 'Aktif' : 'Nonaktif'}
                                                 </span>
                                             </div>
                                         </div>
@@ -162,6 +163,19 @@ export function ServicesTable({
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
+                                        {/* Status Toggle Switch */}
+                                        <button
+                                            onClick={() => onToggleStatus(service.id, !service.is_active)}
+                                            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none"
+                                            style={{
+                                                backgroundColor: service.is_active !== false ? 'rgba(16, 185, 129, 0.6)' : 'rgba(107, 114, 128, 0.4)',
+                                            }}
+                                            title={service.is_active !== false ? 'Nonaktifkan' : 'Aktifkan'}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${service.is_active !== false ? 'translate-x-6' : 'translate-x-1'}`}
+                                            />
+                                        </button>
                                         <button
                                             onClick={() => onDetail(service)}
                                             className="px-3 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-all text-sm"

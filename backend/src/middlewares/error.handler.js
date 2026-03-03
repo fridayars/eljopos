@@ -10,10 +10,17 @@ const errorHandler = (err, req, res, next) => {
         method: req.method
     })
 
-    return res.status(statusCode).json({
+    const response = {
         success: false,
         message: statusCode === 500 ? 'Internal Server Error' : err.message
-    })
+    }
+
+    // Include field-level validation errors if present
+    if (err.errors) {
+        response.errors = err.errors
+    }
+
+    return res.status(statusCode).json(response)
 }
 
 module.exports = errorHandler
