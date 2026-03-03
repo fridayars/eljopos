@@ -1,10 +1,4 @@
 import api from './api'
-import mockDashboard from '../mocks/dashboard.json'
-
-// =============================================
-// Mock data flags — set false saat integrasi
-// =============================================
-const USE_MOCK_DATA = true
 
 // =============================================
 // Types
@@ -12,20 +6,22 @@ const USE_MOCK_DATA = true
 export interface DashboardSummary {
     today_sales: number
     total_transactions: number
-    total_customers: number
+    total_new_customers: number
     low_stock_items: number
     sales_change: string
     transactions_change: string
-    customers_change: string
+    new_customers_change: string
     low_stock_change: string
+    notes: string
 }
 
 export interface RecentTransaction {
+    id: string
     invoice_number: string
     created_at: string
-    customer_name: string
+    customer_name: string | null
     total_amount: number
-    payment_method: string
+    payment_method: string[]
     items_count: number
 }
 
@@ -41,6 +37,12 @@ export interface RecentTransactionsResponse {
     message?: string
 }
 
+export interface UpdateNotesResponse {
+    success: boolean
+    data?: { store_id: string; notes: string }
+    message?: string
+}
+
 // =============================================
 // Service Functions
 // =============================================
@@ -48,27 +50,29 @@ export interface RecentTransactionsResponse {
 /**
  * Ambil data ringkasan statistik dashboard hari ini
  */
-export const getDashboardSummary = async (): Promise<DashboardSummaryResponse> => {
-    if (USE_MOCK_DATA) {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ success: true, data: mockDashboard.summary }), 400)
-        })
-    }
-
-    const response = await api.get('/dashboard/summary')
+export const getDashboardSummary = async (storeId?: string): Promise<DashboardSummaryResponse> => {
+    const params: Record<string, string> = {}
+    if (storeId) params.store_id = storeId
+    const response = await api.get('/dashboard/summary', { params })
     return response.data
 }
 
 /**
  * Ambil daftar 5 transaksi terbaru
  */
-export const getRecentTransactions = async (): Promise<RecentTransactionsResponse> => {
-    if (USE_MOCK_DATA) {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ success: true, data: mockDashboard.recent_transactions }), 400)
-        })
-    }
+export const getRecentTransactions = async (storeId?: string): Promise<RecentTransactionsResponse> => {
+    const params: Record<string, string> = {}
+    if (storeId) params.store_id = storeId
+    const response = await api.get('/dashboard/recent-transactions', { params })
+    return response.data
+}
 
-    const response = await api.get('/dashboard/recent-transactions')
+/**
+ * Update catatan toko (notes)
+ */
+export const updateDashboardNotes = async (notes: string, storeId?: string): Promise<UpdateNotesResponse> => {
+    const body: Record<string, string> = { notes }
+    if (storeId) body.store_id = storeId
+    const response = await api.put('/dashboard/notes', body)
     return response.data
 }

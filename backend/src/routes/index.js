@@ -20,5 +20,6 @@ router.use('/master/layanan', require('./layanan.route'))
 router.use('/master/customers', require('./customer.route'))
 router.use('/transaksi', require('./transaksi.route'))
 router.use('/laporan', require('./laporan.route'))
+router.use('/dashboard', require('./dashboard.route'))
 
 module.exports = router

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'motion/react';
 
 import {
     getServiceCategories,
@@ -252,7 +253,7 @@ export function ServiceInventoryPage() {
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
             {/* Header and Tabs */}
-            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
+            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0 bg-[#0F0F14]/50">
                 <div className="flex flex-col gap-4">
                     <div>
                         <h2 className="text-lg md:text-xl text-gray-200">Inventaris Layanan / Jasa</h2>
@@ -261,7 +262,7 @@ export function ServiceInventoryPage() {
                         </p>
                     </div>
 
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
                         <button
                             onClick={() => setActiveTab('service-category')}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'service-category'
@@ -287,44 +288,68 @@ export function ServiceInventoryPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-hidden">
-                {activeTab === 'service-category' ? (
-                    <ServiceCategoriesList
-                        categories={categories}
-                        searchQuery={searchCategory}
-                        onSearchChange={setSearchCategory}
-                        onAdd={handleOpenAddCategory}
-                        onEdit={handleOpenEditCategory}
-                        onDelete={handleDeleteCategory}
-                    />
-                ) : (
-                    <ServicesTable
-                        services={services}
-                        categories={categories}
-                        searchQuery={searchService}
-                        onSearchChange={(val) => {
-                            setSearchService(val);
-                            setCurrentPage(1);
-                        }}
-                        selectedCategoryId={selectedCategoryFilter}
-                        onCategoryChange={(val) => {
-                            setSelectedCategoryFilter(val);
-                            setCurrentPage(1);
-                        }}
-                        onAdd={handleOpenAddService}
-                        onEdit={handleOpenEditService}
-                        onDelete={handleDeleteService}
-                        onDetail={(s) => {
-                            setServiceToView(s);
-                            setIsServiceDetailModalOpen(true);
-                        }}
-                        onExport={handleExportServices}
-                        onImport={handleImportServices}
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                    />
-                )}
+            <div className="flex-1 overflow-hidden relative">
+                <AnimatePresence mode="wait">
+                    {/* --- CATEGORY TAB --- */}
+                    {activeTab === 'service-category' && (
+                        <motion.div
+                            key="category-tab"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute inset-0 flex flex-col"
+                        >
+                            <ServiceCategoriesList
+                                categories={categories}
+                                searchQuery={searchCategory}
+                                onSearchChange={setSearchCategory}
+                                onAdd={handleOpenAddCategory}
+                                onEdit={handleOpenEditCategory}
+                                onDelete={handleDeleteCategory}
+                            />
+                        </motion.div>
+                    )}
+
+                    {/* --- SERVICES TAB --- */}
+                    {activeTab === 'produk-service' && (
+                        <motion.div
+                            key="service-tab"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute inset-0"
+                        >
+                            <ServicesTable
+                                services={services}
+                                categories={categories}
+                                searchQuery={searchService}
+                                onSearchChange={(val) => {
+                                    setSearchService(val);
+                                    setCurrentPage(1);
+                                }}
+                                selectedCategoryId={selectedCategoryFilter}
+                                onCategoryChange={(val) => {
+                                    setSelectedCategoryFilter(val);
+                                    setCurrentPage(1);
+                                }}
+                                onAdd={handleOpenAddService}
+                                onEdit={handleOpenEditService}
+                                onDelete={handleDeleteService}
+                                onDetail={(s) => {
+                                    setServiceToView(s);
+                                    setIsServiceDetailModalOpen(true);
+                                }}
+                                onExport={handleExportServices}
+                                onImport={handleImportServices}
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Modals */}

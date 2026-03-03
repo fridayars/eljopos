@@ -1,4 +1,5 @@
 import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import type { ServiceCategory } from '../../services/productService';
 
 interface ServiceCategoriesListProps {
@@ -34,64 +35,65 @@ export function ServiceCategoriesList({
                             placeholder="Cari kategori layanan..."
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
                         />
                     </div>
                     <button
                         onClick={onAdd}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all cursor-pointer"
                     >
                         <Plus className="w-5 h-5" />
-                        Tambah Kategori Layanan
+                        Tambah Kategori
                     </button>
                 </div>
             </div>
 
-            {/* Category List */}
+            {/* Category Grid */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                <div className="grid gap-4">
-                    {filteredCategories.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {filteredCategories.length === 0 ? (
+                        <div className="col-span-full py-12 text-center text-gray-500">
+                            Tidak ada kategori ditemukan.
+                        </div>
+                    ) : (
                         filteredCategories.map((category) => (
-                            <div
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
                                 key={category.id}
-                                className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all"
+                                className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-5 hover:border-blue-500/40 transition-all group"
                             >
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-lg text-gray-200">{category.name}</h3>
-                                            <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-xs">
-                                                Service
-                                            </span>
+                                            <h3 className="text-lg font-medium text-gray-200">
+                                                {category.name}
+                                            </h3>
                                         </div>
-                                        <p className="text-sm text-gray-500">{category.description}</p>
+                                        <p className="text-sm text-gray-500 line-clamp-2">
+                                            {category.description || 'Tidak ada deskripsi spesifik.'}
+                                        </p>
                                     </div>
-                                    <div className="flex items-center gap-2 ml-4">
+                                    <div className="flex flex-col gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => onEdit(category)}
-                                            className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all"
-                                            title="Edit Kategori"
+                                            className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
+                                            title="Edit"
                                         >
                                             <Edit className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => onDelete(category.id)}
-                                            className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all"
-                                            title="Hapus Kategori"
+                                            className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
+                                            title="Hapus"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))
-                    ) : (
-                        <div className="text-center py-12">
-                            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Search className="w-8 h-8 text-gray-500" />
-                            </div>
-                            <p className="text-gray-400">Tidak ada kategori layanan ditemukan</p>
-                        </div>
                     )}
                 </div>
             </div>

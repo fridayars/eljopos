@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { DollarSign, ShoppingCart, Users, Package, Clock, Edit3, Save, StickyNote, TrendingUp, TrendingDown } from 'lucide-react'
-import { getDashboardSummary, getRecentTransactions } from '../services/dashboardService'
+import { toast } from 'sonner'
+import { getDashboardSummary, getRecentTransactions, updateDashboardNotes } from '../services/dashboardService'
 import type { DashboardSummary, RecentTransaction } from '../services/dashboardService'
 
-function formatRupiah(amount: number): string {
-    return 'Rp ' + amount.toLocaleString('id-ID')
+function formatRupiah(amount: number | string): string {
+    const num = Math.round(Number(amount))
+    return 'Rp ' + num.toLocaleString('id-ID')
 }
 
 function formatTime(iso: string): string {
@@ -17,11 +19,10 @@ export function DashboardPage() {
     const [transactions, setTransactions] = useState<RecentTransaction[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    const [notes, setNotes] = useState(
-        '• Follow up supplier untuk item stok menipis\n• Jadwal rapat staff besok pagi\n• Review harga promosi untuk akhir pekan',
-    )
+    const [notes, setNotes] = useState('')
     const [isEditingNotes, setIsEditingNotes] = useState(false)
-    const [tempNotes, setTempNotes] = useState(notes)
+    const [tempNotes, setTempNotes] = useState('')
+    const [isSavingNotes, setIsSavingNotes] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -31,7 +32,10 @@ export function DashboardPage() {
                     getDashboardSummary(),
                     getRecentTransactions(),
                 ])
-                if (summaryRes.success && summaryRes.data) setSummary(summaryRes.data)
+                if (summaryRes.success && summaryRes.data) {
+                    setSummary(summaryRes.data)
+                    setNotes(summaryRes.data.notes || '')
+                }
                 if (txRes.success && txRes.data) setTransactions(txRes.data)
             } catch {
                 console.error('Gagal memuat data dashboard')
@@ -42,11 +46,29 @@ export function DashboardPage() {
         fetchData()
     }, [])
 
+    const handleSaveNotes = async () => {
+        setIsSavingNotes(true)
+        try {
+            const res = await updateDashboardNotes(tempNotes)
+            if (res.success) {
+                setNotes(tempNotes)
+                setIsEditingNotes(false)
+                toast.success('Catatan berhasil disimpan')
+            } else {
+                toast.error('Gagal menyimpan catatan')
+            }
+        } catch {
+            toast.error('Gagal menyimpan catatan')
+        } finally {
+            setIsSavingNotes(false)
+        }
+    }
+
     const stats = summary
         ? [
             {
                 id: 1,
-                label: 'Penjualan Hari Ini',
+                label: 'Total Pendapatan',
                 value: formatRupiah(summary.today_sales),
                 change: summary.sales_change,
                 trend: summary.sales_change.startsWith('+') ? 'up' : 'down',
@@ -70,10 +92,10 @@ export function DashboardPage() {
             },
             {
                 id: 3,
-                label: 'Pelanggan Hari Ini',
-                value: String(summary.total_customers),
-                change: summary.customers_change,
-                trend: summary.customers_change.startsWith('+') ? 'up' : 'down',
+                label: 'Pelanggan Baru',
+                value: String(summary.total_new_customers),
+                change: summary.new_customers_change,
+                trend: summary.new_customers_change.startsWith('+') ? 'up' : 'down',
                 icon: Users,
                 colorFrom: 'rgba(6,182,212,0.2)',
                 colorTo: 'rgba(6,182,212,0.1)',
@@ -221,11 +243,16 @@ export function DashboardPage() {
                                     />
                                 ))}
                             </div>
+                        ) : transactions.length === 0 ? (
+                            <div className="p-8 text-center" style={{ color: 'var(--muted-foreground)' }}>
+                                <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                                <p className="text-sm">Belum ada transaksi hari ini</p>
+                            </div>
                         ) : (
                             <div>
                                 {transactions.map((tx, idx) => (
                                     <div
-                                        key={tx.invoice_number}
+                                        key={tx.id || tx.invoice_number}
                                         className="px-5 py-4 transition-colors duration-150"
                                         style={{
                                             borderTop: idx > 0 ? '1px solid rgba(139, 92, 246, 0.08)' : 'none',
@@ -239,31 +266,45 @@ export function DashboardPage() {
                                     >
                                         <div className="flex items-center justify-between mb-1">
                                             <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                                                {tx.customer_name}
+                                                {tx.customer_name || 'Walk-in'}
                                             </p>
                                             <p className="text-sm font-semibold" style={{ color: '#60A5FA' }}>
                                                 {formatRupiah(tx.total_amount)}
                                             </p>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {/* Invoice Number */}
                                                 <span
-                                                    className="text-xs px-2 py-0.5 rounded-full"
+                                                    className="text-xs px-2 py-0.5 rounded-full font-mono"
                                                     style={{
-                                                        color: tx.payment_method === 'CASH' ? '#4ADE80' : '#A78BFA',
-                                                        background:
-                                                            tx.payment_method === 'CASH'
-                                                                ? 'rgba(74,222,128,0.1)'
-                                                                : 'rgba(167,139,250,0.1)',
+                                                        color: '#94A3B8',
+                                                        background: 'rgba(148,163,184,0.1)',
                                                     }}
                                                 >
-                                                    {tx.payment_method}
+                                                    {tx.invoice_number}
                                                 </span>
+                                                {/* Payment Methods — max 2 */}
+                                                {tx.payment_method.slice(0, 2).map((method) => (
+                                                    <span
+                                                        key={method}
+                                                        className="text-xs px-2 py-0.5 rounded-full"
+                                                        style={{
+                                                            color: method === 'CASH' ? '#4ADE80' : '#A78BFA',
+                                                            background:
+                                                                method === 'CASH'
+                                                                    ? 'rgba(74,222,128,0.1)'
+                                                                    : 'rgba(167,139,250,0.1)',
+                                                        }}
+                                                    >
+                                                        {method}
+                                                    </span>
+                                                ))}
                                                 <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                                                     {tx.items_count} item
                                                 </span>
                                             </div>
-                                            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                                            <span className="text-xs shrink-0 ml-2" style={{ color: 'var(--muted-foreground)' }}>
                                                 {formatTime(tx.created_at)}
                                             </span>
                                         </div>
@@ -332,6 +373,7 @@ export function DashboardPage() {
                                             background: 'rgba(255,255,255,0.05)',
                                             border: '1px solid rgba(139,92,246,0.2)',
                                             color: 'var(--foreground)',
+                                            whiteSpace: 'pre-wrap',
                                         }}
                                         onFocus={(e) => {
                                             e.currentTarget.style.borderColor = '#3B82F6'
@@ -345,11 +387,9 @@ export function DashboardPage() {
                                     />
                                     <div className="mt-3 flex items-center gap-2">
                                         <button
-                                            onClick={() => {
-                                                setNotes(tempNotes)
-                                                setIsEditingNotes(false)
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white font-medium transition-all duration-150 cursor-pointer"
+                                            onClick={handleSaveNotes}
+                                            disabled={isSavingNotes}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white font-medium transition-all duration-150 cursor-pointer disabled:opacity-50"
                                             style={{
                                                 background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
                                                 boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
@@ -362,11 +402,12 @@ export function DashboardPage() {
                                             }}
                                         >
                                             <Save className="w-3.5 h-3.5" />
-                                            Simpan
+                                            {isSavingNotes ? 'Menyimpan...' : 'Simpan'}
                                         </button>
                                         <button
                                             onClick={() => setIsEditingNotes(false)}
-                                            className="px-4 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer"
+                                            disabled={isSavingNotes}
+                                            className="px-4 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer disabled:opacity-50"
                                             style={{
                                                 color: 'var(--muted-foreground)',
                                                 border: '1px solid rgba(139,92,246,0.25)',
@@ -386,7 +427,7 @@ export function DashboardPage() {
                                 </>
                             ) : (
                                 <div
-                                    className="text-sm whitespace-pre-line leading-relaxed"
+                                    className="text-sm whitespace-pre-wrap leading-relaxed"
                                     style={{
                                         color: 'var(--foreground)',
                                         minHeight: '220px',

@@ -483,7 +483,8 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
 - **URL Route**: `GET /dashboard/summary`
 - **Deskripsi**: API untuk mengambil statistik ringkasan hari ini, digunakan pada halaman Dashboard.
 - **Request Header**: `Authorization: Bearer <token>`
-- **Request Query**: Tidak ada
+- **Request Query**: 
+  - `store_id=uuid-store` (opsional)
 - **Request Body**: Tidak ada
 - **Response 200 (Success)**:
   ```json
@@ -492,12 +493,13 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     "data": {
       "today_sales": 2450000,
       "total_transactions": 48,
-      "total_customers": 32,
+      "total_new_customers": 32,
       "low_stock_items": 7,
-      "sales_change": "+12.5%",
-      "transactions_change": "+8.2%",
-      "customers_change": "+5.1%",
-      "low_stock_change": "-2"
+      "sales_change": "+12.5%", // perbandingan dengan hari sebelumnya
+      "transactions_change": "+8.2%", // perbandingan dengan hari sebelumnya
+      "new_customers_change": "+5.1%", // perbandingan dengan hari sebelumnya
+      "low_stock_change": "-2", // perbandingan dengan hari sebelumnya, stock < 10
+      "notes": ""
     }
   }
   ```
@@ -506,7 +508,8 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
 - **URL Route**: `GET /dashboard/recent-transactions`
 - **Deskripsi**: API untuk mengambil 5 transaksi terbaru untuk ditampilkan di Dashboard.
 - **Request Header**: `Authorization: Bearer <token>`
-- **Request Query**: Tidak ada
+- **Request Query**: 
+  - `store_id=uuid-store` (opsional)
 - **Request Body**: Tidak ada
 - **Response 200 (Success)**:
   ```json
@@ -514,11 +517,12 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     "success": true,
     "data": [
       {
+        "id": "uuid-transaksi",
         "invoice_number": "INV/20260228/048",
         "created_at": "2026-02-28T10:30:00Z",
         "customer_name": "Sarah Williams",
         "total_amount": 750000,
-        "payment_method": "CASH",
+        "payment_method": ["CASH"],
         "items_count": 3
       }
     ]
