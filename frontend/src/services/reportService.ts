@@ -1,6 +1,22 @@
 import api from './api';
 import reportsMock from '../mocks/reports.json';
 
+/**
+ * Get the current store_id from localStorage (reflects admin store switching)
+ */
+const getCurrentStoreId = (): string | undefined => {
+    try {
+        const userRaw = localStorage.getItem('user')
+        if (userRaw) {
+            const user = JSON.parse(userRaw)
+            return user.store_id || undefined
+        }
+    } catch {
+        // ignore
+    }
+    return undefined
+}
+
 // =============================================
 // Types — General Reports (tetap mock)
 // =============================================
@@ -141,7 +157,11 @@ export const getSalesTable = async (period: 'daily' | 'monthly' | 'yearly'): Pro
  */
 export const getTransactionHistory = async (params: TransactionHistoryParams): Promise<TransactionHistoryResponse> => {
     try {
-        const response = await api.get('/laporan/penjualan', { params });
+        const effectiveParams = { ...params }
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId()
+        }
+        const response = await api.get('/laporan/penjualan', { params: effectiveParams });
         return response.data;
     } catch (error: any) {
         return {

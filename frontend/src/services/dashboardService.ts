@@ -1,6 +1,26 @@
 import api from './api'
 
 // =============================================
+// Helpers
+// =============================================
+
+/**
+ * Get the current store_id from localStorage (reflects admin store switching)
+ */
+const getCurrentStoreId = (): string | undefined => {
+    try {
+        const userRaw = localStorage.getItem('user')
+        if (userRaw) {
+            const user = JSON.parse(userRaw)
+            return user.store_id || undefined
+        }
+    } catch {
+        // ignore
+    }
+    return undefined
+}
+
+// =============================================
 // Types
 // =============================================
 export interface DashboardSummary {
@@ -51,8 +71,9 @@ export interface UpdateNotesResponse {
  * Ambil data ringkasan statistik dashboard hari ini
  */
 export const getDashboardSummary = async (storeId?: string): Promise<DashboardSummaryResponse> => {
+    const effectiveStoreId = storeId || getCurrentStoreId()
     const params: Record<string, string> = {}
-    if (storeId) params.store_id = storeId
+    if (effectiveStoreId) params.store_id = effectiveStoreId
     const response = await api.get('/dashboard/summary', { params })
     return response.data
 }
@@ -61,8 +82,9 @@ export const getDashboardSummary = async (storeId?: string): Promise<DashboardSu
  * Ambil daftar 5 transaksi terbaru
  */
 export const getRecentTransactions = async (storeId?: string): Promise<RecentTransactionsResponse> => {
+    const effectiveStoreId = storeId || getCurrentStoreId()
     const params: Record<string, string> = {}
-    if (storeId) params.store_id = storeId
+    if (effectiveStoreId) params.store_id = effectiveStoreId
     const response = await api.get('/dashboard/recent-transactions', { params })
     return response.data
 }
@@ -71,8 +93,9 @@ export const getRecentTransactions = async (storeId?: string): Promise<RecentTra
  * Update catatan toko (notes)
  */
 export const updateDashboardNotes = async (notes: string, storeId?: string): Promise<UpdateNotesResponse> => {
+    const effectiveStoreId = storeId || getCurrentStoreId()
     const body: Record<string, string> = { notes }
-    if (storeId) body.store_id = storeId
+    if (effectiveStoreId) body.store_id = effectiveStoreId
     const response = await api.put('/dashboard/notes', body)
     return response.data
 }

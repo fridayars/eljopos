@@ -1,5 +1,21 @@
 import api from './api'
 
+/**
+ * Get the current store_id from localStorage (reflects admin store switching)
+ */
+const getCurrentStoreId = (): string | undefined => {
+    try {
+        const userRaw = localStorage.getItem('user')
+        if (userRaw) {
+            const user = JSON.parse(userRaw)
+            return user.store_id || undefined
+        }
+    } catch {
+        // ignore
+    }
+    return undefined
+}
+
 export interface TransactionItemPayload {
     item_type: 'product' | 'layanan'
     item_id: string
@@ -39,7 +55,11 @@ export const createTransaction = async (
     payload: CreateTransactionPayload,
 ): Promise<CreateTransactionResponse> => {
     try {
-        const response = await api.post('/transaksi', payload)
+        const effectivePayload = { ...payload }
+        if (!effectivePayload.store_id) {
+            effectivePayload.store_id = getCurrentStoreId() || ''
+        }
+        const response = await api.post('/transaksi', effectivePayload)
         return response.data
     } catch (error: any) {
         return {
