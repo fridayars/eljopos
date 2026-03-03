@@ -43,9 +43,9 @@ export function ProductList({ products, onAddToCart }: ProductListProps) {
                                 {product.name}
                             </h3>
                             <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs text-gray-500">
-                                <span>SKU: {product.sku}</span>
+                                {product.item_type !== 'layanan' && <span>SKU: {product.sku}</span>}
                                 <span className="text-cyan-400">
-                                    {product.item_type === 'layanan' ? 'Jasa Layanan' : `${product.stok} in stock`}
+                                    {product.item_type === 'layanan' ? `${product.stok} produk` : `${product.stok} in stock`}
                                 </span>
                             </div>
                         </div>

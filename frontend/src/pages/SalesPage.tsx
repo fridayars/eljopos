@@ -11,7 +11,8 @@ import { MobileCartButton } from '../components/sales/MobileCartButton'
 import { PaymentModal } from '../components/sales/PaymentModal'
 import { SelectCustomerModal } from '../components/sales/SelectCustomerModal'
 import { AddCustomerModal } from '../components/sales/AddCustomerModal'
-import { Search, Loader2 } from 'lucide-react'
+import { BarcodeScannerModal } from '../components/sales/BarcodeScannerModal'
+import { Search, Loader2, ScanLine } from 'lucide-react'
 
 import { getProducts, getServiceProducts, type ProductItem } from '../services/productService'
 import { createCustomer, type Customer } from '../services/customerService'
@@ -36,6 +37,7 @@ export function SalesPage() {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
     const [isSelectCustomerModalOpen, setIsSelectCustomerModalOpen] = useState(false)
     const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false)
+    const [isScannerOpen, setIsScannerOpen] = useState(false)
 
     // Data State
     const [displayItems, setDisplayItems] = useState<ProductItem[]>([])
@@ -48,8 +50,19 @@ export function SalesPage() {
     const [hasMore, setHasMore] = useState(true)
     const ITEMS_PER_PAGE = 20
 
-    // Auth Info for transaction payload
-    const [storeId, setStoreId] = useState('')
+    // Auth Info for transaction payload — initialized synchronously to avoid race condition
+    const [storeId] = useState(() => {
+        try {
+            const userStr = localStorage.getItem('user')
+            if (userStr) {
+                const userObj: UserData = JSON.parse(userStr)
+                return userObj.store_id || ''
+            }
+        } catch (e) {
+            console.error(e)
+        }
+        return ''
+    })
 
     // Fetch Items with Pagination and Search
     const fetchItems = async (targetPage: number, reset: boolean = false) => {
@@ -89,7 +102,7 @@ export function SalesPage() {
                         sku: s.sku,
                         price: s.price,
                         cost_price: s.capitalPrice,
-                        stok: 0,
+                        stok: s.count_product,
                         kategori_produk_id: s.categoryId,
                         kategori_name: s.categoryName,
                         image: '', // Services usually don't have images in current schema
@@ -113,19 +126,6 @@ export function SalesPage() {
         setDisplayItems([])
         fetchItems(1, true)
     }, [activeTab, searchQuery, storeId])
-
-    // Load user store info
-    useEffect(() => {
-        const userStr = localStorage.getItem('user')
-        if (userStr) {
-            try {
-                const userObj: UserData = JSON.parse(userStr)
-                setStoreId(userObj.store_id)
-            } catch (e) {
-                console.error(e)
-            }
-        }
-    }, [])
 
     // Intersection Observer for Infinite Scroll
     useEffect(() => {
@@ -304,8 +304,15 @@ export function SalesPage() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder={`Cari ${activeTab === 'produk' ? 'produk...' : 'layanan...'}`}
-                                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all"
+                                className="w-full pl-10 pr-10 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all"
                             />
+                            <button
+                                onClick={() => setIsScannerOpen(true)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                                title="Scan Barcode"
+                            >
+                                <ScanLine className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -380,6 +387,15 @@ export function SalesPage() {
                 isOpen={isSelectCustomerModalOpen}
                 onClose={() => setIsSelectCustomerModalOpen(false)}
                 onSelectCustomer={handleSelectCustomer}
+            />
+
+            <BarcodeScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScanSuccess={(decodedText) => {
+                    setSearchQuery(decodedText)
+                    toast.success(`Barcode terdeteksi: ${decodedText}`)
+                }}
             />
 
             <AddCustomerModal

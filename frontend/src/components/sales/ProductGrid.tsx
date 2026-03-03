@@ -41,7 +41,7 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
                         )}
                         <div className="absolute top-2 md:top-3 right-2 md:right-3 px-2 md:px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-cyan-400/30">
                             <span className="text-xs md:text-sm text-cyan-400">
-                                {product.item_type === 'layanan' ? 'Jasa' : `${product.stok} left`}
+                                {product.item_type === 'layanan' ? `${product.stok} produk` : `${product.stok} left`}
                             </span>
                         </div>
                     </div>
@@ -52,7 +52,9 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
                             <h3 className="text-sm md:text-base text-gray-200 mb-1 group-hover:text-blue-400 transition-colors line-clamp-2">
                                 {product.name}
                             </h3>
-                            <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                            {product.item_type !== 'layanan' && (
+                                <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                            )}
                         </div>
 
                         <div className="flex items-center justify-between mt-auto pt-2">

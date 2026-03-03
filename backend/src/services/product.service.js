@@ -163,14 +163,19 @@ const importProducts = async (buffer, storeId, user) => {
         }
 
         // Build map for existing products in store
-        const existingProducts = await Product.findAll({ where: { store_id: storeId }, paranoid: false, transaction });
+        // paranoid: false → includes soft-deleted, used for ID-based lookups (update/restore)
+        const allExistingProducts = await Product.findAll({ where: { store_id: storeId }, paranoid: false, transaction });
+        // paranoid: true (default) → only active records, used for SKU uniqueness checks
+        const activeExistingProducts = await Product.findAll({ where: { store_id: storeId }, transaction });
         const existingById = {};
         const existingBySku = {};
-        existingProducts.forEach(p => { existingById[p.id] = p; existingBySku[`${p.sku}::${p.store_id}`] = p; });
+        allExistingProducts.forEach(p => { existingById[p.id] = p; });
+        // Only active (non-deleted) products should block SKU reuse
+        activeExistingProducts.forEach(p => { existingBySku[`${p.sku}::${p.store_id}`] = p; });
 
         const toInsert = [];
         const toUpdate = [];
-        const seenIds = new Set();
+        const preservedIds = new Set(); // track all existing product IDs accounted for by import
         const seenSkus = new Set();
         const errors = [];
 
@@ -195,8 +200,8 @@ const importProducts = async (buffer, storeId, user) => {
             const existingBySkuObj = existingBySku[skuKey];
 
             if (ip.id) {
-                // update
-                seenIds.add(ip.id);
+                // Has ID -> try update by ID
+                preservedIds.add(ip.id);
                 const existing = existingById[ip.id];
                 if (!existing) {
                     // id provided but not found -> insert instead
@@ -211,18 +216,20 @@ const importProducts = async (buffer, storeId, user) => {
                     toUpdate.push({ existing, data: { kategori_produk_id: kategori_id, name: ip.name, sku: ip.sku, stock: ip.stock, price: ip.price, cost_price: ip.cost_price, jasa_pasang: ip.jasa_pasang, ongkir_asuransi: ip.ongkir_asuransi, biaya_overhead: ip.biaya_overhead, is_active: ip.is_active } });
                 }
             } else {
-                // insert
+                // No ID -> match by SKU
                 if (existingBySkuObj) {
-                    errors.push({ field: `row_${ip.row}`, message: 'SKU already exists in database' });
-                    continue;
+                    // SKU exists in DB -> update existing product by SKU match
+                    preservedIds.add(existingBySkuObj.id);
+                    toUpdate.push({ existing: existingBySkuObj, data: { kategori_produk_id: kategori_id, name: ip.name, sku: ip.sku, stock: ip.stock, price: ip.price, cost_price: ip.cost_price, jasa_pasang: ip.jasa_pasang, ongkir_asuransi: ip.ongkir_asuransi, biaya_overhead: ip.biaya_overhead, is_active: ip.is_active } });
+                } else {
+                    // SKU not in DB -> insert new product
+                    toInsert.push({ ...ip, kategori_id });
                 }
-                toInsert.push({ ...ip, kategori_id });
             }
         }
 
-        // Delete products not present in file (soft delete)
-        const idsInFile = incomingProducts.filter(p => p.id).map(p => p.id);
-        const toDelete = existingProducts.filter(p => p.store_id === storeId && !idsInFile.includes(p.id));
+        // Delete products not accounted for by import — only consider active records
+        const toDelete = activeExistingProducts.filter(p => p.store_id === storeId && !preservedIds.has(p.id));
 
         // Perform DB ops
         let inserted = 0, updated = 0, deleted = 0, skipped = errors.length;
@@ -274,9 +281,9 @@ const importProducts = async (buffer, storeId, user) => {
                 const product_sku = row.getCell('I').value ? String(row.getCell('I').value).trim() : null;
                 const product_name = row.getCell('J').value ? String(row.getCell('J').value).trim() : null;
 
-                if (id) {
-                    // start new service
-                    currentService = { id, kategori_name, name, price, cost_price, biaya_overhead, description, is_active, products: [] };
+                if (id || name) {
+                    // start new service (detected by id OR name)
+                    currentService = { id, kategori_name, name, price, cost_price, biaya_overhead, description, is_active, products: [], row: rowNumber };
                     if (product_sku) currentService.products.push({ sku: product_sku, name: product_name });
                     incomingServices.push(currentService);
                 } else if (currentService) {
@@ -287,20 +294,29 @@ const importProducts = async (buffer, storeId, user) => {
         }
 
         // existing services
-        const existingServices = await Layanan.findAll({ where: { store_id: storeId }, include: [{ model: ProdukLayanan, as: 'produkLayanan' }], paranoid: false, transaction });
+        // paranoid: false for ID-based lookups (update/restore)
+        const allExistingServices = await Layanan.findAll({ where: { store_id: storeId }, include: [{ model: ProdukLayanan, as: 'produkLayanan' }], paranoid: false, transaction });
+        // only active services for delete logic
+        const activeExistingServices = await Layanan.findAll({ where: { store_id: storeId }, transaction });
         const existingServiceById = {};
-        existingServices.forEach(s => existingServiceById[s.id] = s);
+        allExistingServices.forEach(s => existingServiceById[s.id] = s);
 
         const serviceKategoriList = await KategoriLayanan.findAll({ attributes: ['id', 'name'] });
         const serviceKategoriMap = {};
         serviceKategoriList.forEach(k => { serviceKategoriMap[k.name] = k.id; });
 
-        const sToInsert = [], sToUpdate = [], sSeenIds = new Set();
+        // Build name-based lookup for active services (for matching when no ID)
+        const activeServiceByName = {};
+        activeExistingServices.forEach(s => { activeServiceByName[`${s.name}::${s.store_id}`] = s; });
+
+        const sToInsert = [], sToUpdate = [], sPreservedIds = new Set();
+        const serviceErrors = [];
 
         for (const is of incomingServices) {
             const kategori_id = is.kategori_name ? serviceKategoriMap[is.kategori_name] : null;
             if (is.id) {
-                sSeenIds.add(is.id);
+                // Has ID -> try update by ID
+                sPreservedIds.add(is.id);
                 const existing = existingServiceById[is.id];
                 if (!existing) {
                     sToInsert.push({ ...is, kategori_id });
@@ -308,13 +324,23 @@ const importProducts = async (buffer, storeId, user) => {
                     sToUpdate.push({ existing, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, description: is.description, is_active: is.is_active, products: is.products } });
                 }
             } else {
-                sToInsert.push({ ...is, kategori_id });
+                // No ID -> match by name
+                const nameKey = `${is.name}::${storeId}`;
+                const existingByName = activeServiceByName[nameKey];
+                if (existingByName) {
+                    // Name exists in DB -> update existing service
+                    sPreservedIds.add(existingByName.id);
+                    sToUpdate.push({ existing: existingByName, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, description: is.description, is_active: is.is_active, products: is.products } });
+                } else {
+                    // Name not in DB -> insert new service
+                    sToInsert.push({ ...is, kategori_id });
+                }
             }
         }
 
-        const sToDelete = existingServices.filter(s => s.store_id === storeId && !sSeenIds.has(s.id));
+        const sToDelete = activeExistingServices.filter(s => s.store_id === storeId && !sPreservedIds.has(s.id));
 
-        let sInserted = 0, sUpdated = 0, sDeleted = 0;
+        let sInserted = 0, sUpdated = 0, sDeleted = 0, sSkipped = 0;
 
         // Insert services
         for (const ins of sToInsert) {
@@ -340,7 +366,9 @@ const importProducts = async (buffer, storeId, user) => {
                         }
                     }
                 } else {
+                    const msg = `Product SKU '${p.sku}' not found for service '${ins.name}'`;
                     logger.warn({ type: 'import_service_product_missing', layanan: created.id, sku: p.sku });
+                    serviceErrors.push({ field: `service_${ins.name}`, message: msg });
                 }
             }
             sInserted++;
@@ -371,7 +399,9 @@ const importProducts = async (buffer, storeId, user) => {
                         }
                     }
                 } else {
+                    const msg = `Product SKU '${p.sku}' not found for service '${upd.data.name}'`;
                     logger.warn({ type: 'import_service_product_missing', layanan: upd.existing.id, sku: p.sku });
+                    serviceErrors.push({ field: `service_${upd.data.name}`, message: msg });
                 }
             }
             sUpdated++;
@@ -385,7 +415,25 @@ const importProducts = async (buffer, storeId, user) => {
 
         await transaction.commit();
 
-        return { message: 'Import completed', total_inserted: inserted + sInserted, total_updated: updated + sUpdated, total_deleted: deleted + sDeleted, total_skipped: skipped };
+        const result = {
+            message: 'Import completed',
+            product: {
+                inserted,
+                updated,
+                deleted,
+                skipped,
+                errors: errors.length > 0 ? errors : undefined
+            },
+            service: {
+                inserted: sInserted,
+                updated: sUpdated,
+                deleted: sDeleted,
+                skipped: sSkipped,
+                errors: serviceErrors.length > 0 ? serviceErrors : undefined
+            }
+        };
+
+        return result;
     } catch (error) {
         await transaction.rollback();
         logger.error({ type: 'product_import_failed', message: error.message, stack: error.stack });
