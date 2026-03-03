@@ -1,5 +1,5 @@
 const db = require('../models');
-const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, sequelize } = db;
+const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, ProdukLayanan, sequelize } = db;
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 const { Op, fn, col, literal } = require('sequelize');
@@ -46,7 +46,7 @@ const createTransaksi = async (data, userId) => {
     const t = await sequelize.transaction();
 
     try {
-        const { store_id, customer_id, total_amount, payment_method, items } = data;
+        const { store_id, customer_id, total_amount, subtotal, discount_type, discount, payment_method, items } = data;
 
         // 1. Validasi total payment >= total_amount
         const totalPayment = payment_method.reduce(
@@ -85,6 +85,47 @@ const createTransaksi = async (data, userId) => {
             }
         }
 
+        // 2b. Validasi stok produk yang digunakan oleh layanan (via ProdukLayanan)
+        const layananItems = items.filter(item => item.item_type === 'layanan');
+        const layananStockReductions = []; // { product_id, product_name, totalQty }
+
+        for (const item of layananItems) {
+            const produkLayananList = await ProdukLayanan.findAll({
+                where: { layanan_id: item.item_id },
+                transaction: t
+            });
+
+            for (const pl of produkLayananList) {
+                const requiredQty = pl.quantity * item.quantity;
+
+                const product = await Product.findOne({
+                    where: { id: pl.product_id, store_id },
+                    lock: t.LOCK.UPDATE,
+                    transaction: t
+                });
+
+                if (!product) {
+                    throw new AppError(
+                        `Product used by service "${item.item_name}" not found (product_id: ${pl.product_id})`,
+                        400
+                    );
+                }
+
+                if (product.stock < requiredQty) {
+                    throw new AppError(
+                        `Transaction failed: Insufficient stock for "${product.name}" used by service "${item.item_name}" (available: ${product.stock}, required: ${requiredQty})`,
+                        400
+                    );
+                }
+
+                layananStockReductions.push({
+                    product_id: pl.product_id,
+                    product_name: product.name,
+                    totalQty: requiredQty
+                });
+            }
+        }
+
         // 3. Generate receipt number
         const receiptNumber = await generateReceiptNumber(t);
 
@@ -94,6 +135,9 @@ const createTransaksi = async (data, userId) => {
             user_id: userId,
             customer_id: customer_id || null,
             receipt_number: receiptNumber,
+            subtotal: subtotal || total_amount,
+            discount_type: discount_type || null,
+            discount: discount || 0,
             total_amount,
             payment_status: 'PAID'
         }, { transaction: t });
@@ -121,11 +165,20 @@ const createTransaksi = async (data, userId) => {
 
         await TransaksiPayment.bulkCreate(paymentRecords, { transaction: t });
 
-        // 7. Kurangi stok produk
+        // 7. Kurangi stok produk (direct product items)
         for (const item of productItems) {
             await Product.decrement('stock', {
                 by: item.quantity,
                 where: { id: item.item_id, store_id },
+                transaction: t
+            });
+        }
+
+        // 7b. Kurangi stok produk yang digunakan oleh layanan
+        for (const reduction of layananStockReductions) {
+            await Product.decrement('stock', {
+                by: reduction.totalQty,
+                where: { id: reduction.product_id, store_id },
                 transaction: t
             });
         }
@@ -172,7 +225,7 @@ const createTransaksi = async (data, userId) => {
 const getTransaksiDetail = async (transaksiId) => {
     try {
         const transaksi = await Transaksi.findByPk(transaksiId, {
-            attributes: ['id', 'receipt_number', 'total_amount', 'payment_status', 'created_at'],
+            attributes: ['id', 'receipt_number', 'subtotal', 'discount_type', 'discount', 'total_amount', 'payment_status', 'created_at'],
             include: [
                 {
                     model: TransaksiDetail,
@@ -182,7 +235,7 @@ const getTransaksiDetail = async (transaksiId) => {
                 {
                     model: TransaksiPayment,
                     as: 'payments',
-                    attributes: ['id', 'payment_method', 'nominal']
+                    attributes: [['payment_method', 'method'], ['nominal', 'amount']]
                 },
                 {
                     model: Customer,
@@ -193,6 +246,11 @@ const getTransaksiDetail = async (transaksiId) => {
                     model: User,
                     as: 'user',
                     attributes: ['id', 'username']
+                },
+                {
+                    model: Store,
+                    as: 'store',
+                    attributes: ['id', 'name']
                 }
             ]
         });

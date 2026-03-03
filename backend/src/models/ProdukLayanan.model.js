@@ -26,7 +26,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 1
-        }
+        },
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'ProdukLayanan',

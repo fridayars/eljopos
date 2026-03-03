@@ -30,7 +30,10 @@ module.exports = (sequelize, DataTypes) => {
             unique: true
         },
         password: DataTypes.STRING,
-        is_active: DataTypes.BOOLEAN
+        is_active: DataTypes.BOOLEAN,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'User',

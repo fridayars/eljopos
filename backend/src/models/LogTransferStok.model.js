@@ -32,7 +32,10 @@ module.exports = (sequelize, DataTypes) => {
         from_store_id: DataTypes.UUID,
         to_store_id: DataTypes.UUID,
         quantity: DataTypes.INTEGER,
-        user_id: DataTypes.UUID
+        user_id: DataTypes.UUID,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'LogTransferStok',

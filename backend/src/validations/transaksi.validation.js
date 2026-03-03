@@ -15,6 +15,26 @@ const createTransaksiValidation = [
         .custom((value) => parseFloat(value) > 0)
         .withMessage('Total amount must be greater than 0'),
 
+    body('subtotal')
+        .notEmpty()
+        .withMessage('Subtotal is required')
+        .isDecimal()
+        .withMessage('Subtotal must be a valid number')
+        .custom((value) => parseFloat(value) > 0)
+        .withMessage('Subtotal must be greater than 0'),
+
+    body('discount_type')
+        .optional({ checkFalsy: true })
+        .isIn(['percentage', 'amount'])
+        .withMessage('Discount type must be either "percentage" or "amount"'),
+
+    body('discount')
+        .optional({ checkFalsy: true })
+        .isDecimal()
+        .withMessage('Discount must be a valid number')
+        .custom((value) => parseFloat(value) >= 0)
+        .withMessage('Discount must be 0 or greater'),
+
     body('payment_method')
         .isArray({ min: 1, max: 2 })
         .withMessage('Payment method is required and must have at least 1 item'),

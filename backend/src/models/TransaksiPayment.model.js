@@ -24,7 +24,10 @@ module.exports = (sequelize, DataTypes) => {
         nominal: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false
-        }
+        },
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'TransaksiPayment',

@@ -14,7 +14,7 @@ import { AddCustomerModal } from '../components/sales/AddCustomerModal'
 import { Search, Loader2 } from 'lucide-react'
 
 import { getProducts, getServiceProducts, type ProductItem } from '../services/productService'
-import { getCustomers, createCustomer, type Customer } from '../services/customerService'
+import { createCustomer, type Customer } from '../services/customerService'
 import { createTransaction, type CreateTransactionPayload, type TransactionItemPayload } from '../services/transactionService'
 
 // Define basic user data structure from login
@@ -39,7 +39,7 @@ export function SalesPage() {
 
     // Data State
     const [displayItems, setDisplayItems] = useState<ProductItem[]>([])
-    const [customers, setCustomers] = useState<Customer[]>([])
+
     const [isLoading, setIsLoading] = useState(false)
     const [isTransacting, setIsTransacting] = useState(false)
 
@@ -66,7 +66,10 @@ export function SalesPage() {
                 })
 
                 if (response.success) {
-                    const newItems = response.data.items
+                    const newItems = response.data.items.map(item => ({
+                        ...item,
+                        item_type: 'product' as const,
+                    }))
                     setDisplayItems(prev => reset ? newItems : [...prev, ...newItems])
                     setHasMore(response.data.pagination.has_next)
                     setPage(targetPage)
@@ -111,16 +114,8 @@ export function SalesPage() {
         fetchItems(1, true)
     }, [activeTab, searchQuery, storeId])
 
-    // Load Customers
+    // Load user store info
     useEffect(() => {
-        const loadCustomers = async () => {
-            const customersRes = await getCustomers()
-            if (customersRes.success) {
-                setCustomers(customersRes.data)
-            }
-        }
-        loadCustomers()
-
         const userStr = localStorage.getItem('user')
         if (userStr) {
             try {
@@ -205,11 +200,18 @@ export function SalesPage() {
     const handleAddCustomer = async (customerData: Omit<Customer, 'id'>) => {
         const response = await createCustomer(customerData)
         if (response.success && response.data) {
-            setCustomers((prev) => [...prev, response.data!])
-            setSelectedCustomer(response.data)
+            // Set as selected customer with id and name from API response
+            setSelectedCustomer({
+                id: response.data.id,
+                name: response.data.name,
+                phone: customerData.phone,
+                email: customerData.email,
+                address: customerData.address,
+            })
             toast.success(`${response.data.name} berhasil ditambahkan dan dipilih`)
         } else {
             toast.error(response.message || 'Gagal menambahkan customer')
+            throw new Error(response.message)
         }
     }
 
@@ -219,7 +221,6 @@ export function SalesPage() {
     }
 
     const handleConfirmPayment = async (data: { date: string; cashbox: string; cashPaid: number; payments: { method: string; amount: number }[] }) => {
-        console.log('Confirm payment with data:', data)
         setIsTransacting(true)
 
         const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
@@ -236,14 +237,14 @@ export function SalesPage() {
             subtotal: item.price * item.quantity,
         }))
 
-        // Join multiple payment methods for display/legacy storage
-        const combinedMethod = data.payments.map(p => p.method).join(', ')
-
         const payload: CreateTransactionPayload = {
             store_id: storeId,
             customer_id: selectedCustomer?.id,
+            subtotal,
+            discount_type: discountValue > 0 ? (discountType === '%' ? 'percentage' : 'amount') : undefined,
+            discount: discountValue > 0 ? discountValue : undefined,
             total_amount: grandTotal,
-            payment_method: combinedMethod as any, // Cast as any since backend expects one of the enums, but we are splitting
+            payment_method: data.payments.map(p => ({ method: p.method, amount: p.amount })),
             items: transactionItems,
         }
 
@@ -378,7 +379,6 @@ export function SalesPage() {
             <SelectCustomerModal
                 isOpen={isSelectCustomerModalOpen}
                 onClose={() => setIsSelectCustomerModalOpen(false)}
-                customers={customers}
                 onSelectCustomer={handleSelectCustomer}
             />
 

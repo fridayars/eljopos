@@ -40,7 +40,13 @@ module.exports = (sequelize, DataTypes) => {
             unique: true
         },
         total_amount: DataTypes.DECIMAL(15, 2),
-        payment_status: DataTypes.STRING
+        subtotal: DataTypes.DECIMAL(15, 2),
+        discount_type: DataTypes.ENUM('percentage', 'amount'),
+        discount: DataTypes.DECIMAL(15, 2),
+        payment_status: DataTypes.STRING,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'Transaksi',

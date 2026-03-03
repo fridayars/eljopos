@@ -23,7 +23,10 @@ module.exports = (sequelize, DataTypes) => {
         kategori_name: DataTypes.STRING,
         price: DataTypes.DECIMAL(15, 2),
         quantity: DataTypes.INTEGER,
-        subtotal: DataTypes.DECIMAL(15, 2)
+        subtotal: DataTypes.DECIMAL(15, 2),
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'TransaksiDetail',

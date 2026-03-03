@@ -1,7 +1,4 @@
 import api from './api'
-import mockCustomers from '../mocks/customers.json'
-
-const USE_MOCK_DATA_CUSTOMERS = true
 
 export interface Customer {
     id: string
@@ -11,58 +8,59 @@ export interface Customer {
     address?: string
 }
 
+export interface CustomerPagination {
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+}
+
 export interface GetCustomersResponse {
     success: boolean
-    data: Customer[]
+    data: {
+        items: Customer[]
+        pagination: CustomerPagination
+    }
     message?: string
 }
 
 export interface CreateCustomerResponse {
     success: boolean
-    data?: Customer
+    data?: {
+        id: string
+        name: string
+    }
     message?: string
 }
 
-export const getCustomers = async (): Promise<GetCustomersResponse> => {
-    if (USE_MOCK_DATA_CUSTOMERS) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    success: true,
-                    data: mockCustomers,
-                })
-            }, 500)
-        })
-    }
+export interface GetCustomersParams {
+    page?: number
+    limit?: number
+    search?: string
+}
 
+/**
+ * GET /api/master/customers — dengan pagination dan search
+ */
+export const getCustomers = async (params: GetCustomersParams = {}): Promise<GetCustomersResponse> => {
     try {
-        const response = await api.get('/master/customers') // Asumsi rutanya nanti master/customers
+        const response = await api.get('/master/customers', { params })
         return response.data
     } catch (error: any) {
         return {
             success: false,
-            data: [],
+            data: { items: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0, has_next: false, has_prev: false } },
             message: error.response?.data?.message || 'Gagal memuat pelanggan',
         }
     }
 }
 
+/**
+ * POST /api/master/customers — buat customer baru
+ */
 export const createCustomer = async (data: Omit<Customer, 'id'>): Promise<CreateCustomerResponse> => {
-    if (USE_MOCK_DATA_CUSTOMERS) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const newCustomer = {
-                    ...data,
-                    id: `cust-mock-${Date.now()}`,
-                }
-                resolve({
-                    success: true,
-                    data: newCustomer,
-                })
-            }, 600)
-        })
-    }
-
     try {
         const response = await api.post('/master/customers', data)
         return response.data

@@ -17,7 +17,10 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true
         },
         role_id: DataTypes.UUID,
-        permission: DataTypes.STRING
+        permission: DataTypes.STRING,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'AksesRole',

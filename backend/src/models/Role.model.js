@@ -24,7 +24,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             unique: true
         },
-        is_active: DataTypes.BOOLEAN
+        is_active: DataTypes.BOOLEAN,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'Role',

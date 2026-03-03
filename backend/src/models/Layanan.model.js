@@ -31,7 +31,10 @@ module.exports = (sequelize, DataTypes) => {
         cost_price: DataTypes.DECIMAL(15, 2),
         biaya_overhead: DataTypes.INTEGER,
         description: DataTypes.TEXT,
-        is_active: DataTypes.BOOLEAN
+        is_active: DataTypes.BOOLEAN,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'Layanan',

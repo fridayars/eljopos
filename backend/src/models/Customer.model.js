@@ -23,7 +23,10 @@ module.exports = (sequelize, DataTypes) => {
         },
         email: DataTypes.STRING,
         address: DataTypes.TEXT,
-        is_active: DataTypes.BOOLEAN
+        is_active: DataTypes.BOOLEAN,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'Customer',

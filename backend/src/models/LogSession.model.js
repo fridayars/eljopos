@@ -20,7 +20,10 @@ module.exports = (sequelize, DataTypes) => {
         token: DataTypes.TEXT,
         device: DataTypes.STRING,
         ip_address: DataTypes.STRING,
-        expires_at: DataTypes.DATE
+        expires_at: DataTypes.DATE,
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+        deleted_at: DataTypes.DATE
     }, {
         sequelize,
         modelName: 'LogSession',

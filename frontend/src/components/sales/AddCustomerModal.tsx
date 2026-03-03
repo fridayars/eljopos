@@ -1,12 +1,12 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { X } from 'lucide-react'
+import { X, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { Customer } from '../../services/customerService'
 
 interface AddCustomerModalProps {
     isOpen: boolean
     onClose: () => void
-    onAddCustomer: (customer: Omit<Customer, 'id'>) => void
+    onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>
 }
 
 export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomerModalProps) {
@@ -17,34 +17,48 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
         address: '',
     })
 
-    const [errors, setErrors] = useState<{ name?: string }>({})
+    const [errors, setErrors] = useState<{ name?: string; phone?: string }>({})
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
         if (!isOpen) {
-            // Reset form when modal closes
             setFormData({ name: '', phone: '', email: '', address: '' })
             setErrors({})
+            setIsSubmitting(false)
         }
     }, [isOpen])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Validate
+        const newErrors: { name?: string; phone?: string } = {}
         if (!formData.name.trim()) {
-            setErrors({ name: 'Nama wajib diisi' })
+            newErrors.name = 'Nama wajib diisi'
+        }
+        if (!formData.phone.trim()) {
+            newErrors.phone = 'Nomor telepon wajib diisi'
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors)
             return
         }
 
-        // Add customer
-        onAddCustomer(formData)
-        onClose()
+        setIsSubmitting(true)
+        try {
+            await onAddCustomer(formData)
+            onClose()
+        } catch {
+            // error handled by parent
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const handleChange = (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
-        if (field === 'name' && errors.name) {
-            setErrors({})
+        if (errors[field as keyof typeof errors]) {
+            setErrors((prev) => ({ ...prev, [field]: undefined }))
         }
     }
 
@@ -96,8 +110,8 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
                                         onChange={(e) => handleChange('name', e.target.value)}
                                         placeholder="Ketikkan nama..."
                                         className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-gray-300 placeholder:text-gray-600 focus:outline-none transition-all ${errors.name
-                                                ? 'border-red-500/50 focus:border-red-500/70'
-                                                : 'border-purple-500/20 focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                            ? 'border-red-500/50 focus:border-red-500/70'
+                                            : 'border-purple-500/20 focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)]'
                                             }`}
                                     />
                                     {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
@@ -105,14 +119,20 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
 
                                 {/* Phone */}
                                 <div className="space-y-2">
-                                    <label className="text-sm text-gray-400">Nomor Telepon</label>
+                                    <label className="text-sm text-gray-400">
+                                        Nomor Telepon <span className="text-red-400">*</span>
+                                    </label>
                                     <input
                                         type="tel"
                                         value={formData.phone}
                                         onChange={(e) => handleChange('phone', e.target.value)}
                                         placeholder="Cth: 081234567890"
-                                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                        className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-gray-300 placeholder:text-gray-600 focus:outline-none transition-all ${errors.phone
+                                            ? 'border-red-500/50 focus:border-red-500/70'
+                                            : 'border-purple-500/20 focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                            }`}
                                     />
+                                    {errors.phone && <p className="text-xs text-red-400">{errors.phone}</p>}
                                 </div>
 
                                 {/* Email */}
@@ -144,15 +164,24 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
                                     <button
                                         type="button"
                                         onClick={onClose}
-                                        className="flex-1 h-12 rounded-xl border border-purple-500/30 text-gray-400 hover:text-gray-200 hover:border-purple-500/50 transition-all cursor-pointer"
+                                        disabled={isSubmitting}
+                                        className="flex-1 h-12 rounded-xl border border-purple-500/30 text-gray-400 hover:text-gray-200 hover:border-purple-500/50 transition-all cursor-pointer disabled:opacity-50"
                                     >
                                         Batal
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all font-semibold cursor-pointer"
+                                        disabled={isSubmitting}
+                                        className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        Simpan
+                                        {isSubmitting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Menyimpan...
+                                            </>
+                                        ) : (
+                                            'Simpan'
+                                        )}
                                     </button>
                                 </div>
                             </form>

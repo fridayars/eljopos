@@ -1,7 +1,5 @@
 import api from './api'
 
-const USE_MOCK_DATA_TRANSACTION = true
-
 export interface TransactionItemPayload {
     item_type: 'product' | 'layanan'
     item_id: string
@@ -12,11 +10,19 @@ export interface TransactionItemPayload {
     subtotal: number
 }
 
+export interface PaymentMethodPayload {
+    method: string
+    amount: number
+}
+
 export interface CreateTransactionPayload {
     store_id: string
-    customer_id?: string // walk-in = undefined/null
+    customer_id?: string
     total_amount: number
-    payment_method: 'CASH' | 'TRANSFER' | 'CARD'
+    subtotal: number
+    discount_type?: 'percentage' | 'amount'
+    discount?: number
+    payment_method: PaymentMethodPayload[]
     items: TransactionItemPayload[]
 }
 
@@ -32,24 +38,6 @@ export interface CreateTransactionResponse {
 export const createTransaction = async (
     payload: CreateTransactionPayload,
 ): Promise<CreateTransactionResponse> => {
-    if (USE_MOCK_DATA_TRANSACTION) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const invoiceNum = `INV/${new Date().toISOString().slice(0, 10).replace(/-/g, '')}/${String(
-                    Math.floor(Math.random() * 1000),
-                ).padStart(3, '0')}`
-
-                resolve({
-                    success: true,
-                    data: {
-                        transaksi_id: `txn-mock-${Date.now()}`,
-                        invoice_number: invoiceNum,
-                    },
-                })
-            }, 800)
-        })
-    }
-
     try {
         const response = await api.post('/transaksi', payload)
         return response.data

@@ -1,34 +1,118 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Search, Phone, Mail } from 'lucide-react'
-import { useState } from 'react'
-import type { Customer } from '../../services/customerService'
+import { X, Search, Phone, Mail, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { getCustomers, type Customer } from '../../services/customerService'
 
 interface SelectCustomerModalProps {
     isOpen: boolean
     onClose: () => void
-    customers: Customer[]
     onSelectCustomer: (customer: Customer) => void
 }
 
 export function SelectCustomerModal({
     isOpen,
     onClose,
-    customers,
     onSelectCustomer,
 }: SelectCustomerModalProps) {
     const [searchQuery, setSearchQuery] = useState('')
+    const [customers, setCustomers] = useState<Customer[]>([])
+    const [isLoading, setIsLoading] = useState(false)
+    const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(true)
+    const listRef = useRef<HTMLDivElement>(null)
+    const observerRef = useRef<IntersectionObserver | null>(null)
+    const loadMoreRef = useRef<HTMLDivElement>(null)
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const filteredCustomers = customers.filter(
-        (customer) =>
-            customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customer.phone.includes(searchQuery) ||
-            (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())),
-    )
+    const ITEMS_PER_PAGE = 15
+
+    // Fetch customers from API
+    const fetchCustomers = useCallback(async (targetPage: number, search: string, reset: boolean = false) => {
+        setIsLoading(true)
+        try {
+            const response = await getCustomers({
+                page: targetPage,
+                limit: ITEMS_PER_PAGE,
+                search: search || undefined,
+            })
+
+            if (response.success) {
+                const newItems = response.data.items
+                setCustomers(prev => reset ? newItems : [...prev, ...newItems])
+                setHasMore(response.data.pagination.has_next)
+                setPage(targetPage)
+            }
+        } catch (error) {
+            console.error('Error fetching customers:', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    // Load initial data when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setCustomers([])
+            setPage(1)
+            setHasMore(true)
+            setSearchQuery('')
+            fetchCustomers(1, '', true)
+        }
+    }, [isOpen, fetchCustomers])
+
+    // Debounced search
+    useEffect(() => {
+        if (!isOpen) return
+
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+        }
+
+        debounceTimerRef.current = setTimeout(() => {
+            setCustomers([])
+            setPage(1)
+            setHasMore(true)
+            fetchCustomers(1, searchQuery, true)
+        }, 400)
+
+        return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current)
+            }
+        }
+    }, [searchQuery])
+
+    // Infinite scroll observer
+    useEffect(() => {
+        if (!isOpen) return
+
+        if (observerRef.current) {
+            observerRef.current.disconnect()
+        }
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                    fetchCustomers(page + 1, searchQuery)
+                }
+            },
+            { threshold: 0.1 }
+        )
+
+        if (loadMoreRef.current) {
+            observerRef.current.observe(loadMoreRef.current)
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect()
+            }
+        }
+    }, [isOpen, hasMore, isLoading, page, searchQuery, fetchCustomers])
 
     const handleSelect = (customer: Customer) => {
         onSelectCustomer(customer)
         onClose()
-        setSearchQuery('')
     }
 
     return (
@@ -79,15 +163,15 @@ export function SelectCustomerModal({
                             </div>
 
                             {/* Customer List */}
-                            <div className="flex-1 overflow-y-auto p-4">
-                                {filteredCustomers.length === 0 ? (
+                            <div ref={listRef} className="flex-1 overflow-y-auto p-4">
+                                {customers.length === 0 && !isLoading ? (
                                     <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                         <p className="text-sm">Customer tidak ditemukan</p>
                                         <p className="text-xs mt-1">Gunakan kata kunci pencarian yang lain</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        {filteredCustomers.map((customer) => (
+                                        {customers.map((customer) => (
                                             <motion.button
                                                 key={customer.id}
                                                 onClick={() => handleSelect(customer)}
@@ -123,6 +207,19 @@ export function SelectCustomerModal({
                                         ))}
                                     </div>
                                 )}
+
+                                {/* Infinite scroll trigger */}
+                                <div ref={loadMoreRef} className="h-16 flex items-center justify-center">
+                                    {isLoading && (
+                                        <div className="flex items-center gap-2 text-purple-400">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span className="text-xs">Memuat...</span>
+                                        </div>
+                                    )}
+                                    {!hasMore && customers.length > 0 && (
+                                        <p className="text-xs text-gray-600 italic">Semua data telah dimuat</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </motion.div>

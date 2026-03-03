@@ -17,6 +17,7 @@ router.use('/auth', require('./auth.route'))
 router.use('/master/products', require('./product.route'))
 router.use('/master/stores', require('./store.route'))
 router.use('/master/layanan', require('./layanan.route'))
+router.use('/master/customers', require('./customer.route'))
 router.use('/transaksi', require('./transaksi.route'))
 router.use('/laporan', require('./laporan.route'))
 
