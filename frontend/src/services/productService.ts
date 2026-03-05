@@ -10,10 +10,15 @@ export interface ProductItem {
     sku: string
     price: number
     cost_price: number
-    stok: number
+    stock: number
     kategori_name: string
     image: string
-    item_type: 'product' | 'layanan'
+    image_url?: string
+    item_type?: 'product' | 'layanan'
+    is_active?: boolean
+    jasa_pasang?: number
+    ongkir_asuransi?: number
+    biaya_overhead?: number
 }
 
 export interface Category {
@@ -228,6 +233,45 @@ export const getCategories = async (): Promise<{ success: boolean; data: Categor
     }
 }
 
+export const addCategory = async (category: Omit<Category, 'id'>): Promise<{ success: boolean; data?: Category; message?: string }> => {
+    try {
+        const storeId = getCurrentStoreId()
+        const payload: any = {
+            ...category,
+            store_id: storeId,
+        }
+        const response = await api.post('/master/products/categories', payload)
+        return response.data
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal menambahkan kategori' }
+    }
+}
+
+export const updateCategory = async (id: string, updates: Partial<Category>): Promise<{ success: boolean; data?: Category; message?: string }> => {
+    try {
+        const storeId = getCurrentStoreId()
+        const payload: any = {
+            ...updates,
+            store_id: storeId,
+        }
+        const response = await api.put(`/master/products/categories/${id}`, payload)
+        return response.data
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal memperbarui kategori' }
+    }
+}
+
+export const deleteCategory = async (id: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+        const storeId = getCurrentStoreId()
+        const url = storeId ? `/master/products/categories/${id}?store_id=${storeId}` : `/master/products/categories/${id}`
+        const response = await api.delete(url)
+        return response.data
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal menghapus kategori' }
+    }
+}
+
 export const addProduct = async (product: Omit<ProductItem, 'id'>): Promise<{ success: boolean; data?: ProductItem }> => {
     if (USE_MOCK_DATA_GET_PRODUCTS) {
         return new Promise((resolve) => {
@@ -304,6 +348,40 @@ export const deleteProduct = async (id: string): Promise<{ success: boolean }> =
         return response.data
     } catch (error: any) {
         return { success: false }
+    }
+}
+
+export const updateProductStatus = async (id: string, is_active: boolean): Promise<{ success: boolean; message?: string }> => {
+    try {
+        const storeId = getCurrentStoreId()
+        const url = storeId ? `/master/products/${id}/status?store_id=${storeId}` : `/master/products/${id}/status`
+        const response = await api.put(url, { is_active })
+        return response.data
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal mengubah status produk' }
+    }
+}
+
+export const uploadImage = async (file: File, folder?: string): Promise<{ success: boolean; data?: { url: string; key: string }; message?: string }> => {
+    try {
+        const formData = new FormData()
+        formData.append('image', file)
+        if (folder) formData.append('folder', folder)
+        const response = await api.post('/upload/image', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        return response.data
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal mengupload gambar' }
+    }
+}
+
+export const deleteImage = async (url: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+        const response = await api.delete('/upload/image', { data: { url } })
+        return response.data
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal menghapus gambar' }
     }
 }
 

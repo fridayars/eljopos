@@ -133,6 +133,8 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
 - **URL Route**: `POST /master/products`
 - **Deskripsi**: API untuk menambahkan produk sparepart baru.
 - **Request Header**: `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Request Query**: 
+  - `store_id` (opsional)
 - **Request Body**:
   ```json
   {
@@ -140,7 +142,13 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
     "name": "Baterai iPhone 11",
     "sku": "IP11-BAT-01",
     "price": 250000,
-    "cost_price": 150000
+    "cost_price": 150000,
+    "is_active": true,
+    "image_url": "https://example.com/image.jpg",
+    "stock": 10,
+    "jasa_pasang": 10000,
+    "ongkir_asuransi": 10000,
+    "biaya_overhead": 10000,
   }
   ```
 - **Response 200 (Success)**:
@@ -184,6 +192,19 @@ Standar Header (Kecuali Login): `Authorization: Bearer <JWT_TOKEN>`
       "message": "Product deleted successfully"
     }
   }
+
+### 2.4.1 Update Status Product
+- **URL Route**: `PUT /master/products/:id/status`
+- **Deskripsi**: API untuk mengubah status produk (aktif/tidak aktif).
+- **Request Param**: `id` (UUID produk)
+- **Request Body**: 
+  ```json
+  {
+    "is_active": true
+  }
+  ```
+- **Response 200 (Success)**: Same pattern as Success True Data.
+- **Response 400 (Validation Error)**: Error messages validasi.
 
 ### 2.5 Service (Layanan) & Service Categories (Kategori Layanan)
 > *Catatan: Struktur dan pola respons mengikuti modul Produk. Endpoint layanan mengelola data layanan yang dapat memiliki relasi ke produk melalui tabel produk_layanan.*

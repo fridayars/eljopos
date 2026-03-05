@@ -82,6 +82,7 @@ export function SalesPage() {
                     const newItems = response.data.items.map(item => ({
                         ...item,
                         item_type: 'product' as const,
+                        image: item.image_url || item.image || ''
                     }))
                     setDisplayItems(prev => reset ? newItems : [...prev, ...newItems])
                     setHasMore(response.data.pagination.has_next)
@@ -98,13 +99,15 @@ export function SalesPage() {
                 if (response.success) {
                     const mappedServices: ProductItem[] = response.data.items.map(s => ({
                         id: s.id,
-                        name: s.name, sku: "",
+                        name: s.name,
+                        sku: "",
                         price: s.price,
                         cost_price: s.capitalPrice,
-                        stok: s.count_product,
+                        stock: s.count_product,
                         kategori_produk_id: s.categoryId,
                         kategori_name: s.categoryName,
-                        image: '', // Services usually don't have images in current schema
+                        image: '',
+                        image_url: '',
                         item_type: 'layanan'
                     }))
                     setDisplayItems(prev => reset ? mappedServices : [...prev, ...mappedServices])
@@ -162,7 +165,7 @@ export function SalesPage() {
                     name: product.name,
                     price: product.price,
                     quantity: 1,
-                    item_type: product.item_type,
+                    item_type: (product.item_type || 'product') as 'product' | 'layanan',
                     kategori_name: product.kategori_name,
                 },
             ]

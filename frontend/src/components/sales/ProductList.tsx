@@ -24,9 +24,9 @@ export function ProductList({ products, onAddToCart }: ProductListProps) {
                     <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4">
                         {/* Product Image */}
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg md:rounded-xl overflow-hidden bg-gradient-to-br from-blue-500/10 to-purple-600/10 shrink-0">
-                            {product.image ? (
+                            {(product.image_url || product.image) ? (
                                 <img
-                                    src={product.image}
+                                    src={product.image_url || product.image}
                                     alt={product.name}
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
@@ -45,7 +45,7 @@ export function ProductList({ products, onAddToCart }: ProductListProps) {
                             <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs text-gray-500">
                                 {product.item_type !== 'layanan' && <span>SKU: {product.sku}</span>}
                                 <span className="text-cyan-400">
-                                    {product.item_type === 'layanan' ? `${product.stok} produk` : `${product.stok} in stock`}
+                                    {product.item_type === 'layanan' ? `${product.stock} produk` : `${product.stock} in stock`}
                                 </span>
                             </div>
                         </div>

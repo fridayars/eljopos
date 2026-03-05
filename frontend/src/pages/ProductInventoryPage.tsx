@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, Edit, Trash2, Package, Box } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
-import { getProducts, getCategories, addProduct, updateProduct, deleteProduct, importProductsFile, exportProductsFile } from '../services/productService'
+import { getProducts, getCategories, addCategory, updateCategory, deleteCategory, addProduct, updateProduct, deleteProduct, updateProductStatus, importProductsFile, exportProductsFile } from '../services/productService'
 import { getBranches } from '../services/branchService'
 import type { ProductItem, Category } from '../services/productService'
 import type { Branch } from '../services/branchService'
@@ -13,6 +13,7 @@ import { EditProductModal } from '../components/inventory/EditProductModal'
 import { StockTransferModal } from '../components/inventory/StockTransferModal'
 import { AddCategoryModal } from '../components/inventory/AddCategoryModal'
 import { EditCategoryModal } from '../components/inventory/EditCategoryModal'
+import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmationModal'
 
 type InventoryTab = 'product-category' | 'produk-barang'
 
@@ -30,11 +31,15 @@ export function ProductInventoryPage() {
     const [isAddCatOpen, setIsAddCatOpen] = useState(false)
     const [isEditCatOpen, setIsEditCatOpen] = useState(false)
     const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+    const [isDeleteCatOpen, setIsDeleteCatOpen] = useState(false)
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
 
     // Product States
     const [isEditProdOpen, setIsEditProdOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null)
     const [isTransferOpen, setIsTransferOpen] = useState(false)
+    const [isDeleteProdOpen, setIsDeleteProdOpen] = useState(false)
+    const [productToDelete, setProductToDelete] = useState<ProductItem | null>(null)
 
     // Product Pagination & Sorting States
     const [currentPage, setCurrentPage] = useState(1)
@@ -97,31 +102,46 @@ export function ProductInventoryPage() {
         cat.name.toLowerCase().includes(searchCategory.toLowerCase())
     )
 
-    const handleAddCategory = (newCat: { name: string; description: string }) => {
-        const cat: Category = {
-            id: `cat-${Date.now()}`,
-            name: newCat.name,
-            description: newCat.description
+    const handleAddCategory = async (newCat: { name: string; description: string }) => {
+        const res = await addCategory({ name: newCat.name, description: newCat.description })
+        if (res.success && res.data) {
+            setCategories([...categories, res.data])
+            toast.success('Kategori berhasil ditambahkan')
+            setIsAddCatOpen(false)
+        } else {
+            toast.error(res.message || 'Gagal menambahkan kategori')
         }
-        // Save to state and mock localstorage
-        const updatedCats = [...categories, cat]
-        setCategories(updatedCats)
-        localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
-        toast.success('Kategori berhasil ditambahkan')
     }
 
-    const handleEditCategory = (id: string, updates: { name: string; description?: string }) => {
-        const updatedCats = categories.map(c => c.id === id ? { ...c, ...updates } : c)
-        setCategories(updatedCats)
-        localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
-        toast.success('Kategori berhasil diperbarui')
+    const handleEditCategory = async (id: string, updates: { name: string; description?: string }) => {
+        const res = await updateCategory(id, updates)
+        if (res.success && res.data) {
+            const updatedCats = categories.map(c => c.id === id ? { ...c, ...res.data } : c)
+            setCategories(updatedCats)
+            toast.success('Kategori berhasil diperbarui')
+            setIsEditCatOpen(false)
+        } else {
+            toast.error(res.message || 'Gagal memperbarui kategori')
+        }
     }
 
-    const handleDeleteCategory = (id: string) => {
-        const updatedCats = categories.filter(c => c.id !== id)
-        setCategories(updatedCats)
-        localStorage.setItem('mock_categories_data', JSON.stringify(updatedCats))
-        toast.success('Kategori berhasil dihapus')
+    const handleRequestDeleteCategory = (cat: Category) => {
+        setCategoryToDelete(cat)
+        setIsDeleteCatOpen(true)
+    }
+
+    const handleConfirmDeleteCategory = async () => {
+        if (!categoryToDelete) return
+        const res = await deleteCategory(categoryToDelete.id)
+        if (res.success) {
+            const updatedCats = categories.filter(c => c.id !== categoryToDelete.id)
+            setCategories(updatedCats)
+            toast.success('Kategori berhasil dihapus')
+        } else {
+            toast.error(res.message || 'Gagal menghapus kategori')
+        }
+        setIsDeleteCatOpen(false)
+        setCategoryToDelete(null)
     }
 
     const openEditCategory = (cat: Category) => {
@@ -130,12 +150,13 @@ export function ProductInventoryPage() {
     }
 
     /* --- Product Handlers --- */
-    const saveProduct = async (id: string, updates: Partial<ProductItem>) => {
+    const saveProduct = async (id: string, updates: Record<string, any>) => {
         if (editingProduct === null) {
             // It's a new product
             const res = await addProduct(updates as any)
             if (res.success && res.data) {
                 toast.success('Produk berhasil ditambahkan')
+                setIsEditProdOpen(false)
                 loadData()
             } else {
                 toast.error('Gagal menambahkan produk')
@@ -145,6 +166,7 @@ export function ProductInventoryPage() {
             const res = await updateProduct(id, updates)
             if (res.success && res.data) {
                 toast.success('Produk berhasil diperbarui')
+                setIsEditProdOpen(false)
                 loadData()
             } else {
                 toast.error('Gagal memperbarui produk')
@@ -162,14 +184,32 @@ export function ProductInventoryPage() {
         setIsEditProdOpen(true)
     }
 
-    const handleDeleteProduct = async (prod: ProductItem) => {
-        if (!confirm(`Yakin ingin menghapus ${prod.name}?`)) return
-        const res = await deleteProduct(prod.id)
+    const handleRequestDeleteProduct = (prod: ProductItem) => {
+        setProductToDelete(prod)
+        setIsDeleteProdOpen(true)
+    }
+
+    const handleConfirmDeleteProduct = async () => {
+        if (!productToDelete) return
+        const res = await deleteProduct(productToDelete.id)
         if (res.success) {
             toast.success('Produk berhasil dihapus')
             loadData()
         } else {
             toast.error('Gagal menghapus produk')
+        }
+        setIsDeleteProdOpen(false)
+        setProductToDelete(null)
+    }
+
+    const handleToggleProductStatus = async (prod: ProductItem) => {
+        const newStatus = (prod as any).is_active === false ? true : false
+        const res = await updateProductStatus(prod.id, newStatus)
+        if (res.success) {
+            setProducts(products.map(p => p.id === prod.id ? { ...p, is_active: newStatus } as any : p))
+            toast.success(`Produk ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`)
+        } else {
+            toast.error(res.message || 'Gagal mengubah status produk')
         }
     }
 
@@ -207,7 +247,7 @@ export function ProductInventoryPage() {
             if (index !== -1) {
                 updatedProducts[index] = {
                     ...updatedProducts[index],
-                    stok: updatedProducts[index].stok - item.quantity
+                    stock: (updatedProducts[index].stock || 0) - item.quantity
                 }
             }
         })
@@ -332,9 +372,7 @@ export function ProductInventoryPage() {
                                                             <Edit className="w-4 h-4" />
                                                         </button>
                                                         <button
-                                                            onClick={() => {
-                                                                if (confirm(`Hapus kategori ${category.name}?`)) handleDeleteCategory(category.id)
-                                                            }}
+                                                            onClick={() => handleRequestDeleteCategory(category)}
                                                             className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
                                                             title="Hapus"
                                                         >
@@ -363,7 +401,8 @@ export function ProductInventoryPage() {
                             <ProductsPage
                                 products={products}
                                 onEditProduct={startEditProduct}
-                                onDeleteProduct={handleDeleteProduct}
+                                onDeleteProduct={handleRequestDeleteProduct}
+                                onToggleStatus={handleToggleProductStatus}
                                 onImportProducts={handleImportProducts}
                                 onExportProducts={handleExportProducts}
                                 onOpenTransfer={() => setIsTransferOpen(true)}
@@ -399,6 +438,7 @@ export function ProductInventoryPage() {
                 isOpen={isEditProdOpen}
                 onClose={() => setIsEditProdOpen(false)}
                 product={editingProduct}
+                categories={categories}
                 onSave={saveProduct}
             />
 
@@ -408,6 +448,26 @@ export function ProductInventoryPage() {
                 products={products}
                 branches={branches}
                 onTransfer={handleTransferStock}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteCatOpen}
+                onClose={() => {
+                    setIsDeleteCatOpen(false)
+                    setCategoryToDelete(null)
+                }}
+                onConfirm={handleConfirmDeleteCategory}
+                itemName={categoryToDelete?.name || ''}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteProdOpen}
+                onClose={() => {
+                    setIsDeleteProdOpen(false)
+                    setProductToDelete(null)
+                }}
+                onConfirm={handleConfirmDeleteProduct}
+                itemName={productToDelete?.name || ''}
             />
         </div>
     )

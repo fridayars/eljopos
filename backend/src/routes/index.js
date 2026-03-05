@@ -21,5 +21,6 @@ router.use('/master/customers', require('./customer.route'))
 router.use('/transaksi', require('./transaksi.route'))
 router.use('/laporan', require('./laporan.route'))
 router.use('/dashboard', require('./dashboard.route'))
+router.use('/upload', require('./upload.route'))
 
 module.exports = router

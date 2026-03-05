@@ -28,9 +28,9 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
                 >
                     {/* Product Image */}
                     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-500/10 to-purple-600/10 shrink-0">
-                        {product.image ? (
+                        {(product.image_url || product.image) ? (
                             <img
-                                src={product.image}
+                                src={product.image_url || product.image}
                                 alt={product.name}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />
@@ -41,7 +41,7 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
                         )}
                         <div className="absolute top-2 md:top-3 right-2 md:right-3 px-2 md:px-3 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-cyan-400/30">
                             <span className="text-xs md:text-sm text-cyan-400">
-                                {product.item_type === 'layanan' ? `${product.stok} produk` : `${product.stok} left`}
+                                {product.item_type === 'layanan' ? `${product.stock} produk` : `${product.stock} left`}
                             </span>
                         </div>
                     </div>

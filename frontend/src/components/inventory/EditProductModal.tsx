@@ -1,37 +1,111 @@
-import { X, Save, Image as ImageIcon, Wrench } from 'lucide-react'
+import { X, Save, Upload, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { useState, useEffect } from 'react'
-import type { ProductItem } from '../../services/productService'
+import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
+import type { ProductItem, Category } from '../../services/productService'
+import { uploadImage, deleteImage } from '../../services/productService'
 
 interface EditProductModalProps {
     isOpen: boolean
     onClose: () => void
-    product: ProductItem | null
-    onSave: (id: string, product: Partial<ProductItem>) => void
+    product: ProductItem | null // null = mode tambah
+    categories: Category[]
+    onSave: (id: string, product: Record<string, any>) => void
 }
 
-export function EditProductModal({ isOpen, onClose, product, onSave }: EditProductModalProps) {
-    const [formData, setFormData] = useState<Partial<ProductItem>>({})
+export function EditProductModal({ isOpen, onClose, product, categories, onSave }: EditProductModalProps) {
+    const [formData, setFormData] = useState<Record<string, any>>({})
+    const [imageUrl, setImageUrl] = useState<string>('')
+    const [isUploading, setIsUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
-        if (product && isOpen) {
-            setFormData({ ...product })
+        if (isOpen) {
+            if (product) {
+                setFormData({
+                    name: product.name || '',
+                    sku: product.sku || '',
+                    kategori_produk_id: product.kategori_produk_id || '',
+                    price: product.price || 0,
+                    cost_price: product.cost_price || 0,
+                    stock: product.stock || 0,
+                    jasa_pasang: product.jasa_pasang || 0,
+                    ongkir_asuransi: product.ongkir_asuransi || 0,
+                    biaya_overhead: product.biaya_overhead || 0,
+                    image_url: product.image_url || product.image || '',
+                })
+                setImageUrl(product.image_url || product.image || '')
+            } else {
+                setFormData({
+                    name: '',
+                    sku: '',
+                    kategori_produk_id: categories[0]?.id || '',
+                    price: 0,
+                    cost_price: 0,
+                    stock: 0,
+                    jasa_pasang: 0,
+                    ongkir_asuransi: 0,
+                    biaya_overhead: 0,
+                    image_url: '',
+                })
+                setImageUrl('')
+            }
         }
-    }, [product, isOpen])
+    }, [product, isOpen, categories])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        if (formData && product) {
-            onSave(product.id, formData)
-            onClose()
+        const payload = {
+            ...formData,
+            image_url: imageUrl,
         }
+        onSave(product?.id || '', payload)
     }
 
-    const handleChange = (field: keyof ProductItem, value: string | number) => {
+    const handleChange = (field: string, value: string | number) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
     }
 
-    if (!formData) return null
+    const handleSelectImage = () => {
+        fileInputRef.current?.click()
+    }
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Ukuran gambar maksimal 5MB')
+            return
+        }
+
+        setIsUploading(true)
+        const res = await uploadImage(file, 'products')
+        setIsUploading(false)
+
+        if (res.success && res.data) {
+            setImageUrl(res.data.url)
+            toast.success('Gambar berhasil diupload')
+        } else {
+            toast.error(res.message || 'Gagal mengupload gambar')
+        }
+
+        e.target.value = ''
+    }
+
+    const handleRemoveImage = async () => {
+        if (!imageUrl) return
+
+        const res = await deleteImage(imageUrl)
+        if (res.success) {
+            setImageUrl('')
+            toast.success('Gambar berhasil dihapus')
+        } else {
+            toast.error(res.message || 'Gagal menghapus gambar')
+        }
+    }
+
+    const inputClass = "w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
 
     return (
         <AnimatePresence>
@@ -61,7 +135,9 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                     <h2 className="text-xl md:text-2xl text-gray-200">
                                         {product ? 'Edit Produk' : 'Tambah Produk'}
                                     </h2>
-                                    <p className="text-sm text-gray-500 mt-1">Perbarui informasi produk ini</p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {product ? 'Perbarui informasi produk ini' : 'Tambahkan produk baru ke inventaris'}
+                                    </p>
                                 </div>
                                 <button
                                     onClick={onClose}
@@ -81,12 +157,13 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                             type="text"
                                             value={formData.name || ''}
                                             onChange={(e) => handleChange('name', e.target.value)}
-                                            className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                            className={inputClass}
+                                            placeholder="Contoh: Lampu LED 10W"
                                             required
                                         />
                                     </div>
 
-                                    {/* SKU and Type */}
+                                    {/* SKU and Category */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm text-gray-400 mb-2">SKU / Kode Item *</label>
@@ -94,19 +171,23 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                                 type="text"
                                                 value={formData.sku || ''}
                                                 onChange={(e) => handleChange('sku', e.target.value)}
-                                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                                className={inputClass}
+                                                placeholder="Contoh: LED-10W-001"
                                                 required
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm text-gray-400 mb-2">Tipe Item</label>
+                                            <label className="block text-sm text-gray-400 mb-2">Kategori *</label>
                                             <select
-                                                value={formData.item_type || 'product'}
-                                                onChange={(e) => handleChange('item_type', e.target.value as any)}
-                                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                                value={formData.kategori_produk_id || ''}
+                                                onChange={(e) => handleChange('kategori_produk_id', e.target.value)}
+                                                className={inputClass}
+                                                required
                                             >
-                                                <option value="product">Produk Barang (Fisik)</option>
-                                                <option value="layanan">Layanan / Jasa</option>
+                                                <option value="" disabled>Pilih Kategori</option>
+                                                {categories.map((cat) => (
+                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>
@@ -119,7 +200,7 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                                 type="number"
                                                 value={formData.cost_price || 0}
                                                 onChange={(e) => handleChange('cost_price', Number(e.target.value))}
-                                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                                className={inputClass}
                                                 min="0"
                                             />
                                         </div>
@@ -129,7 +210,7 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                                 type="number"
                                                 value={formData.price || 0}
                                                 onChange={(e) => handleChange('price', Number(e.target.value))}
-                                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                                className={inputClass}
                                                 required
                                                 min="0"
                                             />
@@ -137,77 +218,101 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                     </div>
 
                                     {/* Stock */}
-                                    {formData.item_type === 'product' && (
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-2">Stok Saat Ini</label>
-                                            <input
-                                                type="number"
-                                                value={formData.stok || 0}
-                                                onChange={(e) => handleChange('stok', Number(e.target.value))}
-                                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
-                                                required
-                                                min="0"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Categories */}
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Nama Kategori</label>
+                                        <label className="block text-sm text-gray-400 mb-2">Stok</label>
                                         <input
-                                            type="text"
-                                            value={formData.kategori_name || ''}
-                                            onChange={(e) => handleChange('kategori_name', e.target.value)}
-                                            className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 transition-all"
-                                            placeholder="Contoh: Hardware, Minuman"
+                                            type="number"
+                                            value={formData.stock || 0}
+                                            onChange={(e) => handleChange('stock', Number(e.target.value))}
+                                            className={inputClass}
+                                            min="0"
                                         />
                                     </div>
 
-                                    {/* Image URL */}
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">URL Gambar</label>
-                                        <div className="flex gap-2">
-                                            <div className="flex-1 relative">
-                                                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                                                <input
-                                                    type="url"
-                                                    value={formData.image || ''}
-                                                    onChange={(e) => handleChange('image', e.target.value)}
-                                                    className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl pl-10 pr-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 transition-all"
-                                                    placeholder="https://example.com/image.jpg"
-                                                />
-                                            </div>
+                                    {/* Jasa Pasang, Ongkir, Overhead */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-2">Jasa Pasang (Rp)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.jasa_pasang || 0}
+                                                onChange={(e) => handleChange('jasa_pasang', Number(e.target.value))}
+                                                className={inputClass}
+                                                min="0"
+                                            />
                                         </div>
-                                        {formData.image && (
-                                            <div className="mt-3">
-                                                {/* Image Preview with Fallback */}
-                                                <div className="w-24 h-24 rounded-lg overflow-hidden border border-purple-500/20 bg-purple-500/5 flex items-center justify-center">
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-2">Ongkir & Asuransi (Rp)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.ongkir_asuransi || 0}
+                                                onChange={(e) => handleChange('ongkir_asuransi', Number(e.target.value))}
+                                                className={inputClass}
+                                                min="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-2">Biaya Overhead (Rp)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.biaya_overhead || 0}
+                                                onChange={(e) => handleChange('biaya_overhead', Number(e.target.value))}
+                                                className={inputClass}
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Image Upload */}
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">Gambar Produk</label>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+
+                                        {!imageUrl ? (
+                                            <button
+                                                type="button"
+                                                onClick={handleSelectImage}
+                                                disabled={isUploading}
+                                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer disabled:opacity-50"
+                                            >
+                                                {isUploading ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        Mengupload...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload className="w-4 h-4" />
+                                                        Pilih Gambar
+                                                    </>
+                                                )}
+                                            </button>
+                                        ) : (
+                                            <div className="relative inline-block">
+                                                <div className="w-28 h-28 rounded-xl overflow-hidden border border-purple-500/20 bg-white/5">
                                                     <img
-                                                        src={formData.image}
+                                                        src={imageUrl}
                                                         alt="Preview"
                                                         className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.currentTarget.style.display = 'none'
-                                                            const parent = e.currentTarget.parentElement
-                                                            if (parent) {
-                                                                const fallback = parent.querySelector('.fallback-preview') as HTMLElement
-                                                                if (fallback) fallback.style.display = 'flex'
-                                                            }
-                                                        }}
-                                                        onLoad={(e) => {
-                                                            const parent = e.currentTarget.parentElement
-                                                            if (parent) {
-                                                                const fallback = parent.querySelector('.fallback-preview') as HTMLElement
-                                                                if (fallback) fallback.style.display = 'none'
-                                                            }
-                                                        }}
                                                     />
-                                                    <div className="fallback-preview w-full h-full hidden items-center justify-center">
-                                                        <Wrench className="w-8 h-8 text-purple-500/40" />
-                                                    </div>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleRemoveImage}
+                                                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all cursor-pointer shadow-lg"
+                                                    title="Hapus gambar"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
                                             </div>
                                         )}
+                                        <p className="text-xs text-gray-600 mt-2">Format: JPG, PNG, WebP. Maks 5MB</p>
                                     </div>
                                 </div>
                             </form>
@@ -226,7 +331,7 @@ export function EditProductModal({ isOpen, onClose, product, onSave }: EditProdu
                                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all cursor-pointer"
                                 >
                                     <Save className="w-5 h-5" />
-                                    Simpan Perubahan
+                                    {product ? 'Simpan Perubahan' : 'Tambah Produk'}
                                 </button>
                             </div>
                         </div>

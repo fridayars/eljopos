@@ -63,6 +63,7 @@ const getAllProducts = async (req, res, next) => {
         const limit = parseInt(req.query.limit, 10) || 10;
         const search = req.query.search;
         const sort = req.query.sort; // can be string or array
+        const status = req.query.status;
 
         const storeId = req.query.store_id || req.user.store_id;
 
@@ -70,7 +71,7 @@ const getAllProducts = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'store_id is required' });
         }
 
-        const result = await productService.getAllProducts({ page, limit, search, sort }, storeId);
+        const result = await productService.getAllProducts({ page, limit, search, sort, status }, storeId);
 
         return res.json({ success: true, data: result });
     } catch (error) {
@@ -95,9 +96,143 @@ const getProductCategories = async (req, res, next) => {
     }
 };
 
+/**
+ * Create Product Category
+ */
+const createCategory = async (req, res, next) => {
+    try {
+        const data = req.body;
+        const category = await productService.createCategory(data);
+        return res.status(201).json({ success: true, data: category, message: 'Category created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update Product Category
+ */
+const updateCategory = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        const category = await productService.updateCategory(id, data);
+        return res.json({ success: true, data: category, message: 'Category updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Delete Product Category
+ */
+const deleteCategory = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        await productService.deleteCategory(id);
+        return res.json({ success: true, message: 'Category deleted successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Create Product
+ */
+const createProduct = async (req, res, next) => {
+    try {
+        const storeId = req.query.store_id || req.user.store_id;
+
+        if (!storeId) {
+            return res.status(400).json({ success: false, message: 'store_id is required' });
+        }
+
+        const data = req.body;
+        const product = await productService.createProduct(data, storeId);
+
+        return res.status(201).json({ success: true, data: product, message: 'Product created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update Product
+ */
+const updateProduct = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const storeId = req.query.store_id || req.user.store_id;
+
+        if (!storeId) {
+            return res.status(400).json({ success: false, message: 'store_id is required' });
+        }
+
+        const data = req.body;
+        const product = await productService.updateProduct(id, data, storeId);
+
+        return res.json({ success: true, data: product, message: 'Product updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Delete Product (Soft delete)
+ */
+const deleteProduct = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const storeId = req.query.store_id || req.user.store_id;
+
+        if (!storeId) {
+            return res.status(400).json({ success: false, message: 'store_id is required' });
+        }
+
+        const result = await productService.deleteProduct(id, storeId);
+
+        return res.json({ success: true, message: result.message });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update Product Status
+ */
+const updateProductStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const storeId = req.query.store_id || req.user.store_id;
+
+        if (!storeId) {
+            return res.status(400).json({ success: false, message: 'store_id is required' });
+        }
+
+        const { is_active } = req.body;
+
+        if (is_active === undefined) {
+            return res.status(400).json({ success: false, message: 'is_active is required' });
+        }
+
+        const result = await productService.updateProductStatus(id, is_active, storeId);
+
+        return res.json({ success: true, message: result.message });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     exportProducts,
     getAllProducts,
     importProducts,
-    getProductCategories
+    getProductCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    updateProductStatus
 };

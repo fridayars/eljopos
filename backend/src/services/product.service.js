@@ -24,6 +24,15 @@ const getAllProducts = async (opts, storeId) => {
         ];
     }
 
+    if (opts.status !== undefined && opts.status !== null && opts.status !== '') {
+        const statusStr = String(opts.status).toLowerCase();
+        if (statusStr === 'true' || statusStr === '1') {
+            where.is_active = true;
+        } else if (statusStr === 'false' || statusStr === '0') {
+            where.is_active = false;
+        }
+    }
+
     // base order
     let order = [['created_at', 'DESC']];
 
@@ -69,12 +78,17 @@ const getAllProducts = async (opts, storeId) => {
 
     const items = rows.map(p => ({
         id: p.id,
+        kategori_produk_id: p.kategori_produk_id,
         kategori_name: p.kategori?.name || '',
         name: p.name,
         sku: p.sku,
         image_url: p.image_url || null,
         price: Number(p.price),
-        stok: p.stock,
+        cost_price: Number(p.cost_price || 0),
+        stock: p.stock,
+        jasa_pasang: p.jasa_pasang || 0,
+        ongkir_asuransi: p.ongkir_asuransi || 0,
+        biaya_overhead: p.biaya_overhead || 0,
         is_active: p.is_active
     }));
 
@@ -713,10 +727,155 @@ const exportProducts = async (storeId) => {
     }
 };
 
+/**
+ * Create Product Category
+ * @param {object} data
+ */
+const createCategory = async (data) => {
+    const category = await KategoriProduk.create(data);
+    return category;
+};
+
+/**
+ * Update Product Category
+ * @param {string} id
+ * @param {object} data
+ */
+const updateCategory = async (id, data) => {
+    const category = await KategoriProduk.findByPk(id);
+    if (!category) {
+        throw new AppError('Category not found', 404);
+    }
+    await category.update(data);
+    return category;
+};
+
+/**
+ * Delete Product Category
+ * @param {string} id
+ */
+const deleteCategory = async (id) => {
+    const category = await KategoriProduk.findByPk(id);
+    if (!category) {
+        throw new AppError('Category not found', 404);
+    }
+
+    // Check if category is used by products
+    const productCount = await Product.count({ where: { kategori_produk_id: id } });
+    if (productCount > 0) {
+        throw new AppError('Cannot delete category. It is used by one or more products.', 400);
+    }
+
+    await category.destroy();
+    return category;
+};
+
+/**
+ * Create a new product
+ * @param {object} data
+ * @param {string} storeId
+ */
+const createProduct = async (data, storeId) => {
+    // Check if kategori exists
+    const kategori = await KategoriProduk.findByPk(data.kategori_produk_id);
+    if (!kategori) {
+        throw new AppError('Product category not found', 404);
+    }
+
+    // Check SKU uniqueness per store
+    const existingSku = await Product.findOne({
+        where: { sku: data.sku, store_id: storeId }
+    });
+
+    if (existingSku) {
+        throw new AppError('SKU already exists in this store', 400);
+    }
+
+    const product = await Product.create({
+        ...data,
+        store_id: storeId
+    });
+
+    return product;
+};
+
+/**
+ * Update an existing product
+ * @param {string} id
+ * @param {object} data
+ * @param {string} storeId
+ */
+const updateProduct = async (id, data, storeId) => {
+    const product = await Product.findOne({ where: { id, store_id: storeId } });
+    if (!product) {
+        throw new AppError('Product not found', 404);
+    }
+
+    if (data.kategori_produk_id && data.kategori_produk_id !== product.kategori_produk_id) {
+        const kategori = await KategoriProduk.findByPk(data.kategori_produk_id);
+        if (!kategori) {
+            throw new AppError('Product category not found', 404);
+        }
+    }
+
+    if (data.sku && data.sku !== product.sku) {
+        const existingSku = await Product.findOne({
+            where: { sku: data.sku, store_id: storeId }
+        });
+
+        if (existingSku && existingSku.id !== id) {
+            throw new AppError('SKU already exists in this store', 400);
+        }
+    }
+
+    await product.update(data);
+    return product;
+};
+
+/**
+ * Delete a product (Soft delete)
+ * @param {string} id
+ * @param {string} storeId
+ */
+const deleteProduct = async (id, storeId) => {
+    const product = await Product.findOne({ where: { id, store_id: storeId } });
+    if (!product) {
+        throw new AppError('Product not found', 404);
+    }
+
+    await product.destroy();
+
+    return { message: 'Product deleted successfully' };
+};
+
+/**
+ * Update product status
+ * @param {string} id
+ * @param {boolean} isActive
+ * @param {string} storeId
+ */
+const updateProductStatus = async (id, isActive, storeId) => {
+    const product = await Product.findOne({ where: { id, store_id: storeId } });
+    if (!product) {
+        throw new AppError('Product not found', 404);
+    }
+
+    await product.update({ is_active: isActive });
+
+    return { message: `Product ${isActive ? 'activated' : 'deactivated'} successfully` };
+};
+
 module.exports = {
-    exportProducts
-    , importProducts
-    , getAllProducts
-    , getProductCategoriesList
+    exportProducts,
+    importProducts,
+    getAllProducts,
+    getProductCategoriesList,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    updateProductStatus
 };
 

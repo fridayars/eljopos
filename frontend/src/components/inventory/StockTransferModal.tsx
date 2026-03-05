@@ -42,7 +42,7 @@ export function StockTransferModal({ isOpen, onClose, products, branches, onTran
     const getAvailableStock = (): number => {
         if (!selectedProduct || !sourceBranch) return 0
         const product = products.find((p) => p.id === selectedProduct)
-        return product ? product.stok : 0
+        return product ? product.stock : 0
     }
 
     const availableStock = getAvailableStock()
@@ -245,7 +245,7 @@ export function StockTransferModal({ isOpen, onClose, products, branches, onTran
                                                                     </p>
                                                                 </div>
                                                                 <p className="text-xs text-blue-400">
-                                                                    Stok Tersedia: {product.stok}
+                                                                    Stok Tersedia: {product.stock}
                                                                 </p>
                                                             </div>
                                                         </div>

@@ -11,6 +11,7 @@ interface ProductsPageProps {
     products: ProductItem[]
     onEditProduct: (product: ProductItem) => void
     onDeleteProduct: (product: ProductItem) => void
+    onToggleStatus: (product: ProductItem) => void
     onImportProducts: (file: File) => void
     onExportProducts: () => void
     onOpenTransfer: () => void
@@ -29,6 +30,7 @@ export function ProductsPage({
     products,
     onEditProduct,
     onDeleteProduct,
+    onToggleStatus,
     onImportProducts,
     onExportProducts,
     onOpenTransfer,
@@ -152,6 +154,9 @@ export function ProductsPage({
                                         >
                                             Stok {renderSortIcon('stock')}
                                         </th>
+                                        <th className="px-4 py-4 text-sm font-medium text-gray-400 text-center w-20">
+                                            Status
+                                        </th>
                                         <th className="px-4 py-4 text-sm font-medium text-gray-400 text-center w-24">
                                             Aksi
                                         </th>
@@ -178,9 +183,9 @@ export function ProductsPage({
                                             >
                                                 <td className="px-4 py-3">
                                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
-                                                        {product.image ? (
+                                                        {(product.image_url || product.image) ? (
                                                             <img
-                                                                src={product.image}
+                                                                src={product.image_url || product.image}
                                                                 alt={product.name}
                                                                 className="w-full h-full object-cover"
                                                                 onError={(e) => {
@@ -214,20 +219,33 @@ export function ProductsPage({
                                                     Rp {product.price.toLocaleString('id-ID')}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right">
-                                                    {product.item_type === 'layanan' ? (
-                                                        <span className="text-gray-600">-</span>
-                                                    ) : (
+                                                    <span
+                                                        className={`font-medium ${product.stock < 10
+                                                            ? 'text-red-400'
+                                                            : product.stock < 20
+                                                                ? 'text-orange-400'
+                                                                : 'text-green-400'
+                                                            }`}
+                                                    >
+                                                        {product.stock}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button
+                                                        onClick={() => onToggleStatus!(product)}
+                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${product.is_active !== false
+                                                            ? 'bg-green-500'
+                                                            : 'bg-gray-600'
+                                                            }`}
+                                                        title={`${product.is_active !== false ? 'Nonaktifkan' : 'Aktifkan'} produk`}
+                                                    >
                                                         <span
-                                                            className={`font-medium ${product.stok < 10
-                                                                ? 'text-red-400'
-                                                                : product.stok < 20
-                                                                    ? 'text-orange-400'
-                                                                    : 'text-green-400'
+                                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.is_active !== false
+                                                                ? 'translate-x-6'
+                                                                : 'translate-x-1'
                                                                 }`}
-                                                        >
-                                                            {product.stok}
-                                                        </span>
-                                                    )}
+                                                        />
+                                                    </button>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -10,6 +10,7 @@ const getAllServices = async (req, res, next) => {
         const search = req.query.search;
         const sort = req.query.sort;
         const kategori_layanan_id = req.query.kategori_layanan_id;
+        const status = req.query.status;
 
         const storeId = req.query.store_id || req.user.store_id;
 
@@ -17,7 +18,7 @@ const getAllServices = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'store_id is required' });
         }
 
-        const result = await layananService.getAllServices({ page, limit, search, sort, kategori_layanan_id }, storeId);
+        const result = await layananService.getAllServices({ page, limit, search, sort, kategori_layanan_id, status }, storeId);
 
         return res.json({ success: true, data: result });
     } catch (error) {

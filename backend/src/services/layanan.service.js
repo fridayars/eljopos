@@ -29,6 +29,15 @@ const getAllServices = async (opts, storeId) => {
             ];
         }
 
+        if (opts.status !== undefined && opts.status !== null && opts.status !== '') {
+            const statusStr = String(opts.status).toLowerCase();
+            if (statusStr === 'true' || statusStr === '1') {
+                where.is_active = true;
+            } else if (statusStr === 'false' || statusStr === '0') {
+                where.is_active = false;
+            }
+        }
+
         // Default order
         let order = [['created_at', 'DESC']];
 
