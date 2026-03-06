@@ -140,6 +140,7 @@ interface GetProductsParams {
     search?: string;
     sort?: string;
     store_id?: string;
+    status?: string | boolean;
 }
 
 export const getProducts = async (params: GetProductsParams = {}): Promise<GetProductsResponse> => {
@@ -181,6 +182,7 @@ export const getProducts = async (params: GetProductsParams = {}): Promise<GetPr
         if (params.search) searchParams.append('search', params.search)
         if (params.sort) searchParams.append('sort', params.sort)
         if (storeId) searchParams.append('store_id', storeId)
+        if (params.status !== undefined) searchParams.append('status', String(params.status))
 
         const queryStr = searchParams.toString()
         const url = `/master/products${queryStr ? `?${queryStr}` : ''}`
@@ -416,7 +418,7 @@ export const exportProductsFile = async (storeId?: string): Promise<{ success: b
         const effectiveStoreId = storeId || getCurrentStoreId()
         const url = effectiveStoreId ? `/master/products/export?store_id=${effectiveStoreId}` : '/master/products/export'
         const response = await api.get(url, {
-            responseType: 'blob', // Important: tell Axios to handle binary data
+            responseType: 'blob', // Important: tell Axios to tell Axios to handle binary data
         })
 
         // Extract filename from content-disposition header if present
@@ -501,6 +503,7 @@ interface GetServiceProductsParams {
     sort?: string;
     kategori_layanan_id?: string;
     store_id?: string;
+    status?: string | boolean;
 }
 
 export interface GetServiceProductsResponse {
@@ -531,6 +534,7 @@ export const getServiceProducts = async (params: GetServiceProductsParams = {}):
             searchParams.append('kategori_layanan_id', params.kategori_layanan_id)
         }
         if (storeId) searchParams.append('store_id', storeId)
+        if (params.status !== undefined) searchParams.append('status', String(params.status))
 
         const queryStr = searchParams.toString()
         const url = `/master/layanan${queryStr ? `?${queryStr}` : ''}`

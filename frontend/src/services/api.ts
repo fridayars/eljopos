@@ -26,6 +26,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        if (error.response && error.response.status === 401) {
+            // Clear all auth data
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            localStorage.removeItem('store_name')
+
+            // Redirect to login page
+            window.location.href = '/'
+        }
+
         if (error.response) {
             console.error('API Error:', error.response.data.message)
         } else {

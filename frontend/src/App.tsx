@@ -1,7 +1,13 @@
 import { useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import LoginPage from './pages/LoginPage'
 import { DashboardLayout } from './layouts/DashboardLayout'
+import { DashboardPage } from './pages/DashboardPage'
+import { SalesPage } from './pages/SalesPage'
+import { ProductInventoryPage } from './pages/ProductInventoryPage'
+import { ServiceInventoryPage } from './pages/ServiceInventoryPage'
+import { ReportsPage } from './pages/ReportsPage'
 
 const App = () => {
   // Check localStorage on initial render (persists across page refresh)
@@ -17,11 +23,53 @@ const App = () => {
     setIsAuthenticated(false)
   }
 
-  if (isAuthenticated) {
-    return <DashboardLayout onLogout={handleLogout} />
-  }
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage onLoginSuccess={handleLoginSuccess} />
+            )
+          }
+        />
 
-  return <LoginPage onLoginSuccess={handleLoginSuccess} />
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              <DashboardLayout onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        >
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="sales" element={<SalesPage />} />
+          <Route path="products" element={<ProductInventoryPage />} />
+          <Route path="services" element={<ServiceInventoryPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route
+            path="*"
+            element={
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-lg font-medium" style={{ color: 'var(--foreground)' }}>
+                    Halaman Tidak Ditemukan
+                  </p>
+                </div>
+              </div>
+            }
+          />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App

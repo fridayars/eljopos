@@ -75,7 +75,8 @@ export function SalesPage() {
                     page: targetPage,
                     limit: ITEMS_PER_PAGE,
                     search: searchQuery,
-                    store_id: storeId || undefined
+                    store_id: storeId || undefined,
+                    status: 'true'
                 })
 
                 if (response.success) {
@@ -93,7 +94,8 @@ export function SalesPage() {
                     page: targetPage,
                     limit: ITEMS_PER_PAGE,
                     search: searchQuery,
-                    store_id: storeId || undefined
+                    store_id: storeId || undefined,
+                    status: 'true'
                 })
 
                 if (response.success) {

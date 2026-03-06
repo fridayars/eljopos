@@ -9,8 +9,8 @@ interface SidebarProps {
 const navItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
     { id: 'sales', icon: LayoutGrid, label: 'Kasir' },
-    { id: 'product-inventory', icon: Package, label: 'Produk' },
-    { id: 'service-inventory', icon: Briefcase, label: 'Layanan' },
+    { id: 'products', icon: Package, label: 'Produk' },
+    { id: 'services', icon: Briefcase, label: 'Layanan' },
     { id: 'customers', icon: Users, label: 'Pelanggan' },
     { id: 'reports', icon: BarChart3, label: 'Laporan' },
     { id: 'settings', icon: Settings, label: 'Pengaturan' },

@@ -48,9 +48,7 @@ export function ProductInventoryPage() {
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
     const pageSize = 10
 
-    const loadData = useCallback(async () => {
-        console.log('DEBUG: loadData dipanggil!');
-        setIsLoading(true)
+    const fetchProducts = useCallback(async () => {
         try {
             const params = {
                 page: currentPage,
@@ -59,35 +57,51 @@ export function ProductInventoryPage() {
                 sort: sortConfig ? `${sortConfig.key}:${sortConfig.direction}` : undefined
             }
 
-            const [prodRes, catRes, branchRes] = await Promise.all([
-                getProducts(params),
-                getCategories(),
-                getBranches()
-            ])
-
-            console.log('DEBUG: Promise.all selesai', { catResData: catRes.data, isArray: Array.isArray(catRes.data) });
+            const prodRes = await getProducts(params)
 
             if (prodRes.success) {
                 setProducts(prodRes.data.items)
                 setTotalPages(prodRes.data.pagination?.total_pages || 1)
             }
+        } catch (error) {
+            toast.error('Gagal memuat data produk')
+        }
+    }, [currentPage, searchQuery, sortConfig])
+
+    const loadInitialData = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const [catRes, branchRes] = await Promise.all([
+                getCategories(),
+                getBranches()
+            ])
+
             if (catRes.success) {
                 setCategories(catRes.data)
-                toast.info(`DEBUG LOAD: ${catRes.data.length} kategori`)
             } else {
-                toast.error(`DEBUG: Gagal load kategori dari server`)
+                toast.error(`Gagal load kategori dari server`)
             }
             if (branchRes.success) setBranches(branchRes.data)
+
+            // Also fetch products for the first load
+            await fetchProducts()
         } catch (error) {
             toast.error('Gagal memuat data inventaris')
         } finally {
             setIsLoading(false)
         }
-    }, [currentPage, searchQuery, sortConfig])
+    }, [fetchProducts])
 
     useEffect(() => {
-        loadData()
-    }, [loadData])
+        loadInitialData()
+    }, []) // Run only once on mount
+
+    useEffect(() => {
+        // Only run fetchProducts if it's not the initial loading (already handled by loadInitialData)
+        if (!isLoading) {
+            fetchProducts()
+        }
+    }, [currentPage, searchQuery, sortConfig, isLoading, fetchProducts])
 
     const handleSortChange = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc'
@@ -157,7 +171,7 @@ export function ProductInventoryPage() {
             if (res.success && res.data) {
                 toast.success('Produk berhasil ditambahkan')
                 setIsEditProdOpen(false)
-                loadData()
+                fetchProducts()
             } else {
                 toast.error('Gagal menambahkan produk')
             }
@@ -167,7 +181,7 @@ export function ProductInventoryPage() {
             if (res.success && res.data) {
                 toast.success('Produk berhasil diperbarui')
                 setIsEditProdOpen(false)
-                loadData()
+                fetchProducts()
             } else {
                 toast.error('Gagal memperbarui produk')
             }
@@ -194,7 +208,7 @@ export function ProductInventoryPage() {
         const res = await deleteProduct(productToDelete.id)
         if (res.success) {
             toast.success('Produk berhasil dihapus')
-            loadData()
+            fetchProducts()
         } else {
             toast.error('Gagal menghapus produk')
         }
@@ -217,7 +231,7 @@ export function ProductInventoryPage() {
         const response = await importProductsFile(file)
         if (response.success) {
             toast.success(response.message || 'Produk berhasil diimport')
-            loadData()
+            fetchProducts()
         } else {
             toast.error(response.message || 'Gagal mengimport produk')
         }
@@ -413,7 +427,10 @@ export function ProductInventoryPage() {
                                 sortConfig={sortConfig}
                                 onSortChange={handleSortChange}
                                 searchQuery={searchQuery}
-                                onSearchChange={setSearchQuery}
+                                onSearchChange={(val) => {
+                                    setSearchQuery(val)
+                                    setCurrentPage(1)
+                                }}
                             />
                         </motion.div>
                     )}
