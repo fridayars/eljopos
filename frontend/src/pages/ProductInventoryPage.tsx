@@ -254,19 +254,8 @@ export function ProductInventoryPage() {
         const itemsList = data.items.map((item: any) => `${item.quantity}x ${item.productName}`).join(', ')
         toast.success(`Berhasil transfer dari ${sourceName} ke ${destName}: ${itemsList}`)
 
-        // Update local mock stock for logic realism
-        let updatedProducts = [...products]
-        data.items.forEach((item: any) => {
-            const index = updatedProducts.findIndex(p => p.id === item.productId)
-            if (index !== -1) {
-                updatedProducts[index] = {
-                    ...updatedProducts[index],
-                    stock: (updatedProducts[index].stock || 0) - item.quantity
-                }
-            }
-        })
-        setProducts(updatedProducts)
-        localStorage.setItem('mock_products_data', JSON.stringify(updatedProducts))
+        // Refresh products list from DB to reflect correct stock changes
+        fetchProducts()
     }
 
     if (isLoading) {

@@ -688,3 +688,17 @@ export const exportServiceProducts = async (): Promise<{ success: boolean, messa
     // Reuse exportProductsFile logic as requested
     return exportProductsFile()
 }
+
+export const executeStockTransfer = async (sourceBranch: string, destinationBranch: string, items: { productId: string; quantity: number }[]): Promise<{ success: boolean; message?: string }> => {
+    try {
+        const response = await api.post('/master/products/transfer', {
+            sourceBranch,
+            destinationBranch,
+            items
+        });
+        return response.data;
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal mengeksekusi transfer stok' };
+    }
+}
+

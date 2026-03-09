@@ -223,6 +223,22 @@ const updateProductStatus = async (req, res, next) => {
     }
 };
 
+/**
+ * Transfer Stock
+ */
+const transferStock = async (req, res, next) => {
+    try {
+        const userId = req.user.user_id;
+        const data = req.body;
+
+        const result = await productService.transferStock(data, userId);
+
+        return res.json({ success: true, message: result.message });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     exportProducts,
     getAllProducts,
@@ -234,5 +250,6 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
-    updateProductStatus
+    updateProductStatus,
+    transferStock
 };

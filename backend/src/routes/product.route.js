@@ -21,6 +21,9 @@ router.get('/export', authMiddleware, productController.exportProducts);
 // GET /api/master/products
 router.get('/', authMiddleware, productController.getAllProducts);
 
+// POST /api/master/products/transfer
+router.post('/transfer', authMiddleware, productController.transferStock);
+
 // POST /api/master/products
 router.post('/', authMiddleware, createProductValidation, validate, productController.createProduct);
 

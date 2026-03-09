@@ -1,6 +1,6 @@
 import api from './api'
 
-const USE_MOCK_DATA_GET_BRANCHES = true
+const USE_MOCK_DATA_GET_BRANCHES = false
 
 export interface Branch {
     id: string
@@ -26,7 +26,7 @@ export const getBranches = async (): Promise<{ success: boolean; data: Branch[] 
     }
 
     try {
-        const response = await api.get('/master/branches')
+        const response = await api.get('/master/stores')
         return response.data
     } catch (error: any) {
         return { success: false, data: [] }

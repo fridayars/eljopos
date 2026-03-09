@@ -865,6 +865,81 @@ const updateProductStatus = async (id, isActive, storeId) => {
     return { message: `Product ${isActive ? 'activated' : 'deactivated'} successfully` };
 };
 
+/**
+ * Transfer Stock between stores
+ * @param {object} data { sourceBranch, destinationBranch, items }
+ * @param {string} userId
+ */
+const transferStock = async (data, userId) => {
+    const { sourceBranch, destinationBranch, items } = data;
+
+    if (sourceBranch === destinationBranch) {
+        throw new AppError('Source and destination branches cannot be the same', 400);
+    }
+
+    if (!items || items.length === 0) {
+        throw new AppError('No items to transfer', 400);
+    }
+
+    const transaction = await db.sequelize.transaction();
+    try {
+        for (const item of items) {
+            const { productId, quantity } = item;
+
+            if (!quantity || quantity <= 0) {
+                throw new AppError('Invalid transfer quantity', 400);
+            }
+
+            // 1. Get source product
+            const sourceProduct = await Product.findOne({
+                where: { id: productId, store_id: sourceBranch },
+                transaction
+            });
+
+            if (!sourceProduct) {
+                throw new AppError(`Product not found in source branch`, 404);
+            }
+
+            if (sourceProduct.stock < quantity) {
+                throw new AppError(`Insufficient stock for product ${sourceProduct.name} in source branch`, 400);
+            }
+
+            // 2. Locate destination product by SKU
+            if (!sourceProduct.sku) {
+                throw new AppError(`Product ${sourceProduct.name} has no SKU, cannot transfer`, 400);
+            }
+
+            const destinationProduct = await Product.findOne({
+                where: { sku: sourceProduct.sku, store_id: destinationBranch },
+                transaction
+            });
+
+            if (!destinationProduct) {
+                throw new AppError(`Product SKU ${sourceProduct.sku} not found in destination branch`, 404);
+            }
+
+            // 3. Update stock (using update instead of decrement/increment directly if paranoid prevents logic, wait no, increment/decrement works well. Though let's do safe math.)
+            await sourceProduct.decrement('stock', { by: quantity, transaction });
+            await destinationProduct.increment('stock', { by: quantity, transaction });
+
+            // 4. Create log
+            await db.LogTransferStok.create({
+                product_id: sourceProduct.id,
+                from_store_id: sourceBranch,
+                to_store_id: destinationBranch,
+                quantity: quantity,
+                user_id: userId
+            }, { transaction });
+        }
+
+        await transaction.commit();
+        return { message: 'Stock transfer successful' };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+};
+
 module.exports = {
     exportProducts,
     importProducts,
@@ -876,6 +951,7 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
-    updateProductStatus
+    updateProductStatus,
+    transferStock
 };
 
