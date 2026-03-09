@@ -8,6 +8,9 @@ import { SalesPage } from './pages/SalesPage'
 import { ProductInventoryPage } from './pages/ProductInventoryPage'
 import { ServiceInventoryPage } from './pages/ServiceInventoryPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { InvoicePrintPage } from './pages/InvoicePrintPage'
+import { UsersPage } from './pages/UsersPage'
+import { RolePage } from './pages/RolePage'
 
 const App = () => {
   // Check localStorage on initial render (persists across page refresh)
@@ -37,6 +40,18 @@ const App = () => {
           }
         />
 
+        {/* Print Route without DashboardLayout */}
+        <Route
+          path="/print-invoice/:id"
+          element={
+            isAuthenticated ? (
+              <InvoicePrintPage />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
         {/* Protected Routes */}
         <Route
           path="/"
@@ -54,6 +69,8 @@ const App = () => {
           <Route path="products" element={<ProductInventoryPage />} />
           <Route path="services" element={<ServiceInventoryPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="settings/users" element={<UsersPage />} />
+          <Route path="settings/role" element={<RolePage />} />
           <Route
             path="*"
             element={

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Download, Calendar, Eye, X, ChevronLeft, ChevronRight, Loader2, Store } from 'lucide-react';
+import { Search, Download, Calendar, Eye, X, ChevronLeft, ChevronRight, Loader2, Store, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -486,7 +486,30 @@ export function TransactionReport() {
                                                 Tutup
                                             </button>
                                             <button
-                                                onClick={() => toast.success('Fitur cetak akan segera tersedia')}
+                                                onClick={() => {
+                                                    if (!selectedDetail?.customer?.phone) {
+                                                        toast.error('Nomor telepon pelanggan tidak tersedia');
+                                                        return;
+                                                    }
+                                                    let phone = selectedDetail.customer.phone.replace(/\D/g, '');
+                                                    if (phone.startsWith('0')) {
+                                                        phone = '62' + phone.substring(1);
+                                                    }
+                                                    const invoiceUrl = `${window.location.origin}/print-invoice/${selectedDetail.id}?cetak=false`;
+                                                    const text = encodeURIComponent(`Halo ${selectedDetail.customer.name},\n\nTerima kasih telah berbelanja di ${selectedDetail.store?.name || 'eljoPOS'}.\n\nBerikut adalah link invoice Anda:\n${invoiceUrl}\n\nTerima kasih!`);
+                                                    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+                                                }}
+                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] transition-all text-sm cursor-pointer font-bold"
+                                            >
+                                                <MessageCircle className="w-4 h-4" />
+                                                Kirim WhatsApp
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (selectedDetail) {
+                                                        window.open(`/print-invoice/${selectedDetail.id}?cetak=true`, '_blank');
+                                                    }
+                                                }}
                                                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all text-sm cursor-pointer font-bold"
                                             >
                                                 <Download className="w-4 h-4" />

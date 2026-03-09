@@ -1,23 +1,57 @@
-import { useState } from 'react'
-import { LayoutGrid, Users, Package, BarChart3, Settings, Home, Briefcase } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { LayoutGrid, Users, Package, BarChart3, Settings, Home, Briefcase, ChevronDown } from 'lucide-react'
 
 interface SidebarProps {
     activeTab: string
     onTabChange: (tab: string) => void
 }
 
-const navItems = [
+interface NavItem {
+    id: string
+    icon: any
+    label: string
+    subItems?: { id: string, label: string }[]
+}
+
+const navItems: NavItem[] = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
     { id: 'sales', icon: LayoutGrid, label: 'Kasir' },
     { id: 'products', icon: Package, label: 'Produk' },
     { id: 'services', icon: Briefcase, label: 'Layanan' },
     { id: 'customers', icon: Users, label: 'Pelanggan' },
     { id: 'reports', icon: BarChart3, label: 'Laporan' },
-    { id: 'settings', icon: Settings, label: 'Pengaturan' },
+    { 
+        id: 'settings', 
+        icon: Settings, 
+        label: 'Pengaturan',
+        subItems: [
+            { id: 'settings/users', label: 'User' },
+            { id: 'settings/role', label: 'Role' }
+        ]
+    },
 ]
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     const [isExpanded, setIsExpanded] = useState(false)
+    const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
+        settings: activeTab.startsWith('settings')
+    })
+
+    // Keep menu open if active tab changes to something inside it
+    useEffect(() => {
+        if (activeTab.startsWith('settings')) {
+            setOpenMenus(prev => ({ ...prev, settings: true }))
+        }
+    }, [activeTab])
+
+    const handleMenuClick = (item: NavItem) => {
+        if (item.subItems) {
+            if (!isExpanded) setIsExpanded(true)
+            setOpenMenus(prev => ({ ...prev, [item.id]: !prev[item.id] }))
+        } else {
+            onTabChange(item.id)
+        }
+    }
 
     return (
         <>
@@ -51,54 +85,109 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 <nav className="flex-1 flex flex-col gap-2 w-full px-2">
                     {navItems.map((item) => {
                         const Icon = item.icon
-                        const isActive = activeTab === item.id
+                        const isActive = item.subItems 
+                            ? activeTab.startsWith(item.id) 
+                            : activeTab === item.id
+                        const isOpen = openMenus[item.id]
 
                         return (
-                            <button
-                                key={item.id}
-                                onClick={() => onTabChange(item.id)}
-                                className="relative w-full rounded-xl flex items-center gap-3 transition-all duration-200 cursor-pointer overflow-hidden"
-                                style={{
-                                    height: '48px',
-                                    padding: isExpanded ? '0 16px' : '0',
-                                    justifyContent: isExpanded ? 'flex-start' : 'center',
-                                    color: isActive ? '#3B82F6' : '#71717A',
-                                    background: isActive
-                                        ? 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))'
-                                        : 'transparent',
-                                    border: isActive ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isActive) e.currentTarget.style.color = '#E5E5E7'
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isActive) e.currentTarget.style.color = '#71717A'
-                                }}
-                                title={item.label}
-                            >
-                                {/* Active glow indicator */}
-                                {isActive && (
-                                    <div
-                                        className="absolute left-0 top-1/2 w-0.5 h-6 rounded-r-full"
-                                        style={{
-                                            background: '#3B82F6',
-                                            transform: 'translateY(-50%)',
-                                            boxShadow: '0 0 8px rgba(59,130,246,0.8)',
-                                        }}
-                                    />
-                                )}
-                                <Icon className="w-5 h-5 relative z-10 shrink-0" />
-                                <span
-                                    className="text-sm relative z-10 font-medium whitespace-nowrap transition-all duration-300"
+                            <div key={item.id} className="w-full flex flex-col gap-1">
+                                <button
+                                    onClick={() => handleMenuClick(item)}
+                                    className="relative w-full rounded-xl flex items-center justify-between gap-3 transition-all duration-200 cursor-pointer overflow-hidden"
                                     style={{
-                                        opacity: isExpanded ? 1 : 0,
-                                        width: isExpanded ? 'auto' : 0,
-                                        overflow: 'hidden',
+                                        height: '48px',
+                                        padding: isExpanded ? '0 16px' : '0',
+                                        justifyContent: 'center',
+                                        color: isActive ? '#3B82F6' : '#71717A',
+                                        background: isActive && !item.subItems
+                                            ? 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))'
+                                            : isActive && item.subItems
+                                            ? 'rgba(59,130,246,0.05)'
+                                            : 'transparent',
+                                        border: isActive && !item.subItems ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
                                     }}
+                                    onMouseEnter={(e) => {
+                                        if (!isActive) e.currentTarget.style.color = '#E5E5E7'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isActive) e.currentTarget.style.color = '#71717A'
+                                    }}
+                                    title={!isExpanded ? item.label : undefined}
                                 >
-                                    {item.label}
-                                </span>
-                            </button>
+                                    {/* Active glow indicator */}
+                                    {isActive && (
+                                        <div
+                                            className="absolute left-0 top-1/2 w-0.5 h-6 rounded-r-full"
+                                            style={{
+                                                background: '#3B82F6',
+                                                transform: 'translateY(-50%)',
+                                                boxShadow: '0 0 8px rgba(59,130,246,0.8)',
+                                            }}
+                                        />
+                                    )}
+                                    <div className="flex items-center gap-3 w-full" style={{ justifyContent: isExpanded ? 'flex-start' : 'center' }}>
+                                        <Icon className="w-5 h-5 relative z-10 shrink-0" />
+                                        <span
+                                            className="text-sm relative z-10 font-medium whitespace-nowrap transition-all duration-300"
+                                            style={{
+                                                opacity: isExpanded ? 1 : 0,
+                                                width: isExpanded ? 'auto' : 0,
+                                                overflow: 'hidden',
+                                                visibility: isExpanded ? 'visible' : 'hidden'
+                                            }}
+                                        >
+                                            {item.label}
+                                        </span>
+                                    </div>
+                                    
+                                    {isExpanded && item.subItems && (
+                                        <ChevronDown 
+                                            className="w-4 h-4 shrink-0 transition-transform duration-300"
+                                            style={{ 
+                                                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                color: isActive ? '#3B82F6' : '#71717A'
+                                            }} 
+                                        />
+                                    )}
+                                </button>
+
+                                {/* Sub Items Dropdown */}
+                                {isExpanded && item.subItems && (
+                                    <div 
+                                        className="flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+                                        style={{
+                                            maxHeight: isOpen ? `${item.subItems.length * 40}px` : '0px',
+                                            opacity: isOpen ? 1 : 0,
+                                            marginTop: isOpen ? '4px' : '0'
+                                        }}
+                                    >
+                                        {item.subItems.map(sub => {
+                                            const isSubActive = activeTab === sub.id
+                                            return (
+                                                <button
+                                                    key={sub.id}
+                                                    onClick={() => onTabChange(sub.id)}
+                                                    className="w-full text-left rounded-lg text-sm transition-colors duration-200 cursor-pointer"
+                                                    style={{
+                                                        padding: '8px 16px 8px 48px',
+                                                        color: isSubActive ? '#3B82F6' : '#71717A',
+                                                        background: isSubActive ? 'rgba(59,130,246,0.1)' : 'transparent',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!isSubActive) e.currentTarget.style.color = '#E5E5E7'
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!isSubActive) e.currentTarget.style.color = '#71717A'
+                                                    }}
+                                                >
+                                                    {sub.label}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         )
                     })}
                 </nav>
@@ -117,12 +206,20 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 <div className="flex items-center justify-start h-full px-2 min-w-max">
                     {navItems.map((item) => {
                         const Icon = item.icon
-                        const isActive = activeTab === item.id
+                        const isActive = item.subItems 
+                            ? activeTab.startsWith(item.id) 
+                            : activeTab === item.id
 
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => onTabChange(item.id)}
+                                onClick={() => {
+                                    if (item.subItems) {
+                                        onTabChange(item.subItems[0].id)
+                                    } else {
+                                        onTabChange(item.id)
+                                    }
+                                }}
                                 className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 min-h-[44px] min-w-[64px] rounded-xl transition-all duration-200 cursor-pointer"
                                 style={{
                                     color: isActive ? '#3B82F6' : '#71717A',
