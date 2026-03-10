@@ -11,13 +11,17 @@ const createTransaksiValidation = [
         .notEmpty()
         .withMessage('Total amount is required')
         .isDecimal()
-        .withMessage('Total amount must be a valid number'),
+        .withMessage('Total amount must be a valid number')
+        .custom((value) => parseFloat(value) >= 0)
+        .withMessage('Total amount must be 0 or greater'),
 
     body('subtotal')
         .notEmpty()
         .withMessage('Subtotal is required')
         .isDecimal()
-        .withMessage('Subtotal must be a valid number'),
+        .withMessage('Subtotal must be a valid number')
+        .custom((value) => parseFloat(value) >= 0)
+        .withMessage('Subtotal must be 0 or greater'),
 
     body('discount_type')
         .optional({ checkFalsy: true })
@@ -47,8 +51,8 @@ const createTransaksiValidation = [
         .withMessage('Payment amount is required')
         .isDecimal()
         .withMessage('Payment amount must be a valid number')
-        .custom((value) => parseFloat(value) > 0)
-        .withMessage('Payment amount must be greater than 0'),
+        .custom((value) => parseFloat(value) >= 0)
+        .withMessage('Payment amount must be 0 or greater'),
 
     body('items')
         .isArray({ min: 1 })

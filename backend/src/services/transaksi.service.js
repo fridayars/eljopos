@@ -48,7 +48,22 @@ const createTransaksi = async (data, userId) => {
     try {
         const { store_id, customer_id, total_amount, subtotal, discount_type, discount, payment_method, items } = data;
 
-        // 1. Validasi total payment >= total_amount
+        // 1. Validasi jika total_amount 0 (Strict Validation)
+        if (parseFloat(total_amount) === 0) {
+            const calculatedSubtotal = items.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+            const isZeroPrice = calculatedSubtotal === 0;
+            const isFullPercentageDiscount = discount_type === 'percentage' && parseFloat(discount) === 100;
+            const isFullAmountDiscount = discount_type === 'amount' && parseFloat(discount) >= calculatedSubtotal;
+
+            if (!isZeroPrice && !isFullPercentageDiscount && !isFullAmountDiscount) {
+                throw new AppError(
+                    'Transaksi amount 0 hanya diperbolehkan jika harga produk 0 atau diskon 100%',
+                    400
+                );
+            }
+        }
+
+        // 1b. Validasi total payment >= total_amount
         const totalPayment = payment_method.reduce(
             (sum, pm) => sum + parseFloat(pm.amount), 0
         );
