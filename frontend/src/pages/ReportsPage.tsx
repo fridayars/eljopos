@@ -58,7 +58,25 @@ const formatCompactCurrency = (value: number) => {
 };
 
 export function ReportsPage() {
-    const [selectedCategory, setSelectedCategory] = useState<ReportCategory>('general');
+    const [userPermissions] = useState<string[]>(() => {
+        try {
+            const token = localStorage.getItem('token')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                return payload.permissions || []
+            }
+        } catch {
+            console.error('Failed to parse token permissions')
+        }
+        return []
+    })
+
+    const [selectedCategory, setSelectedCategory] = useState<ReportCategory>(() => {
+        if (userPermissions.includes('report.general')) return 'general';
+        if (userPermissions.includes('report.finance')) return 'financial';
+        if (userPermissions.includes('report.transaction')) return 'transaction';
+        return 'general'; // fallback
+    });
     const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('daily');
 
     const [salesData, setSalesData] = useState<SalesReportItem[]>([]);
@@ -136,37 +154,43 @@ export function ReportsPage() {
             {/* Header */}
             <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
                 <div className="flex flex-col gap-4">
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-                        <button
-                            onClick={() => setSelectedCategory('general')}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'general'
-                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
-                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
-                                }`}
-                        >
-                            <FileText className="w-4 h-4" />
-                            Ringkasan Umum
-                        </button>
-                        <button
-                            onClick={() => setSelectedCategory('financial')}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'financial'
-                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
-                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
-                                }`}
-                        >
-                            <DollarSign className="w-4 h-4" />
-                            Keuangan
-                        </button>
-                        <button
-                            onClick={() => setSelectedCategory('transaction')}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'transaction'
-                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
-                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
-                                }`}
-                        >
-                            <Receipt className="w-4 h-4" />
-                            Riwayat Transaksi
-                        </button>
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+                        {userPermissions.includes('report.general') && (
+                            <button
+                                onClick={() => setSelectedCategory('general')}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'general'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                    }`}
+                            >
+                                <FileText className="w-4 h-4" />
+                                Ringkasan Umum
+                            </button>
+                        )}
+                        {userPermissions.includes('report.finance') && (
+                            <button
+                                onClick={() => setSelectedCategory('financial')}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'financial'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                    }`}
+                            >
+                                <DollarSign className="w-4 h-4" />
+                                Keuangan
+                            </button>
+                        )}
+                        {userPermissions.includes('report.transaction') && (
+                            <button
+                                onClick={() => setSelectedCategory('transaction')}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'transaction'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                    }`}
+                            >
+                                <Receipt className="w-4 h-4" />
+                                Riwayat Transaksi
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -174,7 +198,7 @@ export function ReportsPage() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait">
-                    {selectedCategory === 'general' && (
+                    {selectedCategory === 'general' && userPermissions.includes('report.general') && (
                         <motion.div
                             key="general"
                             initial={{ opacity: 0, y: 10 }}
@@ -398,7 +422,7 @@ export function ReportsPage() {
                         </motion.div>
                     )}
 
-                    {selectedCategory === 'financial' && (
+                    {selectedCategory === 'financial' && userPermissions.includes('report.finance') && (
                         <motion.div
                             key="financial"
                             initial={{ opacity: 0, scale: 0.98 }}
@@ -424,7 +448,7 @@ export function ReportsPage() {
                         </motion.div>
                     )}
 
-                    {selectedCategory === 'transaction' && (
+                    {selectedCategory === 'transaction' && userPermissions.includes('report.transaction') && (
                         <motion.div
                             key="transaction"
                             initial={{ opacity: 0, x: 20 }}

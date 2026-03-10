@@ -385,4 +385,83 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
     }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan };
+/**
+ * Delete Transaksi
+ * - Mengembalikan stok produk dan layanan
+ * - Melakukan soft-delete pada transaksi
+ */
+const deleteTransaksi = async (transaksiId) => {
+    const t = await sequelize.transaction();
+
+    try {
+        const transaksi = await Transaksi.findByPk(transaksiId, {
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        });
+
+        if (!transaksi) {
+            throw new AppError('Transaksi not found', 404);
+        }
+
+        const details = await TransaksiDetail.findAll({
+            where: { transaksi_id: transaksiId },
+            transaction: t,
+            lock: t.LOCK.UPDATE // Lock details juga untuk konsistensi
+        });
+
+        const storeId = transaksi.store_id;
+
+        // 1. Kembalikan stok
+        for (const item of details) {
+            if (item.item_type === 'product') {
+                await Product.increment('stock', {
+                    by: item.quantity,
+                    where: { id: item.item_id, store_id: storeId },
+                    transaction: t
+                });
+            } else if (item.item_type === 'layanan') {
+                const produkLayananList = await ProdukLayanan.findAll({
+                    where: { layanan_id: item.item_id },
+                    transaction: t
+                });
+
+                for (const pl of produkLayananList) {
+                    const requiredQty = pl.quantity * item.quantity;
+                    await Product.increment('stock', {
+                        by: requiredQty,
+                        where: { id: pl.product_id, store_id: storeId },
+                        transaction: t
+                    });
+                }
+            }
+        }
+
+        // 2. Soft-delete transaksi
+        await transaksi.destroy({ transaction: t });
+
+        await t.commit();
+
+        logger.info({
+            type: 'transaksi_deleted',
+            transaksi_id: transaksiId
+        });
+
+        return true;
+    } catch (error) {
+        await t.rollback();
+
+        logger.error({
+            type: 'transaksi_delete_failed',
+            message: error.message,
+            transaksi_id: transaksiId
+        });
+
+        if (error instanceof AppError) {
+            throw error;
+        }
+
+        throw new AppError('Failed to delete transaction', 500);
+    }
+};
+
+module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi };

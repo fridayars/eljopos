@@ -58,4 +58,20 @@ const getLaporanPenjualan = async (req, res, next) => {
     }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan };
+/**
+ * Delete Transaksi — DELETE /api/transaksi/:id
+ */
+const deleteTransaksi = async (req, res, next) => {
+    try {
+        await transaksiService.deleteTransaksi(req.params.id);
+
+        return res.json({
+            success: true,
+            message: 'Transaksi berhasil dihapus'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi };

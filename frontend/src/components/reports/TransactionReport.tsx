@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Download, Calendar, Eye, X, ChevronLeft, ChevronRight, Loader2, Store, MessageCircle } from 'lucide-react';
+import { Search, Download, Calendar, Eye, X, ChevronLeft, ChevronRight, Loader2, Store, MessageCircle, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import {
     getTransactionHistory,
     getTransactionDetail,
+    deleteTransaction,
 } from '../../services/reportService';
 import type {
     TransactionHistoryItem,
@@ -14,6 +15,7 @@ import type {
     TransactionHistoryMeta,
     TransactionDetailData,
 } from '../../services/reportService';
+import { DeleteTransactionModal } from './DeleteTransactionModal';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -33,6 +35,19 @@ export function TransactionReport() {
     const [endDate, setEndDate] = useState(today);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
+    useEffect(() => {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                setUserPermissions(user.permissions || []);
+            } catch {
+                // Ignore parsing errors
+            }
+        }
+    }, []);
 
     // Data
     const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
@@ -43,6 +58,10 @@ export function TransactionReport() {
     const [selectedDetail, setSelectedDetail] = useState<TransactionDetailData | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+    // Delete modal
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [transactionToDelete, setTransactionToDelete] = useState<TransactionHistoryItem | null>(null);
 
     // Loading
     const [isLoading, setIsLoading] = useState(true);
@@ -141,6 +160,34 @@ export function TransactionReport() {
     const handlePageChange = (page: number) => {
         if (page < 1 || page > meta.total_pages) return;
         fetchTransactions(page);
+    };
+
+    const confirmDelete = (e: React.MouseEvent, transaction: TransactionHistoryItem) => {
+        e.stopPropagation();
+        setTransactionToDelete(transaction);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const executeDelete = async () => {
+        if (!transactionToDelete) return;
+
+        try {
+            const res = await deleteTransaction(transactionToDelete.id);
+            if (res.success) {
+                toast.success('Transaksi berhasil dihapus');
+                fetchTransactions(currentPage);
+                if (isDetailOpen && selectedDetail?.id === transactionToDelete.id) {
+                    setIsDetailOpen(false);
+                }
+            } else {
+                toast.error(res.message || 'Gagal menghapus transaksi');
+            }
+        } catch {
+            toast.error('Gagal menghapus transaksi');
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setTransactionToDelete(null);
+        }
     };
 
     return (
@@ -262,16 +309,18 @@ export function TransactionReport() {
                                             {formatCurrency(transaction.total_amount)}
                                         </td>
                                         <td className="py-4 px-4 text-center">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleViewDetail(transaction);
-                                                }}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-all text-xs font-medium"
-                                            >
-                                                <Eye className="w-3 h-3" />
-                                                Detail
-                                            </button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleViewDetail(transaction);
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-all text-xs font-medium"
+                                                >
+                                                    <Eye className="w-3 h-3" />
+                                                    Detail
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -485,6 +534,15 @@ export function TransactionReport() {
                                             >
                                                 Tutup
                                             </button>
+                                            {userPermissions.includes('report.deletetransaction') && (
+                                                <button
+                                                    onClick={(e) => selectedDetail && confirmDelete(e, { id: selectedDetail.id, invoice_number: selectedDetail.receipt_number } as TransactionHistoryItem)}
+                                                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-500/80 to-red-600/80 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] transition-all text-sm cursor-pointer font-bold"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Hapus Transaksi
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => {
                                                     if (!selectedDetail?.customer?.phone) {
@@ -523,6 +581,14 @@ export function TransactionReport() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Custom Delete Confirmation Modal */}
+            <DeleteTransactionModal
+                isOpen={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                onConfirm={executeDelete}
+                invoiceNumber={transactionToDelete?.invoice_number || ''}
+            />
         </div>
     );
 }

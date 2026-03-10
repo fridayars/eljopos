@@ -191,3 +191,18 @@ export const getTransactionDetail = async (id: string): Promise<TransactionDetai
         };
     }
 };
+
+/**
+ * DELETE /api/transaksi/:id — Delete Transaksi
+ */
+export const deleteTransaction = async (id: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+        const response = await api.delete(`/transaksi/${id}`);
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Gagal menghapus transaksi',
+        };
+    }
+};

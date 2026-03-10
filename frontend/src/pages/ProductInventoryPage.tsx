@@ -18,7 +18,7 @@ import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmat
 type InventoryTab = 'product-category' | 'produk-barang'
 
 export function ProductInventoryPage() {
-    const [activeTab, setActiveTab] = useState<InventoryTab>('product-category')
+    const [activeTab, setActiveTab] = useState<InventoryTab>('produk-barang')
 
     // Data States
     const [products, setProducts] = useState<ProductItem[]>([])

@@ -11,4 +11,7 @@ router.post('/', authMiddleware, createTransaksiValidation, validate, transaksiC
 // GET /api/transaksi/:id
 router.get('/:id', authMiddleware, transaksiController.getTransaksiDetail);
 
+// DELETE /api/transaksi/:id
+router.delete('/:id', authMiddleware, transaksiController.deleteTransaksi);
+
 module.exports = router;

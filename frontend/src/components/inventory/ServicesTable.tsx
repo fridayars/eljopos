@@ -18,6 +18,7 @@ interface ServicesTableProps {
     currentPage: number;
     totalPages: number;
     onPageChange: (page: number) => void;
+    userPermissions: string[];
 }
 
 export function ServicesTable({
@@ -37,6 +38,7 @@ export function ServicesTable({
     currentPage,
     totalPages,
     onPageChange,
+    userPermissions,
 }: ServicesTableProps) {
     const displayServices = services;
 
@@ -77,32 +79,38 @@ export function ServicesTable({
                             />
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
-                                <Upload className="w-5 h-5" />
-                                <span className="text-sm">Import</span>
-                                <input
-                                    type="file"
-                                    accept=".xlsx,.xls"
-                                    onChange={onImport}
-                                    className="hidden"
-                                />
-                            </label>
+                            {userPermissions.includes('service.import') && (
+                                <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
+                                    <Upload className="w-5 h-5" />
+                                    <span className="text-sm">Import</span>
+                                    <input
+                                        type="file"
+                                        accept=".xlsx,.xls"
+                                        onChange={onImport}
+                                        className="hidden"
+                                    />
+                                </label>
+                            )}
 
-                            <button
-                                onClick={onExport}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all"
-                            >
-                                <Download className="w-5 h-5" />
-                                <span className="text-sm">Export</span>
-                            </button>
+                            {userPermissions.includes('service.export') && (
+                                <button
+                                    onClick={onExport}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all"
+                                >
+                                    <Download className="w-5 h-5" />
+                                    <span className="text-sm">Export</span>
+                                </button>
+                            )}
 
-                            <button
-                                onClick={onAdd}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
-                            >
-                                <Plus className="w-5 h-5" />
-                                <span className="text-sm">Tambah Layanan</span>
-                            </button>
+                            {userPermissions.includes('service.create') && (
+                                <button
+                                    onClick={onAdd}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    <span className="text-sm">Tambah Layanan</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -164,38 +172,44 @@ export function ServicesTable({
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
                                         {/* Status Toggle Switch */}
-                                        <button
-                                            onClick={() => onToggleStatus(service.id, !service.is_active)}
-                                            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none"
-                                            style={{
-                                                backgroundColor: service.is_active !== false ? 'rgba(16, 185, 129, 0.6)' : 'rgba(107, 114, 128, 0.4)',
-                                            }}
-                                            title={service.is_active !== false ? 'Nonaktifkan' : 'Aktifkan'}
-                                        >
-                                            <span
-                                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${service.is_active !== false ? 'translate-x-6' : 'translate-x-1'}`}
-                                            />
-                                        </button>
+                                        {userPermissions.includes('service.edit') && (
+                                            <button
+                                                onClick={() => onToggleStatus(service.id, !service.is_active)}
+                                                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none"
+                                                style={{
+                                                    backgroundColor: service.is_active !== false ? 'rgba(16, 185, 129, 0.6)' : 'rgba(107, 114, 128, 0.4)',
+                                                }}
+                                                title={service.is_active !== false ? 'Nonaktifkan' : 'Aktifkan'}
+                                            >
+                                                <span
+                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${service.is_active !== false ? 'translate-x-6' : 'translate-x-1'}`}
+                                                />
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => onDetail(service)}
                                             className="px-3 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-all text-sm"
                                         >
                                             Detail
                                         </button>
-                                        <button
-                                            onClick={() => onEdit(service)}
-                                            className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all"
-                                            title="Edit Layanan"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => onDelete(service.id)}
-                                            className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all"
-                                            title="Hapus Layanan"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {userPermissions.includes('service.edit') && (
+                                            <button
+                                                onClick={() => onEdit(service)}
+                                                className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all"
+                                                title="Edit Layanan"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {userPermissions.includes('service.delete') && (
+                                            <button
+                                                onClick={() => onDelete(service.id)}
+                                                className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all"
+                                                title="Hapus Layanan"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

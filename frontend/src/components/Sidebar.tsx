@@ -8,25 +8,27 @@ interface SidebarProps {
 
 interface NavItem {
     id: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
     label: string
-    subItems?: { id: string, label: string }[]
+    permission?: string | string[]
+    subItems?: { id: string, label: string, permission?: string | string[] }[]
 }
 
 const navItems: NavItem[] = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
-    { id: 'sales', icon: LayoutGrid, label: 'Kasir' },
-    { id: 'products', icon: Package, label: 'Produk' },
-    { id: 'services', icon: Briefcase, label: 'Layanan' },
+    { id: 'sales', icon: LayoutGrid, label: 'Kasir', permission: 'casier' },
+    { id: 'products', icon: Package, label: 'Produk', permission: 'product.view' },
+    { id: 'services', icon: Briefcase, label: 'Layanan', permission: 'service.view' },
     { id: 'customers', icon: Users, label: 'Pelanggan' },
-    { id: 'reports', icon: BarChart3, label: 'Laporan' },
+    { id: 'reports', icon: BarChart3, label: 'Laporan', permission: ['report.general', 'report.finance', 'report.transaction'] },
     { 
         id: 'settings', 
         icon: Settings, 
         label: 'Pengaturan',
         subItems: [
-            { id: 'settings/users', label: 'User' },
-            { id: 'settings/role', label: 'Role' }
+            { id: 'settings/users', label: 'User', permission: 'user.view' },
+            { id: 'settings/role', label: 'Role', permission: 'role.view' }
         ]
     },
 ]
@@ -36,13 +38,50 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
         settings: activeTab.startsWith('settings')
     })
+    const [userPermissions] = useState<string[]>(() => {
+        try {
+            const token = localStorage.getItem('token')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                return payload.permissions || []
+            }
+        } catch {
+            console.error('Failed to parse token permissions')
+        }
+        return []
+    })
 
     // Keep menu open if active tab changes to something inside it
     useEffect(() => {
         if (activeTab.startsWith('settings')) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setOpenMenus(prev => ({ ...prev, settings: true }))
         }
     }, [activeTab])
+
+    const filteredNavItems = navItems.map(item => {
+        if (item.permission) {
+            const hasPermission = Array.isArray(item.permission)
+                ? item.permission.some(p => userPermissions.includes(p))
+                : userPermissions.includes(item.permission)
+            if (!hasPermission) return null
+        }
+        
+        if (item.subItems) {
+            const filteredSubItems = item.subItems.filter(sub => {
+                if (!sub.permission) return true
+                return Array.isArray(sub.permission)
+                    ? sub.permission.some(p => userPermissions.includes(p))
+                    : userPermissions.includes(sub.permission)
+            })
+            
+            if (filteredSubItems.length === 0) return null
+            
+            return { ...item, subItems: filteredSubItems }
+        }
+        
+        return item
+    }).filter(Boolean) as NavItem[]
 
     const handleMenuClick = (item: NavItem) => {
         if (item.subItems) {
@@ -83,7 +122,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
                 {/* Nav Items */}
                 <nav className="flex-1 flex flex-col gap-2 w-full px-2">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const Icon = item.icon
                         const isActive = item.subItems 
                             ? activeTab.startsWith(item.id) 
@@ -204,7 +243,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 }}
             >
                 <div className="flex items-center justify-start h-full px-2 min-w-max">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const Icon = item.icon
                         const isActive = item.subItems 
                             ? activeTab.startsWith(item.id) 

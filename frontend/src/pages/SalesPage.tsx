@@ -12,6 +12,7 @@ import { PaymentModal } from '../components/sales/PaymentModal'
 import { SelectCustomerModal } from '../components/sales/SelectCustomerModal'
 import { AddCustomerModal } from '../components/sales/AddCustomerModal'
 import { BarcodeScannerModal } from '../components/sales/BarcodeScannerModal'
+import { TransactionSuccessModal } from '../components/sales/TransactionSuccessModal'
 import { Search, Loader2, ScanLine } from 'lucide-react'
 
 import { getProducts, getServiceProducts, type ProductItem } from '../services/productService'
@@ -38,6 +39,8 @@ export function SalesPage() {
     const [isSelectCustomerModalOpen, setIsSelectCustomerModalOpen] = useState(false)
     const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false)
     const [isScannerOpen, setIsScannerOpen] = useState(false)
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
+    const [successTransactionInfo, setSuccessTransactionInfo] = useState<{ id: string, invoiceNumber: string, totalAmount: number, customerName?: string, customerPhone?: string } | null>(null)
 
     // Data State
     const [displayItems, setDisplayItems] = useState<ProductItem[]>([])
@@ -256,12 +259,21 @@ export function SalesPage() {
 
         setIsTransacting(false)
 
-        if (response.success) {
-            toast.success(`Transaksi berhasil! Invoice: ${response.data?.invoice_number}`)
+        if (response.success && response.data) {
+            toast.success(`Transaksi berhasil! Invoice: ${response.data.invoice_number}`)
             setIsPaymentModalOpen(false)
             setCart([])
             setDiscountValue(0)
             setSelectedCustomer(null)
+
+            setSuccessTransactionInfo({
+                id: response.data.transaksi_id,
+                invoiceNumber: response.data.invoice_number,
+                totalAmount: grandTotal,
+                customerName: selectedCustomer?.name,
+                customerPhone: selectedCustomer?.phone
+            })
+            setIsSuccessModalOpen(true)
         } else {
             toast.error(response.message || 'Gagal memproses transaksi')
         }
@@ -406,6 +418,16 @@ export function SalesPage() {
                 isOpen={isAddCustomerModalOpen}
                 onClose={() => setIsAddCustomerModalOpen(false)}
                 onAddCustomer={handleAddCustomer}
+            />
+
+            <TransactionSuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                transactionId={successTransactionInfo?.id || ''}
+                invoiceNumber={successTransactionInfo?.invoiceNumber || ''}
+                totalAmount={successTransactionInfo?.totalAmount || 0}
+                customerName={successTransactionInfo?.customerName}
+                customerPhone={successTransactionInfo?.customerPhone}
             />
 
             <Toaster position="top-right" theme="dark" />

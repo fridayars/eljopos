@@ -34,12 +34,23 @@ import { EditCategoryModal } from '../components/inventory/EditCategoryModal';
 type ServiceInventoryTab = 'service-category' | 'produk-service';
 
 export function ServiceInventoryPage() {
-    const [activeTab, setActiveTab] = useState<ServiceInventoryTab>('service-category');
+    const [activeTab, setActiveTab] = useState<ServiceInventoryTab>('produk-service');
 
-    // Data states
     const [categories, setCategories] = useState<ServiceCategory[]>([]);
     const [services, setServices] = useState<ServiceProduct[]>([]);
     const [products, setProducts] = useState<ProductItem[]>([]); // For linked items
+    const [userPermissions] = useState<string[]>(() => {
+        try {
+            const token = localStorage.getItem('token');
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                return payload.permissions || [];
+            }
+        } catch {
+            console.error('Failed to parse token permissions');
+        }
+        return [];
+    });
 
     // Search and Filters
     const [searchCategory, setSearchCategory] = useState('');
@@ -345,15 +356,15 @@ export function ServiceInventoryPage() {
                             transition={{ duration: 0.2 }}
                             className="absolute inset-0 flex flex-col"
                         >
-                            <ServiceCategoriesList
-                                categories={categories}
-                                searchQuery={searchCategory}
-                                onSearchChange={setSearchCategory}
-                                onAdd={handleOpenAddCategory}
-                                onEdit={handleOpenEditCategory}
-                                onDelete={handleDeleteCategory}
-                            />
-                        </motion.div>
+                                <ServiceCategoriesList
+                                    categories={categories}
+                                    searchQuery={searchCategory}
+                                    onSearchChange={setSearchCategory}
+                                    onAdd={handleOpenAddCategory}
+                                    onEdit={handleOpenEditCategory}
+                                    onDelete={handleDeleteCategory}
+                                />
+                            </motion.div>
                     )}
 
                     {/* --- SERVICES TAB --- */}
@@ -389,6 +400,7 @@ export function ServiceInventoryPage() {
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={setCurrentPage}
+                                userPermissions={userPermissions}
                             />
                         </motion.div>
                     )}

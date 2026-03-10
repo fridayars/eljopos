@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX, Wrench } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { ProductItem } from '../../services/productService'
@@ -43,6 +44,18 @@ export function ProductsPage({
     searchQuery,
     onSearchChange
 }: ProductsPageProps) {
+    const [userPermissions] = useState<string[]>(() => {
+        try {
+            const token = localStorage.getItem('token')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                return payload.permissions || []
+            }
+        } catch {
+            console.error('Failed to parse token permissions')
+        }
+        return []
+    })
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -73,35 +86,43 @@ export function ProductsPage({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
-                                <Upload className="w-4 h-4" />
-                                <span className="text-sm">Import</span>
-                                <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-                            </label>
+                            {userPermissions.includes('product.import') && (
+                                <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
+                                    <Upload className="w-4 h-4" />
+                                    <span className="text-sm">Import</span>
+                                    <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+                                </label>
+                            )}
 
-                            <button
-                                onClick={onExportProducts}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer"
-                            >
-                                <Download className="w-4 h-4" />
-                                <span className="text-sm">Export</span>
-                            </button>
+                            {userPermissions.includes('product.export') && (
+                                <button
+                                    onClick={onExportProducts}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span className="text-sm">Export</span>
+                                </button>
+                            )}
 
-                            <button
-                                onClick={onOpenTransfer}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
-                            >
-                                <ArrowRightLeft className="w-4 h-4" />
-                                <span className="text-sm">Transfer Stok</span>
-                            </button>
+                            {userPermissions.includes('product.transfer') && (
+                                <button
+                                    onClick={onOpenTransfer}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
+                                >
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                    <span className="text-sm">Transfer Stok</span>
+                                </button>
+                            )}
 
-                            <button
-                                onClick={onOpenAdd}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all cursor-pointer"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span className="text-sm">Tambah Produk</span>
-                            </button>
+                            {userPermissions.includes('product.create') && (
+                                <button
+                                    onClick={onOpenAdd}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all cursor-pointer"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    <span className="text-sm">Tambah Produk</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -249,20 +270,24 @@ export function ProductsPage({
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={() => onEditProduct(product)}
-                                                            className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => onDeleteProduct(product)}
-                                                            className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
-                                                            title="Hapus"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        {userPermissions.includes('product.edit') && (
+                                                            <button
+                                                                onClick={() => onEditProduct(product)}
+                                                                className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
+                                                                title="Edit"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {userPermissions.includes('product.delete') && (
+                                                            <button
+                                                                onClick={() => onDeleteProduct(product)}
+                                                                className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
+                                                                title="Hapus"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>
