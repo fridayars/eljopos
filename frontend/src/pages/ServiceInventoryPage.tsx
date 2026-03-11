@@ -354,7 +354,7 @@ export function ServiceInventoryPage() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute inset-0 flex flex-col"
+                            className="relative w-full h-full flex flex-col"
                         >
                                 <ServiceCategoriesList
                                     categories={categories}
@@ -375,7 +375,7 @@ export function ServiceInventoryPage() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute inset-0"
+                            className="relative w-full h-full flex flex-col"
                         >
                             <ServicesTable
                                 services={services}

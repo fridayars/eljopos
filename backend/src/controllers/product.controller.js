@@ -64,6 +64,7 @@ const getAllProducts = async (req, res, next) => {
         const search = req.query.search;
         const sort = req.query.sort; // can be string or array
         const status = req.query.status;
+        const kategori_id = req.query.kategori_id;
 
         const storeId = req.query.store_id || req.user.store_id;
 
@@ -71,7 +72,7 @@ const getAllProducts = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'store_id is required' });
         }
 
-        const result = await productService.getAllProducts({ page, limit, search, sort, status }, storeId);
+        const result = await productService.getAllProducts({ page, limit, search, sort, status, kategori_id }, storeId);
 
         return res.json({ success: true, data: result });
     } catch (error) {

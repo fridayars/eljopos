@@ -40,6 +40,7 @@ export function ProductInventoryPage() {
     const [isTransferOpen, setIsTransferOpen] = useState(false)
     const [isDeleteProdOpen, setIsDeleteProdOpen] = useState(false)
     const [productToDelete, setProductToDelete] = useState<ProductItem | null>(null)
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all')
 
     // Product Pagination & Sorting States
     const [currentPage, setCurrentPage] = useState(1)
@@ -54,6 +55,7 @@ export function ProductInventoryPage() {
                 page: currentPage,
                 limit: pageSize,
                 search: searchQuery || undefined,
+                kategori_id: selectedCategoryFilter === 'all' ? undefined : selectedCategoryFilter,
                 sort: sortConfig ? `${sortConfig.key}:${sortConfig.direction}` : undefined
             }
 
@@ -66,7 +68,7 @@ export function ProductInventoryPage() {
         } catch (error) {
             toast.error('Gagal memuat data produk')
         }
-    }, [currentPage, searchQuery, sortConfig])
+    }, [currentPage, searchQuery, sortConfig, selectedCategoryFilter])
 
     const loadInitialData = useCallback(async () => {
         setIsLoading(true)
@@ -101,7 +103,7 @@ export function ProductInventoryPage() {
         if (!isLoading) {
             fetchProducts()
         }
-    }, [currentPage, searchQuery, sortConfig, isLoading, fetchProducts])
+    }, [currentPage, searchQuery, sortConfig, selectedCategoryFilter, isLoading, fetchProducts])
 
     const handleSortChange = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc'
@@ -340,7 +342,7 @@ export function ProductInventoryPage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
                                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                     {filteredCategories.length === 0 ? (
                                         <div className="col-span-full py-12 text-center text-gray-500">
@@ -403,6 +405,12 @@ export function ProductInventoryPage() {
                         >
                             <ProductsPage
                                 products={products}
+                                categories={categories}
+                                selectedCategoryId={selectedCategoryFilter}
+                                onCategoryChange={(val) => {
+                                    setSelectedCategoryFilter(val)
+                                    setCurrentPage(1)
+                                }}
                                 onEditProduct={startEditProduct}
                                 onDeleteProduct={handleRequestDeleteProduct}
                                 onToggleStatus={handleToggleProductStatus}

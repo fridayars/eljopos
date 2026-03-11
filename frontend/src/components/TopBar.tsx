@@ -195,7 +195,7 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
 
                 {/* Store info — Admin: dropdown, Others: static */}
                 {storeName && (
-                    <div className="hidden md:block relative" ref={storeDropdownRef}>
+                    <div className="relative" ref={storeDropdownRef}>
                         <button
                             onClick={() => { if (isAdmin && stores.length > 1) setIsStoreDropdownOpen(!isStoreDropdownOpen) }}
                             className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 ${isAdmin && stores.length > 1 ? 'cursor-pointer' : 'cursor-default'}`}

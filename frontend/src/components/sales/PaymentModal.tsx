@@ -1,6 +1,91 @@
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Calendar, Wallet, Plus, Trash2 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+function PaymentMethodSelect({
+    value,
+    onChange
+}: {
+    value: string;
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const options = [
+        { label: 'Cash', value: 'CASH' },
+        { label: 'Transfer BCA', value: 'TRANSFER_BCA' }
+    ];
+
+    const selectedOption = options.find(o => o.value === value);
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`h-10 bg-black/40 border rounded-lg px-3 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${
+                    isOpen ? 'border-primary shadow-[0_0_0_2px_rgba(59,130,246,0.15)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                }`}
+                style={{
+                    color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
+                    borderColor: isOpen ? 'var(--primary)' : undefined,
+                }}
+            >
+                <span className="text-gray-300">{selectedOption?.label || 'Pilih Metode'}</span>
+                <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </span>
+            </div>
+
+            {isOpen && (
+                <div
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-lg z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+                    style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                    }}
+                >
+                    <ul className="max-h-60 overflow-y-auto">
+                        {options.map((option) => (
+                            <li
+                                key={option.value}
+                                className="px-3 py-2 text-sm cursor-pointer transition-colors"
+                                style={{
+                                    color: value === option.value ? 'var(--primary)' : 'var(--foreground)',
+                                    background: value === option.value ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                }}
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (value !== option.value) e.currentTarget.style.background = 'var(--surface-subtle)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (value !== option.value) e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                {option.label}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 interface Payment {
     method: string
@@ -25,7 +110,7 @@ export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: Payment
         if (isOpen) {
             const today = new Date().toISOString().split('T')[0]
             setDate(today)
-            setPayments([{ method: 'CASH', amount: grandTotal }])
+            setPayments([{ method: 'CASH', amount: 0 }])
         }
     }, [isOpen, grandTotal])
 
@@ -72,17 +157,18 @@ export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: Payment
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
                     />
 
                     {/* Modal */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] md:w-full md:max-w-lg max-h-[90vh] z-50 flex flex-col"
-                    >
-                        <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden flex flex-col h-full" style={{ background: 'var(--background)' }}>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full md:max-w-lg max-h-[90vh] flex flex-col pointer-events-auto"
+                        >
+                            <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden flex flex-col h-full w-full" style={{ background: 'var(--background)' }}>
                             {/* Header */}
                             <div className="relative p-4 md:p-6 border-b border-purple-500/20 shrink-0">
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10" />
@@ -143,14 +229,10 @@ export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: Payment
                                         {payments.map((payment, index) => (
                                             <div key={index} className="flex gap-2 items-start">
                                                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-white/5 border border-purple-500/10 rounded-xl relative group">
-                                                    <select
+                                                    <PaymentMethodSelect
                                                         value={payment.method}
-                                                        onChange={(e) => updatePayment(index, 'method', e.target.value)}
-                                                        className="h-10 bg-black/40 border border-purple-500/20 rounded-lg px-3 text-sm text-gray-300 focus:outline-none focus:border-blue-500/40"
-                                                    >
-                                                        <option value="CASH">Cash</option>
-                                                        <option value="TRANSFER_BCA">Transfer BCA</option>
-                                                    </select>
+                                                        onChange={(val) => updatePayment(index, 'method', val)}
+                                                    />
                                                     <div className="relative">
                                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">Rp</span>
                                                         <input
@@ -230,6 +312,7 @@ export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: Payment
                             </div>
                         </div>
                     </motion.div>
+                    </div>
                 </>
             )}
         </AnimatePresence>

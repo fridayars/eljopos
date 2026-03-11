@@ -45,6 +45,7 @@ const getRolesPaginated = async (page = 1, limit = 10, search = '', sortBy = 'cr
             order: [[sortBy, sortOrder]],
             limit: parseInt(limit),
             offset: parseInt(offset),
+            distinct: true,
             include: [{
                 model: AksesRole,
                 as: 'permissions',

@@ -51,7 +51,7 @@ export function TransactionReport() {
 
     // Data
     const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
-    const [summary, setSummary] = useState<TransactionHistorySummary>({ total_revenue: 0, total_transactions: 0 });
+    const [summary, setSummary] = useState<TransactionHistorySummary>({ total_revenue: 0, total_transactions: 0, payment_summary: [] });
     const [meta, setMeta] = useState<TransactionHistoryMeta>({ page: 1, limit: 20, total: 0, total_pages: 0 });
 
     // Detail modal
@@ -204,46 +204,67 @@ export function TransactionReport() {
                 </div>
             </div>
 
-            {/* Date Range Filter */}
-            <div className="mb-6 flex flex-wrap gap-3 items-center">
-                <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="px-3 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 focus:outline-none focus:border-blue-500/50"
-                    />
-                    <span className="text-gray-500 text-sm">s/d</span>
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="px-3 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 focus:outline-none focus:border-blue-500/50"
-                    />
+            {/* Cash Box Summary (Breakdown per Payment Method) */}
+            {summary.payment_summary && summary.payment_summary.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {summary.payment_summary.map((payment, idx) => (
+                        <div
+                            key={idx}
+                            className="bg-white/5 backdrop-blur-xl border border-purple-500/10 rounded-2xl p-4 flex flex-col justify-between"
+                        >
+                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1 italic">
+                                {payment.method}
+                            </p>
+                            <p className="text-lg text-gray-200 font-bold">
+                                {formatCurrency(payment.total)}
+                            </p>
+                        </div>
+                    ))}
                 </div>
-                <div className="ml-auto">
+            )}
+
+            {/* Filters & Actions Toolbar */}
+            <div className="flex flex-col xl:flex-row gap-4 mb-6">
+                {/* Date Range */}
+                <div className="flex items-center gap-3 p-2 bg-white/5 border border-purple-500/10 rounded-2xl">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-purple-500/10">
+                        <Calendar className="w-4 h-4 text-purple-400" />
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="bg-transparent border-none text-xs md:text-sm text-gray-200 focus:outline-none focus:ring-0 [color-scheme:dark]"
+                        />
+                        <span className="text-gray-600 text-xs font-bold px-1">s/d</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-transparent border-none text-xs md:text-sm text-gray-200 focus:outline-none focus:ring-0 [color-scheme:dark]"
+                        />
+                    </div>
+                </div>
+
+                {/* Search & Export */}
+                <div className="flex flex-1 gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input
+                            type="text"
+                            placeholder="Cari invoice, pelanggan, kasir..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full h-full pl-11 pr-4 py-3 bg-white/5 border border-purple-500/20 rounded-2xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/40 transition-all"
+                        />
+                    </div>
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all"
+                        className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:text-white hover:from-cyan-500 hover:to-blue-600 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer whitespace-nowrap font-medium text-sm"
                     >
                         <Download className="w-4 h-4" />
-                        Ekspor Excel
+                        <span className="hidden sm:inline">Ekspor Excel</span>
+                        <span className="sm:hidden">Ekspor</span>
                     </button>
-                </div>
-            </div>
-
-            {/* Search */}
-            <div className="mb-6">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                    <input
-                        type="text"
-                        placeholder="Cari berdasarkan invoice, pelanggan, kasir, atau cabang..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
-                    />
                 </div>
             </div>
 
@@ -527,17 +548,17 @@ export function TransactionReport() {
                                         </div>
 
                                         {/* Footer */}
-                                        <div className="p-6 border-t border-purple-500/20 flex gap-3 justify-end shrink-0">
+                                        <div className="p-4 md:p-6 border-t border-purple-500/20 flex flex-col sm:flex-row gap-2 md:gap-3 justify-end shrink-0">
                                             <button
                                                 onClick={() => setIsDetailOpen(false)}
-                                                className="px-6 py-2.5 rounded-xl border border-purple-500/30 text-gray-400 hover:text-gray-200 hover:border-purple-500/50 transition-all text-sm cursor-pointer"
+                                                className="w-full sm:w-auto order-4 sm:order-none px-6 py-2.5 rounded-xl border border-purple-500/30 text-gray-400 hover:text-gray-200 hover:border-purple-500/50 transition-all text-sm cursor-pointer"
                                             >
                                                 Tutup
                                             </button>
                                             {userPermissions.includes('report.deletetransaction') && (
                                                 <button
                                                     onClick={(e) => selectedDetail && confirmDelete(e, { id: selectedDetail.id, invoice_number: selectedDetail.receipt_number } as TransactionHistoryItem)}
-                                                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-500/80 to-red-600/80 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] transition-all text-sm cursor-pointer font-bold"
+                                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-500/80 to-red-600/80 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] transition-all text-sm cursor-pointer font-bold"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                     Hapus Transaksi
@@ -557,7 +578,7 @@ export function TransactionReport() {
                                                     const text = encodeURIComponent(`Halo ${selectedDetail.customer.name},\n\nTerima kasih telah berbelanja di ${selectedDetail.store?.name || 'eljoPOS'}.\n\nBerikut adalah link invoice Anda:\n${invoiceUrl}\n\nTerima kasih!`);
                                                     window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
                                                 }}
-                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] transition-all text-sm cursor-pointer font-bold"
+                                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] transition-all text-sm cursor-pointer font-bold"
                                             >
                                                 <MessageCircle className="w-4 h-4" />
                                                 Kirim WhatsApp
@@ -568,7 +589,7 @@ export function TransactionReport() {
                                                         window.open(`/print-invoice/${selectedDetail.id}?cetak=true`, '_blank');
                                                     }
                                                 }}
-                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all text-sm cursor-pointer font-bold"
+                                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all text-sm cursor-pointer font-bold"
                                             >
                                                 <Download className="w-4 h-4" />
                                                 Cetak Invoice

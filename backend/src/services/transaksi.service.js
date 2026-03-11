@@ -326,6 +326,23 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
             raw: true
         });
 
+        // 1b. Payment Summary — breakdown per method
+        const paymentSummary = await TransaksiPayment.findAll({
+            attributes: [
+                ['payment_method', 'method'],
+                [fn('SUM', col('nominal')), 'total']
+            ],
+            include: [{
+                model: Transaksi,
+                as: 'transaksi',
+                attributes: [],
+                where: whereClause,
+                required: true
+            }],
+            group: ['payment_method'],
+            raw: true
+        });
+
         // 2. Paginated items
         const { count: total, rows: transaksiList } = await Transaksi.findAndCountAll({
             where: whereClause,
@@ -376,7 +393,11 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         return {
             summary: {
                 total_revenue: parseFloat(summary.total_revenue) || 0,
-                total_transactions: parseInt(summary.total_transactions, 10) || 0
+                total_transactions: parseInt(summary.total_transactions, 10) || 0,
+                payment_summary: paymentSummary.map(p => ({
+                    method: p.method.replace('_', ' '),
+                    total: parseFloat(p.total) || 0
+                }))
             },
             items,
             meta: {

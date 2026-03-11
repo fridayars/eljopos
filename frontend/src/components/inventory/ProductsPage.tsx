@@ -1,7 +1,96 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX, Wrench } from 'lucide-react'
 import { motion } from 'motion/react'
-import type { ProductItem } from '../../services/productService'
+import type { ProductItem, Category } from '../../services/productService'
+
+function CategoryFilterSelect({
+    value,
+    categories,
+    onChange
+}: {
+    value: string;
+    categories: Category[];
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedCategory = value === 'all' 
+        ? { id: 'all', name: 'Semua Kategori' }
+        : categories.find(c => c.id === value);
+
+    const allOptions = [
+        { id: 'all', name: 'Semua Kategori' },
+        ...categories
+    ];
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${
+                    isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                }`}
+                style={{
+                    color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
+                    borderColor: isOpen ? 'var(--primary)' : undefined,
+                }}
+            >
+                <span className="text-gray-200">{selectedCategory?.name || 'Semua Kategori'}</span>
+                <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </span>
+            </div>
+
+            {isOpen && (
+                <div
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+                    style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                    }}
+                >
+                    <ul className="max-h-60 overflow-y-auto">
+                        {allOptions.map((cat) => (
+                            <li
+                                key={cat.id}
+                                className="px-4 py-3 text-sm cursor-pointer transition-colors"
+                                style={{
+                                    color: value === cat.id ? 'var(--primary)' : 'var(--foreground)',
+                                    background: value === cat.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                }}
+                                onClick={() => {
+                                    onChange(cat.id);
+                                    setIsOpen(false);
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (value !== cat.id) e.currentTarget.style.background = 'var(--surface-subtle)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (value !== cat.id) e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                {cat.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export interface SortConfig {
     key: string;
@@ -10,6 +99,7 @@ export interface SortConfig {
 
 interface ProductsPageProps {
     products: ProductItem[]
+    categories: Category[]
     onEditProduct: (product: ProductItem) => void
     onDeleteProduct: (product: ProductItem) => void
     onToggleStatus: (product: ProductItem) => void
@@ -25,10 +115,13 @@ interface ProductsPageProps {
     onSortChange: (key: string) => void
     searchQuery: string
     onSearchChange: (query: string) => void
+    selectedCategoryId: string
+    onCategoryChange: (categoryId: string) => void
 }
 
 export function ProductsPage({
     products,
+    categories,
     onEditProduct,
     onDeleteProduct,
     onToggleStatus,
@@ -42,7 +135,9 @@ export function ProductsPage({
     sortConfig,
     onSortChange,
     searchQuery,
-    onSearchChange
+    onSearchChange,
+    selectedCategoryId,
+    onCategoryChange
 }: ProductsPageProps) {
     const [userPermissions] = useState<string[]>(() => {
         try {
@@ -76,7 +171,7 @@ export function ProductsPage({
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
                 <div className="p-4 md:p-6 space-y-6">
                     {/* Header & Actions */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -126,16 +221,25 @@ export function ProductsPage({
                         </div>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="Cari berdasarkan nama atau kode SKU..."
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl pl-12 pr-4 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
-                        />
+                    {/* Filter & Search */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="md:w-64">
+                            <CategoryFilterSelect
+                                value={selectedCategoryId}
+                                categories={categories}
+                                onChange={onCategoryChange}
+                            />
+                        </div>
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                            <input
+                                type="text"
+                                placeholder="Cari berdasarkan nama atau kode SKU..."
+                                value={searchQuery}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl pl-12 pr-4 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                            />
+                        </div>
                     </div>
 
                     {/* Products Table */}
@@ -269,7 +373,7 @@ export function ProductsPage({
                                                     </button>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex items-center justify-center gap-2">
                                                         {userPermissions.includes('product.edit') && (
                                                             <button
                                                                 onClick={() => onEditProduct(product)}

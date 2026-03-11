@@ -178,9 +178,19 @@ export function Cart({
                     </div>
                     <input
                         type="number"
-                        value={discountValue}
-                        onChange={(e) => onDiscountValueChange(Number(e.target.value) || 0)}
+                        value={discountValue || ''}
+                        onChange={(e) => {
+                            const raw = e.target.value
+                            if (raw === '' || raw === '-') {
+                                onDiscountValueChange(0)
+                                return
+                            }
+                            const parsed = parseFloat(raw)
+                            if (!isNaN(parsed)) onDiscountValueChange(parsed)
+                        }}
+                        onFocus={(e) => e.target.select()}
                         placeholder="0"
+                        min="0"
                         className="w-full h-11 md:h-12 bg-white/5 border border-purple-500/20 rounded-lg px-4 text-gray-300 text-sm focus:outline-none focus:border-blue-500/50 transition-all"
                     />
                     {discountAmount > 0 && (

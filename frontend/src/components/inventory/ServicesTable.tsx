@@ -1,5 +1,95 @@
 import { Search, Plus, Edit, Trash2, Download, Upload } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import type { ServiceProduct, ServiceCategory } from '../../services/productService';
+
+function CategoryFilterSelect({
+    value,
+    categories,
+    onChange
+}: {
+    value: string;
+    categories: ServiceCategory[];
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedCategory = value === 'all' 
+        ? { id: 'all', name: 'Semua Kategori' }
+        : categories.find(c => c.id === value);
+
+    const allOptions = [
+        { id: 'all', name: 'Semua Kategori' },
+        ...categories
+    ];
+
+    return (
+        <div className="relative w-full md:w-64" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full h-[44px] bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${
+                    isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                }`}
+                style={{
+                    color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
+                    borderColor: isOpen ? 'var(--primary)' : undefined,
+                }}
+            >
+                <span className="text-gray-200">{selectedCategory?.name || 'Semua Kategori'}</span>
+                <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </span>
+            </div>
+
+            {isOpen && (
+                <div
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+                    style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                    }}
+                >
+                    <ul className="max-h-60 overflow-y-auto">
+                        {allOptions.map((cat) => (
+                            <li
+                                key={cat.id}
+                                className="px-4 py-3 text-sm cursor-pointer transition-colors"
+                                style={{
+                                    color: value === cat.id ? 'var(--primary)' : 'var(--foreground)',
+                                    background: value === cat.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                }}
+                                onClick={() => {
+                                    onChange(cat.id);
+                                    setIsOpen(false);
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (value !== cat.id) e.currentTarget.style.background = 'var(--surface-subtle)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (value !== cat.id) e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                {cat.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 interface ServicesTableProps {
     services: ServiceProduct[];
@@ -43,82 +133,74 @@ export function ServicesTable({
     const displayServices = services;
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
-            {/* Category Filter, Search and Toolbar */}
-            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
-                <div className="flex flex-col gap-4">
-                    {/* Category Filter */}
-                    <div>
-                        <label className="text-sm text-gray-400 mb-2 block">
-                            Filter berdasarkan Kategori
-                        </label>
-                        <select
-                            value={selectedCategoryId}
-                            onChange={(e) => onCategoryChange(e.target.value)}
-                            className="w-full md:w-64 px-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 focus:outline-none focus:border-blue-500/50"
-                        >
-                            <option value="all">Semua Kategori</option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Search and Buttons */}
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                            <input
-                                type="text"
-                                placeholder="Cari layanan berdasarkan nama dan deskripsi"
-                                value={searchQuery}
-                                onChange={(e) => onSearchChange(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+        <div className="absolute inset-0 flex flex-col overflow-hidden h-full">
+            <div className="flex-1 overflow-y-auto pb-32 md:pb-6">
+                <div className="p-4 md:p-6 space-y-6">
+                    {/* Category Filter, Search and Toolbar */}
+                    <div className="flex flex-col gap-4 border-b border-purple-500/10 pb-6">
+                        {/* Category Filter */}
+                        <div>
+                            <label className="text-sm text-gray-400 mb-2 block">
+                                Filter berdasarkan Kategori
+                            </label>
+                            <CategoryFilterSelect
+                                value={selectedCategoryId}
+                                categories={categories}
+                                onChange={onCategoryChange}
                             />
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {userPermissions.includes('service.import') && (
-                                <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
-                                    <Upload className="w-5 h-5" />
-                                    <span className="text-sm">Import</span>
-                                    <input
-                                        type="file"
-                                        accept=".xlsx,.xls"
-                                        onChange={onImport}
-                                        className="hidden"
-                                    />
-                                </label>
-                            )}
 
-                            {userPermissions.includes('service.export') && (
-                                <button
-                                    onClick={onExport}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all"
-                                >
-                                    <Download className="w-5 h-5" />
-                                    <span className="text-sm">Export</span>
-                                </button>
-                            )}
+                        {/* Search and Buttons */}
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Cari layanan berdasarkan nama dan deskripsi"
+                                    value={searchQuery}
+                                    onChange={(e) => onSearchChange(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-purple-500/20 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                                />
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {userPermissions.includes('service.import') && (
+                                    <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
+                                        <Upload className="w-5 h-5" />
+                                        <span className="text-sm">Import</span>
+                                        <input
+                                            type="file"
+                                            accept=".xlsx,.xls"
+                                            onChange={onImport}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
 
-                            {userPermissions.includes('service.create') && (
-                                <button
-                                    onClick={onAdd}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
-                                >
-                                    <Plus className="w-5 h-5" />
-                                    <span className="text-sm">Tambah Layanan</span>
-                                </button>
-                            )}
+                                {userPermissions.includes('service.export') && (
+                                    <button
+                                        onClick={onExport}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                        <span className="text-sm">Export</span>
+                                    </button>
+                                )}
+
+                                {userPermissions.includes('service.create') && (
+                                    <button
+                                        onClick={onAdd}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        <span className="text-sm">Tambah Layanan</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Service List / Table */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                <div className="grid gap-4">
+                    {/* Service List / Table */}
+                    <div className="grid gap-4">
                     {displayServices.length > 0 ? (
                         displayServices.map((service) => (
                             <div
@@ -222,6 +304,7 @@ export function ServicesTable({
                             <p className="text-gray-400">Tidak ada produk layanan ditemukan</p>
                         </div>
                     )}
+                </div>
                 </div>
             </div>
 

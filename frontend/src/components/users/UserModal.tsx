@@ -1,7 +1,85 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, User as UserIcon, Mail, Lock, Shield } from 'lucide-react'
 import type { User, Role } from '../../services/userService'
+
+function RoleSelect({
+    value,
+    roles,
+    onChange
+}: {
+    value: string;
+    roles: Role[];
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedRole = roles.find(r => r.id === value);
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full pl-11 pr-4 py-2.5 bg-black/20 border rounded-xl text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all duration-200 ${
+                    isOpen ? 'border-blue-500/50 ring-2 ring-blue-500/50' : 'border-white/10 hover:border-white/20'
+                }`}
+                style={{
+                    color: value ? 'white' : 'rgb(107 114 128)', // text-white or text-gray-500
+                }}
+            >
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Shield className="h-5 w-5 text-gray-500" />
+                </div>
+                <span>{selectedRole?.name || 'Pilih Role'}</span>
+                <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </span>
+            </div>
+
+            {isOpen && (
+                <div className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out] bg-[#1a1b23] border border-white/10">
+                    <ul className="max-h-60 overflow-y-auto">
+                        {roles.map((role) => (
+                            <li
+                                key={role.id}
+                                className="px-4 py-3 text-sm cursor-pointer transition-colors"
+                                style={{
+                                    color: value === role.id ? '#60a5fa' : 'white', // text-blue-400 or text-white
+                                    background: value === role.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                }}
+                                onClick={() => {
+                                    onChange(role.id);
+                                    setIsOpen(false);
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (value !== role.id) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (value !== role.id) e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                {role.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 interface UserModalProps {
     isOpen: boolean
@@ -154,27 +232,11 @@ export function UserModal({ isOpen, onClose, user, roles, onSave }: UserModalPro
                                     Role Pengguna
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                                        <Shield className="h-5 w-5 text-gray-500" />
-                                    </div>
-                                    <select
-                                        required
+                                    <RoleSelect
                                         value={formData.role_id}
-                                        onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                                        className="w-full pl-11 pr-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 appearance-none"
-                                    >
-                                        <option value="" disabled className="bg-[#1a1b23]">Pilih Role</option>
-                                        {roles.map(role => (
-                                            <option key={role.id} value={role.id} className="bg-[#1a1b23]">
-                                                {role.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                                        </svg>
-                                    </div>
+                                        roles={roles}
+                                        onChange={(val) => setFormData({ ...formData, role_id: val })}
+                                    />
                                 </div>
                             </div>
 

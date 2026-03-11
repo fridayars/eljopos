@@ -5,6 +5,88 @@ import { toast } from 'sonner'
 import type { ProductItem, Category } from '../../services/productService'
 import { uploadImage, deleteImage } from '../../services/productService'
 
+function CategorySelect({
+    value,
+    categories,
+    onChange
+}: {
+    value: string;
+    categories: Category[];
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedCategory = categories.find(c => c.id === value);
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${
+                    isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                }`}
+                style={{
+                    color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
+                    borderColor: isOpen ? 'var(--primary)' : undefined,
+                }}
+            >
+                <span className="text-gray-200">{selectedCategory?.name || 'Pilih Kategori'}</span>
+                <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </span>
+            </div>
+
+            {isOpen && (
+                <div
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+                    style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                    }}
+                >
+                    <ul className="max-h-60 overflow-y-auto">
+                        {categories.map((cat) => (
+                            <li
+                                key={cat.id}
+                                className="px-4 py-3 text-sm cursor-pointer transition-colors"
+                                style={{
+                                    color: value === cat.id ? 'var(--primary)' : 'var(--foreground)',
+                                    background: value === cat.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                }}
+                                onClick={() => {
+                                    onChange(cat.id);
+                                    setIsOpen(false);
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (value !== cat.id) e.currentTarget.style.background = 'var(--surface-subtle)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (value !== cat.id) e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                {cat.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface EditProductModalProps {
     isOpen: boolean
     onClose: () => void
@@ -178,17 +260,11 @@ export function EditProductModal({ isOpen, onClose, product, categories, onSave 
                                         </div>
                                         <div>
                                             <label className="block text-sm text-gray-400 mb-2">Kategori *</label>
-                                            <select
+                                            <CategorySelect
                                                 value={formData.kategori_produk_id || ''}
-                                                onChange={(e) => handleChange('kategori_produk_id', e.target.value)}
-                                                className={inputClass}
-                                                required
-                                            >
-                                                <option value="" disabled>Pilih Kategori</option>
-                                                {categories.map((cat) => (
-                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                                ))}
-                                            </select>
+                                                categories={categories}
+                                                onChange={(val) => handleChange('kategori_produk_id', val)}
+                                            />
                                         </div>
                                     </div>
 

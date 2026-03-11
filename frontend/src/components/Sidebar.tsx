@@ -38,6 +38,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
         settings: activeTab.startsWith('settings')
     })
+    const [mobileSubmenu, setMobileSubmenu] = useState<NavItem | null>(null)
     const [userPermissions] = useState<string[]>(() => {
         try {
             const token = localStorage.getItem('token')
@@ -254,9 +255,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                 key={item.id}
                                 onClick={() => {
                                     if (item.subItems) {
-                                        onTabChange(item.subItems[0].id)
+                                        setMobileSubmenu(prev => prev?.id === item.id ? null : item)
                                     } else {
                                         onTabChange(item.id)
+                                        setMobileSubmenu(null)
                                     }
                                 }}
                                 className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 min-h-[44px] min-w-[64px] rounded-xl transition-all duration-200 cursor-pointer"
@@ -274,6 +276,70 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                     })}
                 </div>
             </nav>
+
+            {/* Mobile Submenu Sheet */}
+            {mobileSubmenu && (
+                <>
+                    {/* Overlay */}
+                    <div
+                        className="lg:hidden fixed inset-0 z-30"
+                        onClick={() => setMobileSubmenu(null)}
+                    />
+                    {/* Popup */}
+                    <div
+                        className="lg:hidden fixed bottom-16 left-1/2 z-40 rounded-2xl overflow-hidden"
+                        style={{
+                            transform: 'translateX(-50%)',
+                            minWidth: '200px',
+                            background: 'var(--surface-overlay)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            border: '1px solid var(--border-subtle)',
+                            boxShadow: '0 -4px 32px rgba(0,0,0,0.3)',
+                            animation: 'slideUp 0.2s ease-out',
+                        }}
+                    >
+                        <div
+                            className="px-4 py-2.5"
+                            style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                        >
+                            <p className="text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>
+                                {mobileSubmenu.label}
+                            </p>
+                        </div>
+                        <div className="p-2 flex flex-col gap-1">
+                            {mobileSubmenu.subItems!.map(sub => {
+                                const isSubActive = activeTab === sub.id
+                                return (
+                                    <button
+                                        key={sub.id}
+                                        onClick={() => {
+                                            onTabChange(sub.id)
+                                            setMobileSubmenu(null)
+                                        }}
+                                        className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer"
+                                        style={{
+                                            color: isSubActive ? '#3B82F6' : 'var(--foreground)',
+                                            background: isSubActive
+                                                ? 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))'
+                                                : 'transparent',
+                                        }}
+                                    >
+                                        {sub.label}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            <style>{`
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+            `}</style>
         </>
     )
 }

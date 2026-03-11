@@ -33,6 +33,10 @@ const getAllProducts = async (opts, storeId) => {
         }
     }
 
+    if (opts.kategori_id && opts.kategori_id !== 'all') {
+        where.kategori_produk_id = opts.kategori_id;
+    }
+
     // base order
     let order = [['created_at', 'DESC']];
 

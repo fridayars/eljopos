@@ -141,6 +141,7 @@ interface GetProductsParams {
     sort?: string;
     store_id?: string;
     status?: string | boolean;
+    kategori_id?: string;
 }
 
 export const getProducts = async (params: GetProductsParams = {}): Promise<GetProductsResponse> => {
@@ -183,6 +184,7 @@ export const getProducts = async (params: GetProductsParams = {}): Promise<GetPr
         if (params.sort) searchParams.append('sort', params.sort)
         if (storeId) searchParams.append('store_id', storeId)
         if (params.status !== undefined) searchParams.append('status', String(params.status))
+        if (params.kategori_id && params.kategori_id !== 'all') searchParams.append('kategori_id', params.kategori_id)
 
         const queryStr = searchParams.toString()
         const url = `/master/products${queryStr ? `?${queryStr}` : ''}`

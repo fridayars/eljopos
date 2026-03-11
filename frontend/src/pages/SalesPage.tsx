@@ -25,7 +25,7 @@ interface UserData {
 }
 
 export function SalesPage() {
-    const [view, setView] = useState<'grid' | 'list'>('grid')
+    const [view, setView] = useState<'grid' | 'list'>(() => window.innerWidth < 1024 ? 'list' : 'grid')
     const [activeTab, setActiveTab] = useState<'produk' | 'layanan'>('produk')
     const [searchQuery, setSearchQuery] = useState('')
     const [cart, setCart] = useState<CartItem[]>([])
@@ -279,6 +279,14 @@ export function SalesPage() {
         }
     }
 
+    const handleNewTransaction = () => {
+        setIsSuccessModalOpen(false)
+        setActiveTab('produk')
+        setIsCartOpen(false)
+        // Reset view mode to default based on screen size
+        setView(window.innerWidth < 1024 ? 'list' : 'grid')
+    }
+
     return (
         <div className="flex-1 flex overflow-hidden">
             <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -422,7 +430,7 @@ export function SalesPage() {
 
             <TransactionSuccessModal
                 isOpen={isSuccessModalOpen}
-                onClose={() => setIsSuccessModalOpen(false)}
+                onClose={handleNewTransaction}
                 transactionId={successTransactionInfo?.id || ''}
                 invoiceNumber={successTransactionInfo?.invoiceNumber || ''}
                 totalAmount={successTransactionInfo?.totalAmount || 0}

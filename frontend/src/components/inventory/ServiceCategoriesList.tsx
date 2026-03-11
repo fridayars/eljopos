@@ -24,7 +24,7 @@ export function ServiceCategoriesList({
     );
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="absolute inset-0 flex flex-col">
             {/* Search and Add Button */}
             <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
                 <div className="flex flex-col md:flex-row gap-4">
@@ -49,7 +49,7 @@ export function ServiceCategoriesList({
             </div>
 
             {/* Category Grid */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {filteredCategories.length === 0 ? (
                         <div className="col-span-full py-12 text-center text-gray-500">

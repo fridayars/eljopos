@@ -57,6 +57,7 @@ export interface TransactionHistoryItem {
 export interface TransactionHistorySummary {
     total_revenue: number;
     total_transactions: number;
+    payment_summary: { method: string; total: number }[];
 }
 
 export interface TransactionHistoryMeta {
@@ -167,7 +168,7 @@ export const getTransactionHistory = async (params: TransactionHistoryParams): P
         return {
             success: false,
             data: {
-                summary: { total_revenue: 0, total_transactions: 0 },
+                summary: { total_revenue: 0, total_transactions: 0, payment_summary: [] },
                 items: [],
                 meta: { page: 1, limit: 20, total: 0, total_pages: 0 },
             },
