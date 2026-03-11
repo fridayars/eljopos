@@ -17,7 +17,7 @@ export function MobileCartButton({ itemCount, onClick }: MobileCartButtonProps) 
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-6 h-6 md:w-7 md:h-7 rounded-full bg-red-500 border-2 border-[#0F0F14] flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.6)]"
+                    className="absolute -top-1 -right-1 w-6 h-6 md:w-7 md:h-7 rounded-full bg-red-500 flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.6)]" style={{ border: '2px solid var(--background)' }}
                 >
                     <span className="text-xs md:text-sm font-bold">{itemCount}</span>
                 </motion.div>

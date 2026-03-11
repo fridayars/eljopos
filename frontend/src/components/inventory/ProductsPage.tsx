@@ -299,7 +299,7 @@ export function ProductsPage({
 
                         {/* Pagination Footer */}
                         {totalPages > 0 && (
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-purple-500/20 bg-black/20">
+                            <div className="flex items-center justify-between px-6 py-4 border-t border-purple-500/20" style={{ background: 'var(--surface-overlay)' }}>
                                 <p className="text-sm text-gray-400">
                                     Halaman <span className="font-medium text-gray-200">{currentPage}</span> dari <span className="font-medium text-gray-200">{totalPages}</span>
                                 </p>

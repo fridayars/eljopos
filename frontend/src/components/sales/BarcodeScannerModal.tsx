@@ -140,7 +140,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: BarcodeS
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="bg-[#1a1a2e] border border-purple-500/20 rounded-2xl w-full max-w-md overflow-hidden shadow-[0_0_40px_rgba(168,85,247,0.15)]">
+            <div className="border border-purple-500/20 rounded-2xl w-full max-w-md overflow-hidden shadow-[0_0_40px_rgba(168,85,247,0.15)]" style={{ background: 'var(--surface-modal)' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-purple-500/10">
                     <div className="flex items-center gap-2">

@@ -271,7 +271,7 @@ export function ProductInventoryPage() {
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
             {/* Header / Tabs Container */}
-            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0 bg-[#0F0F14]/50">
+            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0" style={{ background: 'var(--surface-overlay)' }}>
                 <div className="flex flex-col gap-4">
                     <div>
                         <h2 className="text-lg md:text-xl text-gray-200">Manajemen Inventaris</h2>

@@ -82,7 +82,7 @@ export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: Payment
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] md:w-full md:max-w-lg max-h-[90vh] z-50 flex flex-col"
                     >
-                        <div className="bg-[#0F0F14] backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden flex flex-col h-full">
+                        <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden flex flex-col h-full" style={{ background: 'var(--background)' }}>
                             {/* Header */}
                             <div className="relative p-4 md:p-6 border-b border-purple-500/20 shrink-0">
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10" />

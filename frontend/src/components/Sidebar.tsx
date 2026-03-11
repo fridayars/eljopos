@@ -99,10 +99,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 className="hidden lg:flex flex-col items-center py-6 gap-4 shrink-0 transition-all duration-300 ease-in-out"
                 style={{
                     width: isExpanded ? '200px' : '80px',
-                    background: 'rgba(10, 10, 15, 0.9)',
+                    background: 'var(--surface-overlay)',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
-                    borderRight: '1px solid rgba(139, 92, 246, 0.15)',
+                    borderRight: '1px solid var(--border-subtle)',
                 }}
             >
                 {/* Logo — toggle expand/collapse on click */}
@@ -147,10 +147,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                         border: isActive && !item.subItems ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
                                     }}
                                     onMouseEnter={(e) => {
-                                        if (!isActive) e.currentTarget.style.color = '#E5E5E7'
+                                        if (!isActive) e.currentTarget.style.color = 'var(--foreground)'
                                     }}
                                     onMouseLeave={(e) => {
-                                        if (!isActive) e.currentTarget.style.color = '#71717A'
+                                        if (!isActive) e.currentTarget.style.color = 'var(--muted-foreground)'
                                     }}
                                     title={!isExpanded ? item.label : undefined}
                                 >
@@ -214,10 +214,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                                         background: isSubActive ? 'rgba(59,130,246,0.1)' : 'transparent',
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        if (!isSubActive) e.currentTarget.style.color = '#E5E5E7'
+                                                        if (!isSubActive) e.currentTarget.style.color = 'var(--foreground)'
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        if (!isSubActive) e.currentTarget.style.color = '#71717A'
+                                                        if (!isSubActive) e.currentTarget.style.color = 'var(--muted-foreground)'
                                                     }}
                                                 >
                                                     {sub.label}
@@ -236,10 +236,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             <nav
                 className="lg:hidden fixed bottom-0 left-0 right-0 h-16 z-40 overflow-x-auto"
                 style={{
-                    background: 'rgba(10, 10, 15, 0.95)',
+                    background: 'var(--surface-overlay)',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
-                    borderTop: '1px solid rgba(139, 92, 246, 0.15)',
+                    borderTop: '1px solid var(--border-subtle)',
                 }}
             >
                 <div className="flex items-center justify-start h-full px-2 min-w-max">

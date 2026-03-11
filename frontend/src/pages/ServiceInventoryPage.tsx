@@ -309,7 +309,7 @@ export function ServiceInventoryPage() {
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
             {/* Header and Tabs */}
-            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0 bg-[#0F0F14]/50">
+            <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0" style={{ background: 'var(--surface-overlay)' }}>
                 <div className="flex flex-col gap-4">
                     <div>
                         <h2 className="text-lg md:text-xl text-gray-200">Inventaris Layanan / Jasa</h2>

@@ -259,7 +259,7 @@ export function StockTransferModal({ isOpen, onClose, branches, onTransfer }: St
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div ref={modalRef} className="bg-[#0F0F14]/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                            <div ref={modalRef} className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" style={{ background: 'var(--surface-modal)' }}>
                                 {/* Header */}
                                 <div className="p-6 border-b border-purple-500/20 flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-3">
@@ -406,7 +406,7 @@ export function StockTransferModal({ isOpen, onClose, branches, onTransfer }: St
                                                                         <p className="text-gray-200 text-sm font-medium">{row.sourceProduct.name}</p>
                                                                         <p className="text-gray-500 text-xs mt-0.5">SKU: {row.sourceProduct.sku}</p>
                                                                     </div>
-                                                                    <div className="flex gap-4 items-center bg-[#0F0F14]/50 p-2 rounded-lg border border-purple-500/10">
+                                                                    <div className="flex gap-4 items-center p-2 rounded-lg border border-purple-500/10" style={{ background: 'var(--surface-subtle)' }}>
                                                                         <div className="text-center px-2">
                                                                             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Stok Asal</p>
                                                                             <p className={`text-sm font-semibold ${row.sourceProduct.stock > 0 ? 'text-blue-400' : 'text-red-400'}`}>{row.sourceProduct.stock}</p>
@@ -488,7 +488,7 @@ export function StockTransferModal({ isOpen, onClose, branches, onTransfer }: St
                                 </form>
 
                                 {/* Footer */}
-                                <div className="p-6 border-t border-purple-500/20 flex gap-3 justify-end shrink-0 bg-[#0F0F14]/90">
+                                <div className="p-6 border-t border-purple-500/20 flex gap-3 justify-end shrink-0" style={{ background: 'var(--surface-overlay)' }}>
                                     <button
                                         type="button"
                                         onClick={onClose}

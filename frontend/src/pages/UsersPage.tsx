@@ -159,7 +159,7 @@ export function UsersPage() {
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden p-6 gap-6 relative bg-[#0a0a0f] text-gray-200">
+        <div className="flex-1 flex flex-col h-full overflow-hidden p-6 gap-6 relative" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
              {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
                 <div className="flex items-center gap-3">
@@ -167,8 +167,8 @@ export function UsersPage() {
                         <Users className="w-6 h-6 text-indigo-400" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Manajemen User</h1>
-                        <p className="text-sm text-indigo-200/60 mt-0.5">
+                        <h1 className="text-2xl font-bold tracking-tight drop-shadow-sm" style={{ color: 'var(--foreground)' }}>Manajemen User</h1>
+                        <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
                             Kelola akses pengguna dan pengaturan role sistem
                         </p>
                     </div>
@@ -177,18 +177,18 @@ export function UsersPage() {
                 <div className="flex items-center gap-3">
                     <form onSubmit={handleSearchSubmit} className="relative w-full md:w-64">
                         <input
-                            type="text"
+                            className="w-full pl-10 pr-10 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                            style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                             placeholder="Cari user (nama/email)..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-10 py-2.5 bg-[#14151a] border border-white/5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder-gray-500"
                         />
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                         {searchTerm && (
                             <button
                                 type="button"
                                 onClick={handleClearSearch}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                                className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted-foreground)' }}
                             >
                                 <XCircle className="w-4 h-4" />
                             </button>
@@ -208,7 +208,7 @@ export function UsersPage() {
             </div>
 
             {/* Table Area */}
-            <div className="flex-1 overflow-hidden relative z-10 flex flex-col bg-[#111218] border border-white/5 rounded-2xl shadow-xl">
+            <div className="flex-1 overflow-hidden relative z-10 flex flex-col border rounded-2xl shadow-xl" style={{ background: 'var(--card)', borderColor: 'var(--border-subtle)' }}>
                 {isLoading ? (
                     <div className="flex-1 flex items-center justify-center">
                         <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
@@ -217,7 +217,7 @@ export function UsersPage() {
                     <>
                         <div className="flex-1 overflow-auto">
                             <table className="w-full text-left whitespace-nowrap">
-                                <thead className="sticky top-0 bg-[#161722] text-xs uppercase text-gray-400 font-semibold tracking-wider z-20 border-b border-white/5 shadow-sm">
+                                <thead className="sticky top-0 text-xs uppercase font-semibold tracking-wider z-20 border-b shadow-sm" style={{ background: 'var(--surface-overlay)', color: 'var(--muted-foreground)', borderColor: 'var(--border-subtle)' }}>
                                     <tr>
                                         <th className="px-6 py-4">User</th>
                                         <th className="px-6 py-4">Email</th>
@@ -248,9 +248,9 @@ export function UsersPage() {
                                                 className="hover:bg-white/[0.02] transition-colors"
                                             >
                                                 <td className="px-6 py-4">
-                                                    <div className="font-medium text-gray-200">{user.username}</div>
+                                                    <div className="font-medium" style={{ color: 'var(--foreground)' }}>{user.username}</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-400">
+                                                <td className="px-6 py-4" style={{ color: 'var(--muted-foreground)' }}>
                                                     {user.email}
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -284,11 +284,11 @@ export function UsersPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-2 text-gray-400">
+                                                    <div className="flex items-center justify-end gap-2" style={{ color: 'var(--muted-foreground)' }}>
                                                         {userPermissions.includes('user.edit') && (
                                                             <button 
                                                                 onClick={() => openEditUser(user)}
-                                                                className="p-2 bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 rounded-xl transition-all"
+                                                                className="p-2 rounded-xl transition-all" style={{ background: 'var(--surface-subtle)' }}
                                                                 title="Edit"
                                                             >
                                                                 <Edit className="w-4 h-4" />
@@ -297,7 +297,7 @@ export function UsersPage() {
                                                         {userPermissions.includes('user.delete') && (
                                                             <button 
                                                                 onClick={() => openDeleteUser(user)}
-                                                                className="p-2 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-xl transition-all"
+                                                                className="p-2 rounded-xl transition-all" style={{ background: 'var(--surface-subtle)' }}
                                                                 title="Hapus"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -314,22 +314,22 @@ export function UsersPage() {
 
                         {/* Pagination Footer */}
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-between p-4 border-t border-white/5 bg-[#161722] mt-auto">
-                                <div className="text-sm text-gray-500">
-                                    Halaman <span className="text-white font-medium">{currentPage}</span> dari <span className="text-white font-medium">{totalPages}</span>
+                            <div className="flex items-center justify-between p-4 border-t mt-auto" style={{ background: 'var(--surface-overlay)', borderColor: 'var(--border-subtle)' }}>
+                                <div className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                                    Halaman <span className="font-medium" style={{ color: 'var(--foreground)' }}>{currentPage}</span> dari <span className="font-medium" style={{ color: 'var(--foreground)' }}>{totalPages}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
                                         disabled={currentPage === 1}
                                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        className="p-2 bg-[#1a1b23] border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all"
+                                        className="p-2 border rounded-xl transition-all disabled:opacity-50" style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
                                     >
                                         <ArrowLeft className="w-4 h-4" />
                                     </button>
                                     <button
                                         disabled={currentPage === totalPages}
                                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        className="p-2 bg-[#1a1b23] border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all"
+                                        className="p-2 border rounded-xl transition-all disabled:opacity-50" style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
                                     >
                                         <ArrowRight className="w-4 h-4" />
                                     </button>

@@ -71,7 +71,7 @@ export function CustomerSelector({
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        className="absolute right-0 top-full mt-2 w-56 bg-[#1A1A1F] backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-[0_0_30px_rgba(59,130,246,0.2)] overflow-hidden z-50"
+                        className="absolute right-0 top-full mt-2 w-56 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-[0_0_30px_rgba(59,130,246,0.2)] overflow-hidden z-50" style={{ background: 'var(--card)' }}
                     >
                         <div className="p-2 space-y-1">
                             <button

@@ -245,7 +245,7 @@ export function Cart({
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                            className="xl:hidden fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0F0F14] backdrop-blur-xl border-l border-purple-500/20 flex flex-col z-50"
+                            className="xl:hidden fixed right-0 top-0 bottom-0 w-full sm:w-96 backdrop-blur-xl border-l border-purple-500/20 flex flex-col z-50" style={{ background: 'var(--background)' }}
                         >
                             {CartContent}
                         </motion.div>

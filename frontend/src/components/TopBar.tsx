@@ -1,7 +1,8 @@
-import { Bell, ChevronDown, Store as StoreIcon, LogOut, User, Loader2 } from 'lucide-react'
+import { Bell, ChevronDown, Store as StoreIcon, LogOut, User, Loader2, Sun, Moon } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { logout as logoutApi, getStores } from '../services/authService'
 import type { Store } from '../services/authService'
+import { useTheme } from '../hooks/useTheme'
 
 interface TopBarProps {
     onLogout: () => void
@@ -22,6 +23,7 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
     const [storeName, setStoreName] = useState<string>('')
     const [stores, setStores] = useState<Store[]>([])
     const [isLoggingOut, setIsLoggingOut] = useState(false)
+    const { isDark, toggleTheme } = useTheme()
 
     const storeDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -112,10 +114,10 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
         <header
             className="h-16 md:h-[72px] flex items-center justify-between px-4 md:px-8 shrink-0 relative z-50"
             style={{
-                background: 'rgba(26, 26, 31, 0.8)',
+                background: 'var(--surface-overlay-header)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+                borderBottom: '1px solid var(--border-subtle)',
             }}
         >
             {/* Left — App branding (mobile only, desktop sidebar handles logo) */}
@@ -152,16 +154,34 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
             {/* Right — Actions */}
             <div className="flex items-center gap-2 md:gap-3">
 
+                {/* Theme Toggle */}
+                <button
+                    title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    onClick={toggleTheme}
+                    className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer"
+                    style={{
+                        background: 'var(--surface-subtle)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--muted-foreground)',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--foreground)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
+                >
+                    {isDark
+                        ? <Sun className="w-4 h-4" />
+                        : <Moon className="w-4 h-4" />}
+                </button>
+
                 {/* Notifications */}
                 <button
                     className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer"
                     style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(139, 92, 246, 0.2)',
-                        color: '#71717A',
+                        background: 'var(--surface-subtle)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--muted-foreground)',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#E5E5E7')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#71717A')}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--foreground)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
                 >
                     <Bell className="w-5 h-5" />
                     <span
@@ -215,7 +235,7 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
                             <div
                                 className="absolute top-full right-0 mt-2 w-56 rounded-xl overflow-hidden z-50"
                                 style={{
-                                    background: 'rgba(18, 18, 24, 0.97)',
+                                    background: 'var(--surface-dropdown)',
                                     backdropFilter: 'blur(20px)',
                                     WebkitBackdropFilter: 'blur(20px)',
                                     border: '1px solid rgba(139, 92, 246, 0.25)',
@@ -335,7 +355,7 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
                                 id="topbar-user-dropdown"
                                 className="absolute top-full right-0 mt-2 w-52 rounded-xl overflow-hidden z-50"
                                 style={{
-                                    background: 'rgba(18, 18, 24, 0.97)',
+                                    background: 'var(--surface-dropdown)',
                                     backdropFilter: 'blur(20px)',
                                     WebkitBackdropFilter: 'blur(20px)',
                                     border: '1px solid rgba(139, 92, 246, 0.25)',

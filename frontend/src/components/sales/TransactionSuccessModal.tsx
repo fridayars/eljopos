@@ -49,7 +49,7 @@ export function TransactionSuccessModal({
                         className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="bg-[#0F0F14]/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-md overflow-hidden text-center p-8">
+                        <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-md overflow-hidden text-center p-8" style={{ background: 'var(--surface-modal)' }}>
                             <div className="flex justify-center mb-6">
                                 <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center">
                                     <CheckCircle2 className="w-12 h-12 text-green-400" />

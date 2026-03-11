@@ -30,7 +30,7 @@ export function DeleteConfirmationModal({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 30 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    className="bg-[#12121a] border border-red-500/30 rounded-2xl shadow-[0_0_60px_rgba(239,68,68,0.2)] w-full max-w-md overflow-hidden"
+                    className="border border-red-500/30 rounded-2xl shadow-[0_0_60px_rgba(239,68,68,0.2)] w-full max-w-md overflow-hidden" style={{ background: 'var(--surface-modal)' }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Visual Warning Header */}

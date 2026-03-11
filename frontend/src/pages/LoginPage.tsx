@@ -97,7 +97,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
         <div
             className="min-h-screen flex items-center justify-center px-4 py-8"
             style={{
-                background: 'linear-gradient(135deg, #0F0F14 0%, #1a1025 40%, #0F0F14 100%)',
+                background: 'linear-gradient(135deg, var(--background) 0%, color-mix(in srgb, var(--background) 80%, var(--secondary)) 40%, var(--background) 100%)',
             }}
         >
             {/* Decorative glow orbs */}
@@ -114,12 +114,12 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
             <div
                 className="relative w-full max-w-md z-10"
                 style={{
-                    background: 'rgba(26, 26, 31, 0.8)',
+                    background: 'var(--surface-overlay-header)',
                     backdropFilter: 'blur(24px)',
                     WebkitBackdropFilter: 'blur(24px)',
                     borderRadius: 'var(--radius)',
-                    border: '1px solid rgba(139, 92, 246, 0.15)',
-                    boxShadow: '0 0 60px rgba(59, 130, 246, 0.08), 0 25px 50px rgba(0, 0, 0, 0.4)',
+                    border: '1px solid var(--border-subtle)',
+                    boxShadow: '0 0 60px rgba(59, 130, 246, 0.08), 0 25px 50px rgba(0, 0, 0, 0.3)',
                 }}
             >
                 {/* Top gradient line */}
@@ -404,8 +404,8 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                                     <div
                                         className="absolute left-0 right-0 mt-2 py-1 rounded-lg z-50 overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
                                         style={{
-                                            background: '#1A1A1F',
-                                            border: '1px solid rgba(139, 92, 246, 0.2)',
+                                            background: 'var(--card)',
+                                            border: '1px solid var(--border)',
                                         }}
                                     >
                                         <ul className="max-h-60 overflow-y-auto">
@@ -414,7 +414,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                                                     key={store.id}
                                                     className="px-4 py-3 pl-14 text-sm cursor-pointer transition-colors flex items-center"
                                                     style={{
-                                                        color: storeId === store.id ? '#3B82F6' : '#E5E5E7',
+                                                        color: storeId === store.id ? 'var(--primary)' : 'var(--foreground)',
                                                         background: storeId === store.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                                                     }}
                                                     onClick={() => {
@@ -422,7 +422,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                                                         setIsDropdownOpen(false)
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        if (storeId !== store.id) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                                                        if (storeId !== store.id) e.currentTarget.style.background = 'var(--surface-subtle)'
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (storeId !== store.id) e.currentTarget.style.background = 'transparent'

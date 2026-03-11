@@ -128,7 +128,7 @@ export function EditProductModal({ isOpen, onClose, product, categories, onSave 
                         className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="bg-[#0F0F14]/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" style={{ background: 'var(--surface-modal)' }}>
                             {/* Header */}
                             <div className="p-6 border-b border-purple-500/20 flex items-center justify-between shrink-0">
                                 <div>
@@ -318,7 +318,7 @@ export function EditProductModal({ isOpen, onClose, product, categories, onSave 
                             </form>
 
                             {/* Footer */}
-                            <div className="p-6 border-t border-purple-500/20 flex gap-3 justify-end shrink-0 bg-[#0F0F14]/90">
+                            <div className="p-6 border-t border-purple-500/20 flex gap-3 justify-end shrink-0" style={{ background: 'var(--surface-overlay)' }}>
                                 <button
                                     type="button"
                                     onClick={onClose}

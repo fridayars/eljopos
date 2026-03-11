@@ -59,7 +59,7 @@ export function EditCategoryModal({ isOpen, onClose, category, onSave, modalTitl
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-default"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="bg-[#0F0F14]/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-md overflow-hidden">
+                        <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-md overflow-hidden" style={{ background: 'var(--surface-modal)' }}>
                             <div className="p-6 border-b border-purple-500/20 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-xl md:text-2xl text-gray-200">

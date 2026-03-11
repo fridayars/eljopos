@@ -151,7 +151,7 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-2xl bg-[#161722] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                    className="relative w-full max-w-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" style={{ background: 'var(--surface-modal)' }}
                 >
                     <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02]">
                         <div className="flex items-center gap-3">
@@ -186,7 +186,7 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                                     required
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-[#1a1b23] border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                    className="w-full px-4 py-2.5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50" style={{ background: 'var(--surface-subtle)', color: 'var(--foreground)' }}
                                     placeholder="Contoh: Manager"
                                 />
                             </div>
@@ -203,7 +203,7 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                                         const allSelected = groupValues.length > 0 && groupValues.every(val => permissions.includes(val))
 
                                         return (
-                                            <div key={idx} className="bg-[#1a1b23] border border-white/10 rounded-xl p-4">
+                                            <div key={idx} className="border border-white/10 rounded-xl p-4" style={{ background: 'var(--surface-subtle)' }}>
                                                 <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/5">
                                                     <div className="font-medium text-purple-200">{group.label}</div>
                                                     <button
@@ -245,7 +245,7 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-[#1a1b23] hover:bg-white/5 border border-white/10 rounded-xl transition-all"
+                            className="px-4 py-2 text-sm font-medium border border-white/10 rounded-xl transition-all" style={{ color: 'var(--muted-foreground)', background: 'var(--surface-subtle)' }}
                         >
                             Batal
                         </button>

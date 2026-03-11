@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTheme } from './hooks/useTheme'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import LoginPage from './pages/LoginPage'
@@ -13,6 +14,8 @@ import { UsersPage } from './pages/UsersPage'
 import { RolePage } from './pages/RolePage'
 
 const App = () => {
+  // Initialize theme from localStorage — applies data-theme to <html>
+  useTheme()
   // Check localStorage on initial render (persists across page refresh)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem('token')

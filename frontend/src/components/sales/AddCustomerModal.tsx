@@ -82,7 +82,7 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md z-50"
                     >
-                        <div className="bg-[#0F0F14] backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden">
+                        <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden" style={{ background: 'var(--background)' }}>
                             {/* Header */}
                             <div className="relative p-6 border-b border-purple-500/20">
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10" />

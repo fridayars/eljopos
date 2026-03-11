@@ -142,8 +142,8 @@ export function DashboardPage() {
                                 key={i}
                                 className="rounded-xl p-5 animate-pulse"
                                 style={{
-                                    background: 'rgba(255,255,255,0.04)',
-                                    border: '1px solid rgba(139,92,246,0.15)',
+                                    background: 'var(--surface-subtle)',
+                                    border: '1px solid var(--border-subtle)',
                                     height: '120px',
                                 }}
                             />
@@ -159,8 +159,8 @@ export function DashboardPage() {
                                     key={stat.id}
                                     className="rounded-xl p-4 md:p-5 transition-all duration-200"
                                     style={{
-                                        background: 'rgba(255, 255, 255, 0.04)',
-                                        border: '1px solid rgba(139, 92, 246, 0.15)',
+                                        background: 'var(--surface-subtle)',
+                                        border: '1px solid var(--border-subtle)',
                                         backdropFilter: 'blur(12px)',
                                         WebkitBackdropFilter: 'blur(12px)',
                                     }}
@@ -169,7 +169,7 @@ export function DashboardPage() {
                                             ; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 20px ${stat.colorTo}`
                                     }}
                                     onMouseLeave={(e) => {
-                                        ; (e.currentTarget as HTMLDivElement).style.border = '1px solid rgba(139, 92, 246, 0.15)'
+                                        ; (e.currentTarget as HTMLDivElement).style.border = '1px solid var(--border-subtle)'
                                             ; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
                                     }}
                                 >
@@ -217,15 +217,15 @@ export function DashboardPage() {
                     <div
                         className="rounded-xl overflow-hidden"
                         style={{
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            border: '1px solid rgba(139, 92, 246, 0.15)',
+                            background: 'var(--surface-subtle)',
+                            border: '1px solid var(--border-subtle)',
                             backdropFilter: 'blur(12px)',
                             WebkitBackdropFilter: 'blur(12px)',
                         }}
                     >
                         <div
                             className="px-5 py-4 flex items-center gap-2"
-                            style={{ borderBottom: '1px solid rgba(139, 92, 246, 0.15)' }}
+                            style={{ borderBottom: '1px solid var(--border-subtle)' }}
                         >
                             <Clock className="w-5 h-5" style={{ color: '#60A5FA' }} />
                             <h3 className="text-base font-medium" style={{ color: 'var(--foreground)' }}>
@@ -239,7 +239,7 @@ export function DashboardPage() {
                                     <div
                                         key={i}
                                         className="rounded-lg h-14 animate-pulse"
-                                        style={{ background: 'rgba(255,255,255,0.05)' }}
+                                        style={{ background: 'var(--surface-subtle)' }}
                                     />
                                 ))}
                             </div>
@@ -258,7 +258,7 @@ export function DashboardPage() {
                                             borderTop: idx > 0 ? '1px solid rgba(139, 92, 246, 0.08)' : 'none',
                                         }}
                                         onMouseEnter={(e) => {
-                                            ; (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'
+                                            ; (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-subtle)'
                                         }}
                                         onMouseLeave={(e) => {
                                             ; (e.currentTarget as HTMLDivElement).style.background = 'transparent'
@@ -318,15 +318,15 @@ export function DashboardPage() {
                     <div
                         className="rounded-xl overflow-hidden"
                         style={{
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            border: '1px solid rgba(139, 92, 246, 0.15)',
+                            background: 'var(--surface-subtle)',
+                            border: '1px solid var(--border-subtle)',
                             backdropFilter: 'blur(12px)',
                             WebkitBackdropFilter: 'blur(12px)',
                         }}
                     >
                         <div
                             className="px-5 py-4 flex items-center justify-between"
-                            style={{ borderBottom: '1px solid rgba(139, 92, 246, 0.15)' }}
+                            style={{ borderBottom: '1px solid var(--border-subtle)' }}
                         >
                             <div className="flex items-center gap-2">
                                 <StickyNote className="w-5 h-5" style={{ color: '#22D3EE' }} />
@@ -343,8 +343,8 @@ export function DashboardPage() {
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150 cursor-pointer"
                                     style={{
                                         color: 'var(--muted-foreground)',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(139,92,246,0.2)',
+                                        background: 'var(--surface-subtle)',
+                                        border: '1px solid var(--border)',
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.color = '#60A5FA'
@@ -370,8 +370,8 @@ export function DashboardPage() {
                                         className="w-full resize-none rounded-xl p-4 text-sm outline-none transition-all duration-200"
                                         style={{
                                             minHeight: '220px',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid rgba(139,92,246,0.2)',
+                                            background: 'var(--surface-subtle)',
+                                            border: '1px solid var(--border)',
                                             color: 'var(--foreground)',
                                             whiteSpace: 'pre-wrap',
                                         }}

@@ -3,6 +3,8 @@
 /* ========================================
    eljoPOS Design Tokens (from figma theme)
    ======================================== */
+
+/* ── Dark Mode (Default) ─────────────────────────── */
 :root {
   /* Core Colors */
   --background: #0F0F14;
@@ -37,6 +39,61 @@
 
   /* Radius */
   --radius: 0.75rem;
+
+  /* ── Surface Tokens (replaces hardcoded rgba) ── */
+  --surface-overlay: rgba(10, 10, 15, 0.9);       /* Sidebar / nav bg */
+  --surface-overlay-header: rgba(26, 26, 31, 0.8); /* TopBar header bg */
+  --surface-dropdown: rgba(18, 18, 24, 0.97);      /* Dropdown / modal overlay bg */
+  --surface-modal: rgba(15, 15, 20, 0.95);         /* Modal backdrop */
+  --surface-subtle: rgba(255, 255, 255, 0.05);     /* Subtle element bg */
+  --surface-hover: rgba(255, 255, 255, 0.08);      /* Hover state */
+  --border-subtle: rgba(139, 92, 246, 0.15);       /* Subtle divider border */
+  --glow-blue: rgba(59, 130, 246, 0.04);           /* Decorative glow */
+  --glow-purple: rgba(139, 92, 246, 0.04);         /* Decorative glow */
+  --scrollbar-thumb: rgba(139, 92, 246, 0.3);
+  --scrollbar-track: transparent;
+}
+
+/* ── Light Mode ──────────────────────────────────── */
+[data-theme="light"] {
+  /* Core Colors — soft warm gray, not pure white/black */
+  --background: #EEEEF4;           /* warm lavender-gray page bg */
+  --foreground: #2D2D38;           /* dark charcoal, NOT pure black */
+  --card: #F5F5FA;                 /* card surface, softer white */
+  --card-foreground: #2D2D38;
+
+  /* Brand Colors (slightly muted for light bg) */
+  --primary: #2563EB;
+  --primary-foreground: #ffffff;
+  --secondary: #7C3AED;
+  --secondary-foreground: #ffffff;
+
+  /* UI Colors */
+  --muted: #E2E2EA;
+  --muted-foreground: #6E6E80;     /* medium gray, readable but not too dark */
+  --accent: #0891B2;
+  --accent-foreground: #ffffff;
+  --destructive: #DC2626;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & Inputs — neutral, not purple-heavy */
+  --border: rgba(100, 100, 140, 0.2);
+  --input: rgba(100, 100, 140, 0.2);
+  --input-background: rgba(0, 0, 0, 0.03);
+  --ring: #2563EB;
+
+  /* Surface Tokens */
+  --surface-overlay: rgba(238, 238, 244, 0.97);       /* Sidebar/nav */
+  --surface-overlay-header: rgba(245, 245, 250, 0.92); /* TopBar */
+  --surface-dropdown: rgba(248, 248, 253, 0.99);      /* Dropdown */
+  --surface-modal: rgba(238, 238, 244, 0.98);         /* Modal bg */
+  --surface-subtle: rgba(0, 0, 0, 0.04);              /* Subtle el bg */
+  --surface-hover: rgba(0, 0, 0, 0.06);               /* Hover */
+  --border-subtle: rgba(100, 100, 140, 0.15);         /* Divider */
+  --glow-blue: rgba(59, 130, 246, 0.04);
+  --glow-purple: rgba(139, 92, 246, 0.04);
+  --scrollbar-thumb: rgba(59, 130, 246, 0.25);
+  --scrollbar-track: transparent;
 }
 
 /* ========================================
@@ -65,3 +122,77 @@ h5,
 h6 {
   font-weight: var(--font-weight-medium);
 }
+
+/* ========================================
+   Light Mode — Global Tailwind Class Overrides
+   These fix Tailwind classes that are hardcoded
+   for dark-bg appearance and don't respond to data-theme.
+   ======================================== */
+
+/* ── Text Colors ─────────────────────────── */
+[data-theme="light"] .text-white          { color: var(--foreground) !important; }
+[data-theme="light"] .text-gray-100       { color: #2D2D38 !important; }
+[data-theme="light"] .text-gray-200       { color: #3D3D4A !important; }
+[data-theme="light"] .text-gray-300       { color: #52526B !important; }
+[data-theme="light"] .text-gray-400       { color: #6E6E80 !important; }
+[data-theme="light"] .text-gray-500       { color: #8888A0 !important; }
+[data-theme="light"] .text-gray-600       { color: #9999B0 !important; }
+[data-theme="light"] .hover\:text-white:hover { color: var(--foreground) !important; }
+[data-theme="light"] .hover\:text-gray-200:hover { color: #3D3D4A !important; }
+[data-theme="light"] .group:hover .group-hover\:text-white { color: var(--foreground) !important; }
+
+/* ── Background Colors (white-opacity on dark bg) ── */
+[data-theme="light"] .bg-white\/5         { background-color: rgba(0, 0, 0, 0.04) !important; }
+[data-theme="light"] .bg-white\/\[0\.02\] { background-color: rgba(0, 0, 0, 0.02) !important; }
+[data-theme="light"] .bg-white\/\[0\.03\] { background-color: rgba(0, 0, 0, 0.03) !important; }
+[data-theme="light"] .bg-white\/8         { background-color: rgba(0, 0, 0, 0.06) !important; }
+[data-theme="light"] .bg-white\/10        { background-color: rgba(0, 0, 0, 0.07) !important; }
+[data-theme="light"] .hover\:bg-white\/5:hover  { background-color: rgba(0, 0, 0, 0.05) !important; }
+[data-theme="light"] .hover\:bg-white\/\[0\.02\]:hover { background-color: rgba(0, 0, 0, 0.03) !important; }
+[data-theme="light"] .hover\:bg-white\/8:hover { background-color: rgba(0, 0, 0, 0.06) !important; }
+
+/* ── Border Colors (white-opacity) ── */
+[data-theme="light"] .border-white\/5     { border-color: rgba(0, 0, 0, 0.08) !important; }
+[data-theme="light"] .border-white\/10    { border-color: rgba(0, 0, 0, 0.1) !important; }
+[data-theme="light"] .border-white\/20    { border-color: rgba(0, 0, 0, 0.12) !important; }
+
+/* ── Divider Colors ── */
+[data-theme="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* ── Tab / Button inactive states ── */
+[data-theme="light"] .border-purple-500\/20 { border-color: rgba(100, 100, 140, 0.2) !important; }
+[data-theme="light"] .border-purple-500\/10 { border-color: rgba(100, 100, 140, 0.12) !important; }
+[data-theme="light"] .border-purple-500\/30 { border-color: rgba(100, 100, 140, 0.25) !important; }
+[data-theme="light"] .hover\:border-blue-500\/50:hover { border-color: rgba(59, 130, 246, 0.4) !important; }
+[data-theme="light"] .hover\:border-purple-500\/50:hover { border-color: rgba(100, 100, 140, 0.4) !important; }
+
+/* ── Dark hardcoded summary card backgrounds ── */
+[data-theme="light"] .bg-\[\#121E19\]\/40,
+[data-theme="light"] [class*="bg-[#121E19]"] { background-color: rgba(16, 185, 129, 0.06) !important; }
+[data-theme="light"] .bg-\[\#1E1212\]\/40,
+[data-theme="light"] [class*="bg-[#1E1212]"] { background-color: rgba(239, 68, 68, 0.06) !important; }
+[data-theme="light"] .bg-\[\#12181E\]\/40,
+[data-theme="light"] [class*="bg-[#12181E]"] { background-color: rgba(6, 182, 212, 0.06) !important; }
+
+/* ── Chart / Tooltip dark bg ── */
+[data-theme="light"] [class*="bg-[#1A1A24]"] { background-color: rgba(245, 245, 250, 0.98) !important; }
+[data-theme="light"] [class*="bg-[#0a0a0f]"] { background-color: var(--background) !important; }
+[data-theme="light"] [class*="bg-[#12121a]"] { background-color: var(--surface-modal) !important; }
+[data-theme="light"] [class*="bg-[#161722]"] { background-color: var(--surface-overlay) !important; }
+[data-theme="light"] [class*="bg-[#1a1b23]"] { background-color: var(--surface-subtle) !important; }
+[data-theme="light"] [class*="bg-[#1a1a2e]"] { background-color: var(--surface-modal) !important; }
+
+/* ── bg-black opacity variants (dark in dark mode, subtle in light) ── */
+[data-theme="light"] .bg-black\/10        { background-color: rgba(0, 0, 0, 0.03) !important; }
+[data-theme="light"] .bg-black\/20        { background-color: rgba(0, 0, 0, 0.04) !important; }
+[data-theme="light"] .bg-black\/30        { background-color: rgba(0, 0, 0, 0.06) !important; }
+[data-theme="light"] .bg-black\/40        { background-color: rgba(0, 0, 0, 0.07) !important; }
+[data-theme="light"] .bg-black\/50        { background-color: rgba(0, 0, 0, 0.09) !important; }
+
+/* ── Placeholder text colors ── */
+[data-theme="light"] .placeholder\:text-gray-500::placeholder { color: #AAAABB !important; }
+[data-theme="light"] .placeholder\:text-gray-600::placeholder { color: #AAAABB !important; }
+[data-theme="light"] .placeholder-gray-500::placeholder       { color: #AAAABB !important; }
+[data-theme="light"] .placeholder-gray-600::placeholder       { color: #AAAABB !important; }

@@ -400,7 +400,7 @@ export function TransactionReport() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-default"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="bg-[#0F0F14]/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                            <div className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" style={{ background: 'var(--surface-modal)' }}>
                                 {isDetailLoading || !selectedDetail ? (
                                     <div className="flex-1 flex items-center justify-center p-12">
                                         <div className="flex items-center gap-3 text-gray-500">
