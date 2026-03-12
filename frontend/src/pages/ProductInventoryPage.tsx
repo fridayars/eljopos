@@ -14,6 +14,7 @@ import { StockTransferModal } from '../components/inventory/StockTransferModal'
 import { AddCategoryModal } from '../components/inventory/AddCategoryModal'
 import { EditCategoryModal } from '../components/inventory/EditCategoryModal'
 import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmationModal'
+import { StockHistoryPage } from '../components/inventory/StockHistoryPage'
 
 type InventoryTab = 'product-category' | 'produk-barang'
 
@@ -41,6 +42,7 @@ export function ProductInventoryPage() {
     const [isDeleteProdOpen, setIsDeleteProdOpen] = useState(false)
     const [productToDelete, setProductToDelete] = useState<ProductItem | null>(null)
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all')
+    const [viewingStockProduct, setViewingStockProduct] = useState<ProductItem | null>(null)
 
     // Product Pagination & Sorting States
     const [currentPage, setCurrentPage] = useState(1)
@@ -260,6 +262,37 @@ export function ProductInventoryPage() {
         fetchProducts()
     }
 
+    const handleEditStock = async (productId: string, payload: Record<string, any>) => {
+        try {
+            const { stockAdjustmentAdd, stockAdjustmentSubtract, stockAdjustmentNotes } = payload
+
+            const res = await updateProduct(productId, {
+                stockAdjustmentAdd,
+                stockAdjustmentSubtract,
+                stockAdjustmentNotes
+            })
+
+            if (res.success) {
+                toast.success('Stok produk berhasil diperbarui')
+                fetchProducts()
+            } else {
+                throw new Error('Gagal memperbarui stok')
+            }
+        } catch (error) {
+            toast.error('Gagal memperbarui stok produk')
+            throw error
+        }
+    }
+
+    if (viewingStockProduct) {
+        return (
+            <StockHistoryPage
+                product={viewingStockProduct}
+                onBack={() => setViewingStockProduct(null)}
+            />
+        )
+    }
+
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center">
@@ -368,7 +401,7 @@ export function ProductInventoryPage() {
                                                             {category.description || 'Tidak ada deskripsi spesifik.'}
                                                         </p>
                                                     </div>
-                                                    <div className="flex flex-col gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex flex-col gap-2 ml-4">
                                                         <button
                                                             onClick={() => openEditCategory(category)}
                                                             className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
@@ -428,6 +461,8 @@ export function ProductInventoryPage() {
                                     setSearchQuery(val)
                                     setCurrentPage(1)
                                 }}
+                                onEditStock={handleEditStock}
+                                onViewStockHistory={setViewingStockProduct}
                             />
                         </motion.div>
                     )}

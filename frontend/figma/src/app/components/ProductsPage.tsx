@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, X, Save } from 'lucide-react';
+import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, X, Save, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from './ProductGrid';
 import { EditProductModal } from './EditProductModal';
@@ -11,6 +11,7 @@ interface ProductsPageProps {
   products: Product[];
   onUpdateProduct: (product: Product) => void;
   onImportProducts: (products: Product[]) => void;
+  onViewStockHistory: (product: Product) => void;
 }
 
 interface Branch {
@@ -25,7 +26,7 @@ const mockBranches: Branch[] = [
   { id: '4', name: 'Branch 3 - Tangerang' },
 ];
 
-export function ProductsPage({ products, onUpdateProduct, onImportProducts }: ProductsPageProps) {
+export function ProductsPage({ products, onUpdateProduct, onImportProducts, onViewStockHistory }: ProductsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -129,7 +130,7 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
 
     // Build success message
     const itemsList = data.items.map((item) => `${item.quantity}x ${item.productName}`).join(', ');
-    
+
     toast.success(
       `Transferred ${data.items.length} item(s) from ${sourceBranchName} to ${destBranchName}: ${itemsList}`
     );
@@ -156,7 +157,7 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
 
     // Add to products list
     onImportProducts([...products, productToAdd]);
-    
+
     // Reset form
     setNewProduct({
       name: '',
@@ -170,9 +171,10 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
 
     // Close modal
     setIsAddModalOpen(false);
-    
+
     toast.success('Product added successfully');
   };
+
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -283,13 +285,12 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
                         </td>
                         <td className="px-4 py-4 text-sm text-right">
                           <span
-                            className={`${
-                              product.stock < 10
-                                ? 'text-red-400'
-                                : product.stock < 20
+                            className={`${product.stock < 10
+                              ? 'text-red-400'
+                              : product.stock < 20
                                 ? 'text-orange-400'
                                 : 'text-green-400'
-                            }`}
+                              }`}
                           >
                             {product.stock}
                           </span>
@@ -301,6 +302,13 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
                               className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-blue-400 hover:border-blue-500/50 hover:shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all"
                             >
                               <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => onViewStockHistory(product)}
+                              className="flex items-center gap-1 p-2 rounded-lg bg-white/5 border border-purple-500/20 text-purple-400 hover:border-purple-500/50 hover:shadow-[0_0_10px_rgba(139,92,246,0.3)] transition-all"
+                            >
+                              <ArrowRightLeft className="w-4 h-4" />
+                              <span className="text-xs">Riwayat Stok</span>
                             </button>
                           </div>
                         </td>
@@ -315,30 +323,32 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-1">Total Products</p>
-              <p className="text-2xl text-gray-200">{products.length}</p>
+              <p className="text-sm text-gray-500 mb-1">Total Products</p>
+              <p className="text-2xl text-gray-200 font-semibold">{products.length}</p>
             </div>
             <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-1">Low Stock</p>
-              <p className="text-2xl text-orange-400">{products.filter((p) => p.stock < 10).length}</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-1">Total Value</p>
-              <p className="text-2xl text-gray-200">
-                Rp {products.reduce((sum, p) => sum + p.price * p.stock, 0).toLocaleString()}
+              <p className="text-sm text-gray-500 mb-1">Low Stock</p>
+              <p className="text-2xl text-orange-400 font-semibold">
+                {products.filter(p => p.stock > 0 && p.stock < 10).length}
               </p>
             </div>
             <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-1">Categories</p>
-              <p className="text-2xl text-gray-200">
-                {new Set(products.map((p) => p.category)).size}
+              <p className="text-sm text-gray-500 mb-1">Out of Stock</p>
+              <p className="text-2xl text-red-400 font-semibold">
+                {products.filter(p => p.stock === 0).length}
+              </p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-xl p-4">
+              <p className="text-sm text-gray-500 mb-1">Categories</p>
+              <p className="text-2xl text-blue-400 font-semibold">
+                {new Set(products.map(p => p.category)).size}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Edit Product Modal */}
+      {/* Modals */}
       <EditProductModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -346,7 +356,6 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
         onSave={handleSaveProduct}
       />
 
-      {/* Stock Transfer Modal */}
       <StockTransferModal
         isOpen={isTransferModalOpen}
         onClose={() => setIsTransferModalOpen(false)}
@@ -354,181 +363,6 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts }: Pr
         branches={mockBranches}
         onTransfer={handleTransfer}
       />
-
-      {/* Add Product Modal */}
-      <AnimatePresence>
-        {isAddModalOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddModalOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            />
-
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-[#0F0F14]/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                {/* Header */}
-                <div className="p-6 border-b border-purple-500/20 flex items-center justify-between shrink-0">
-                  <div>
-                    <h2 className="text-xl md:text-2xl text-gray-200">Add New Product</h2>
-                    <p className="text-sm text-gray-500 mt-1">Create a new product item</p>
-                  </div>
-                  <button
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="w-10 h-10 rounded-lg bg-white/5 border border-purple-500/20 flex items-center justify-center text-gray-400 hover:text-gray-200 hover:border-red-500/50 transition-all"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Form Content */}
-                <div className="flex-1 overflow-y-auto p-6">
-                  <div className="space-y-4">
-                    {/* Product Name */}
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Product Name *</label>
-                      <input
-                        type="text"
-                        value={newProduct.name}
-                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                        placeholder="Enter product name"
-                      />
-                    </div>
-
-                    {/* SKU and Category */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">SKU *</label>
-                        <input
-                          type="text"
-                          value={newProduct.sku}
-                          onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-                          className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                          placeholder="PRD-001"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Category *</label>
-                        <select
-                          value={newProduct.category}
-                          onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as any })}
-                          className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 focus:outline-none focus:border-blue-500/50"
-                        >
-                          <option value="beverages">Beverages</option>
-                          <option value="pastries">Pastries</option>
-                          <option value="meals">Meals</option>
-                          <option value="desserts">Desserts</option>
-                          <option value="healthy">Healthy</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Capital Price and Sale Price */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Capital Price (Rp)</label>
-                        <input
-                          type="number"
-                          value={newProduct.capitalPrice}
-                          onChange={(e) =>
-                            setNewProduct({ ...newProduct, capitalPrice: Number(e.target.value) })
-                          }
-                          className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                          min="0"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Sale Price (Rp) *</label>
-                        <input
-                          type="number"
-                          value={newProduct.price}
-                          onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-                          className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                          min="0"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Stock */}
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Initial Stock</label>
-                      <input
-                        type="number"
-                        value={newProduct.stock}
-                        onChange={(e) => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
-                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                        min="0"
-                        placeholder="0"
-                      />
-                    </div>
-
-                    {/* Image URL */}
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Image URL (Optional)</label>
-                      <input
-                        type="text"
-                        value={newProduct.image}
-                        onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
-                        placeholder="https://example.com/image.jpg"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Leave empty to use default image
-                      </p>
-                    </div>
-
-                    {/* Preview */}
-                    {newProduct.image && (
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Image Preview</label>
-                        <img
-                          src={newProduct.image}
-                          alt="Preview"
-                          className="w-32 h-32 rounded-lg object-cover border border-purple-500/20"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop';
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-6 border-t border-purple-500/20 flex gap-3 justify-end shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="px-6 py-3 rounded-xl border border-purple-500/30 text-gray-400 hover:text-gray-200 hover:border-purple-500/50 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddProduct}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all"
-                  >
-                    <Save className="w-5 h-5" />
-                    Add Product
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

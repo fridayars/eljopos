@@ -19,6 +19,19 @@ export interface ProductItem {
     jasa_pasang?: number
     ongkir_asuransi?: number
     biaya_overhead?: number
+    stockAdjustmentAdd?: number
+    stockAdjustmentSubtract?: number
+    stockAdjustmentNotes?: string
+}
+
+export interface StockMutation {
+    id: string;
+    product_id: string;
+    jenis_mutasi: string;
+    stok: number;
+    keterangan: string;
+    created_at: string;
+    updated_at?: string;
 }
 
 export interface Category {
@@ -451,6 +464,37 @@ export const exportProductsFile = async (storeId?: string): Promise<{ success: b
         return { success: false, message: 'Gagal mengekspor file produk' }
     }
 }
+
+export const getStockMutations = async (productId: string, params: { page?: number, limit?: number } = {}): Promise<{
+    success: boolean;
+    data: {
+        items: StockMutation[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            total_pages: number;
+        }
+    };
+    message?: string;
+}> => {
+    try {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        queryParams.append('product_id', productId);
+        
+        const response = await api.get(`/master/products/mutasi?${queryParams.toString()}`);
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: { items: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0 } },
+            message: error.response?.data?.message || 'Gagal memuat riwayat stok'
+        };
+    }
+}
+
 
 // ============================
 // SERVICE INVENTORY OPERATIONS

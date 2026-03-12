@@ -292,17 +292,17 @@ export function EditProductModal({ isOpen, onClose, product, categories, onSave 
                                         </div>
                                     </div>
 
-                                    {/* Stock */}
+                                    {/* Stock Display */}
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Stok (Tidak bisa diubah)</label>
+                                        <label className="block text-sm text-gray-400 mb-2">Stok Saat Ini</label>
                                         <input
                                             type="number"
                                             value={formData.stock || 0}
-                                            onChange={(e) => handleChange('stock', Number(e.target.value))}
                                             className={inputClass}
                                             min="0"
                                             disabled
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">Stok dapat diubah melalui fitur penyesuaian stok di halaman inventaris</p>
                                     </div>
 
                                     {/* Jasa Pasang, Ongkir, Overhead */}

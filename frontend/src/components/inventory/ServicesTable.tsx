@@ -1,6 +1,120 @@
-import { Search, Plus, Edit, Trash2, Download, Upload } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Download, Upload, MoreVertical, Eye, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { ServiceProduct, ServiceCategory } from '../../services/productService';
+
+function ServiceActionDropdown({
+    service,
+    onEdit,
+    onDelete,
+    onDetail,
+    onToggleStatus,
+    userPermissions,
+    isOpen,
+    setIsOpen,
+}: {
+    service: ServiceProduct;
+    onEdit: (service: ServiceProduct) => void;
+    onDelete: (id: string) => void;
+    onDetail: (service: ServiceProduct) => void;
+    onToggleStatus: (id: string, newStatus: boolean) => void;
+    userPermissions: string[];
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+}) {
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-gray-200 transition-all cursor-pointer"
+            >
+                <MoreVertical className="w-5 h-5" />
+            </button>
+
+            {isOpen && (
+                <div
+                    className="absolute right-0 top-full mt-2 w-48 rounded-xl z-[100] overflow-hidden shadow-2xl border border-purple-500/20"
+                    style={{ background: 'var(--surface-overlay)', backdropFilter: 'blur(10px)' }}
+                >
+                    <div className="py-1">
+                        <button
+                            onClick={() => {
+                                onDetail(service);
+                                setIsOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer"
+                        >
+                            <Eye className="w-4 h-4" />
+                            Detail
+                        </button>
+
+                        {userPermissions.includes('service.edit') && (
+                            <>
+                                <button
+                                    onClick={() => {
+                                        onToggleStatus(service.id, !service.is_active);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer ${
+                                        service.is_active !== false ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-white/5'
+                                    }`}
+                                >
+                                    {service.is_active !== false ? (
+                                        <>
+                                            <ToggleRight className="w-4 h-4" />
+                                            Nonaktifkan
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ToggleLeft className="w-4 h-4" />
+                                            Aktifkan
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onEdit(service);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                                >
+                                    <Edit className="w-4 h-4" />
+                                    Edit
+                                </button>
+                            </>
+                        )}
+
+                        {userPermissions.includes('service.delete') && (
+                            <button
+                                onClick={() => {
+                                    onDelete(service.id);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Hapus
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 function CategoryFilterSelect({
     value,
@@ -130,6 +244,7 @@ export function ServicesTable({
     onPageChange,
     userPermissions,
 }: ServicesTableProps) {
+    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
     const displayServices = services;
 
     return (
@@ -205,7 +320,7 @@ export function ServicesTable({
                         displayServices.map((service) => (
                             <div
                                 key={service.id}
-                                className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all"
+                                className={`bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all relative ${openDropdownId === service.id ? 'z-50' : 'z-0'}`}
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
@@ -253,45 +368,16 @@ export function ServicesTable({
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
-                                        {/* Status Toggle Switch */}
-                                        {userPermissions.includes('service.edit') && (
-                                            <button
-                                                onClick={() => onToggleStatus(service.id, !service.is_active)}
-                                                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none"
-                                                style={{
-                                                    backgroundColor: service.is_active !== false ? 'rgba(16, 185, 129, 0.6)' : 'rgba(107, 114, 128, 0.4)',
-                                                }}
-                                                title={service.is_active !== false ? 'Nonaktifkan' : 'Aktifkan'}
-                                            >
-                                                <span
-                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${service.is_active !== false ? 'translate-x-6' : 'translate-x-1'}`}
-                                                />
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => onDetail(service)}
-                                            className="px-3 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition-all text-sm"
-                                        >
-                                            Detail
-                                        </button>
-                                        {userPermissions.includes('service.edit') && (
-                                            <button
-                                                onClick={() => onEdit(service)}
-                                                className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all"
-                                                title="Edit Layanan"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                        {userPermissions.includes('service.delete') && (
-                                            <button
-                                                onClick={() => onDelete(service.id)}
-                                                className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all"
-                                                title="Hapus Layanan"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                        <ServiceActionDropdown
+                                            service={service}
+                                            onEdit={onEdit}
+                                            onDelete={onDelete}
+                                            onDetail={onDetail}
+                                            onToggleStatus={onToggleStatus}
+                                            userPermissions={userPermissions}
+                                            isOpen={openDropdownId === service.id}
+                                            setIsOpen={(open) => setOpenDropdownId(open ? service.id : null)}
+                                        />
                                     </div>
                                 </div>
                             </div>

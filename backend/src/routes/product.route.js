@@ -18,6 +18,9 @@ const {
 // GET /api/master/products/export
 router.get('/export', authMiddleware, productController.exportProducts);
 
+// GET /api/master/products/mutasi
+router.get('/mutasi', authMiddleware, productController.getStockMutations);
+
 // GET /api/master/products
 router.get('/', authMiddleware, productController.getAllProducts);
 

@@ -10,6 +10,7 @@ Karena kita menggunakan npx, pastikan menjalankannya dari dalam folder `backend`
 Perintah ini akan mengeksekusi semua file migration yang belum pernah di-run sebelumnya (berdasarkan data di tabel SequelizeMeta).
 
   npx sequelize-cli db:migrate
+  railway run npx sequelize-cli db:migrate --env production
 
 
 ---------------------------------------------------------

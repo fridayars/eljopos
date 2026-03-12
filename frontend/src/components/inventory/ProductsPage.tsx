@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX, Wrench } from 'lucide-react'
+import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX, Wrench, MoreVertical, History, Settings2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { ProductItem, Category } from '../../services/productService'
+import { EditStockModal } from './EditStockModal'
+import { toast } from 'sonner'
 
 function CategoryFilterSelect({
     value,
@@ -25,7 +27,7 @@ function CategoryFilterSelect({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const selectedCategory = value === 'all' 
+    const selectedCategory = value === 'all'
         ? { id: 'all', name: 'Semua Kategori' }
         : categories.find(c => c.id === value);
 
@@ -38,9 +40,8 @@ function CategoryFilterSelect({
         <div className="relative w-full" ref={dropdownRef}>
             <div
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${
-                    isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
-                }`}
+                className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                    }`}
                 style={{
                     color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
                     borderColor: isOpen ? 'var(--primary)' : undefined,
@@ -92,6 +93,107 @@ function CategoryFilterSelect({
     );
 }
 
+function ProductActionDropdown({
+    product,
+    userPermissions,
+    onEdit,
+    onDelete,
+    onEditStock,
+    onViewStockHistory
+}: {
+    product: ProductItem;
+    userPermissions: string[];
+    onEdit: (product: ProductItem) => void;
+    onDelete: (product: ProductItem) => void;
+    onEditStock: (product: ProductItem) => void;
+    onViewStockHistory: (product: ProductItem) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative flex justify-center" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                title="Aksi"
+            >
+                <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {isOpen && (
+                <div
+                    className="absolute right-0 top-full mt-2 w-48 py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+                    style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                    }}
+                >
+                    <ul className="py-1">
+                        {userPermissions.includes('product.edit') && (
+                            <li
+                                className="px-4 py-2 text-sm text-gray-200 hover:bg-white/5 cursor-pointer flex items-center gap-2 transition-colors"
+                                onClick={() => {
+                                    onEdit(product);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                <Edit className="w-4 h-4 text-blue-400" />
+                                <span>Edit Produk</span>
+                            </li>
+                        )}
+                        <li
+                            className="px-4 py-2 text-sm text-gray-200 hover:bg-white/5 cursor-pointer flex items-center gap-2 transition-colors"
+                            onClick={() => {
+                                onEditStock(product);
+                                setIsOpen(false);
+                            }}
+                        >
+                            <Settings2 className="w-4 h-4 text-cyan-400" />
+                            <span>Edit Stok</span>
+                        </li>
+                        <li
+                            className="px-4 py-2 text-sm text-gray-200 hover:bg-white/5 cursor-pointer flex items-center gap-2 transition-colors"
+                            onClick={() => {
+                                onViewStockHistory(product);
+                                setIsOpen(false);
+                            }}
+                        >
+                            <History className="w-4 h-4 text-orange-400" />
+                            <span>Riwayat Stok</span>
+                        </li>
+                        {userPermissions.includes('product.delete') && (
+                            <>
+                                <div className="h-px bg-purple-500/10 my-1" />
+                                <li
+                                    className="px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 cursor-pointer flex items-center gap-2 transition-colors"
+                                    onClick={() => {
+                                        onDelete(product);
+                                        setIsOpen(false);
+                                    }}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>Hapus</span>
+                                </li>
+                            </>
+                        )}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export interface SortConfig {
     key: string;
     direction: 'asc' | 'desc';
@@ -107,6 +209,8 @@ interface ProductsPageProps {
     onExportProducts: () => void
     onOpenTransfer: () => void
     onOpenAdd: () => void
+    onEditStock: (productId: string, payload: Record<string, any>) => Promise<void>
+    onViewStockHistory: (product: ProductItem) => void
     // Pagination & Sorting props
     currentPage: number
     totalPages: number
@@ -129,6 +233,7 @@ export function ProductsPage({
     onExportProducts,
     onOpenTransfer,
     onOpenAdd,
+    onEditStock,
     currentPage,
     totalPages,
     onPageChange,
@@ -137,7 +242,8 @@ export function ProductsPage({
     searchQuery,
     onSearchChange,
     selectedCategoryId,
-    onCategoryChange
+    onCategoryChange,
+    onViewStockHistory
 }: ProductsPageProps) {
     const [userPermissions] = useState<string[]>(() => {
         try {
@@ -151,6 +257,8 @@ export function ProductsPage({
         }
         return []
     })
+
+    const [editingStockProduct, setEditingStockProduct] = useState<ProductItem | null>(null)
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -373,26 +481,14 @@ export function ProductsPage({
                                                     </button>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        {userPermissions.includes('product.edit') && (
-                                                            <button
-                                                                onClick={() => onEditProduct(product)}
-                                                                className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"
-                                                                title="Edit"
-                                                            >
-                                                                <Edit className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        {userPermissions.includes('product.delete') && (
-                                                            <button
-                                                                onClick={() => onDeleteProduct(product)}
-                                                                className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all cursor-pointer"
-                                                                title="Hapus"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    <ProductActionDropdown
+                                                        product={product}
+                                                        userPermissions={userPermissions}
+                                                        onEdit={onEditProduct}
+                                                        onDelete={onDeleteProduct}
+                                                        onEditStock={() => setEditingStockProduct(product)}
+                                                        onViewStockHistory={onViewStockHistory}
+                                                    />
                                                 </td>
                                             </motion.tr>
                                         ))
@@ -453,6 +549,21 @@ export function ProductsPage({
                     </div>
                 </div>
             </div>
+
+            <EditStockModal
+                isOpen={!!editingStockProduct}
+                onClose={() => setEditingStockProduct(null)}
+                product={editingStockProduct}
+                onSave={async (productId, payload) => {
+                    try {
+                        await onEditStock(productId, payload)
+                        setEditingStockProduct(null)
+                    } catch (error) {
+                        toast.error('Gagal memperbarui stok')
+                        console.error(error)
+                    }
+                }}
+            />
         </div>
     )
 }

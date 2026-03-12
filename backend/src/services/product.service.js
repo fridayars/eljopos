@@ -12,103 +12,109 @@ const { Product, KategoriProduk, Store, Layanan, KategoriLayanan, ProdukLayanan,
  * @param {string} storeId
  */
 const getAllProducts = async (opts, storeId) => {
-    const page = opts.page || 1;
-    const limit = opts.limit || 10;
-    const offset = (page - 1) * limit;
-    const where = { store_id: storeId };
+    try {
+        const page = opts.page || 1;
+        const limit = opts.limit || 10;
+        const offset = (page - 1) * limit;
+        const where = { store_id: storeId };
 
-    if (opts.search) {
-        // search on name or sku
-        const Sequelize = db.Sequelize;
-        where[Sequelize.Op.or] = [
-            { name: { [Sequelize.Op.iLike]: `%${opts.search}%` } },
-            { sku: { [Sequelize.Op.iLike]: `%${opts.search}%` } }
-        ];
-    }
-
-    if (opts.status !== undefined && opts.status !== null && opts.status !== '') {
-        const statusStr = String(opts.status).toLowerCase();
-        if (statusStr === 'true' || statusStr === '1') {
-            where.is_active = true;
-        } else if (statusStr === 'false' || statusStr === '0') {
-            where.is_active = false;
+        if (opts.search) {
+            // search on name or sku
+            const Sequelize = db.Sequelize;
+            where[Sequelize.Op.or] = [
+                { name: { [Sequelize.Op.iLike]: `%${opts.search}%` } },
+                { sku: { [Sequelize.Op.iLike]: `%${opts.search}%` } }
+            ];
         }
-    }
 
-    if (opts.kategori_id && opts.kategori_id !== 'all') {
-        where.kategori_produk_id = opts.kategori_id;
-    }
-
-    // base order
-    let order = [['created_at', 'DESC']];
-
-    if (opts.sort) {
-        // sort can be comma separated or array
-        const sortArr = Array.isArray(opts.sort) ? opts.sort : String(opts.sort).split(',');
-        const sortableMap = {
-            name: ['name'],
-            price: ['price'],
-            stock: ['stock'],
-            created_at: ['created_at'],
-            is_active: ['is_active'],
-            kategori_name: [{ model: KategoriProduk, as: 'kategori' }, 'name'],
-            sku: ['sku']
-        };
-
-        order = [];
-        for (const s of sortArr) {
-            if (!s) continue;
-            const parts = s.split(':');
-            const field = parts[0];
-            const dir = (parts[1] || 'asc').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-
-            const mapped = sortableMap[field];
-            if (mapped) {
-                order.push([...mapped, dir]);
+        if (opts.status !== undefined && opts.status !== null && opts.status !== '') {
+            const statusStr = String(opts.status).toLowerCase();
+            if (statusStr === 'true' || statusStr === '1') {
+                where.is_active = true;
+            } else if (statusStr === 'false' || statusStr === '0') {
+                where.is_active = false;
             }
         }
 
-        if (order.length === 0) order = [['created_at', 'DESC']];
-    }
-
-    const { count, rows } = await Product.findAndCountAll({
-        where,
-        include: [{ model: KategoriProduk, as: 'kategori', attributes: ['name'] }],
-        order,
-        limit,
-        offset
-    });
-
-    const total_product = count;
-    const total_pages = Math.ceil(total_product / limit);
-
-    const items = rows.map(p => ({
-        id: p.id,
-        kategori_produk_id: p.kategori_produk_id,
-        kategori_name: p.kategori?.name || '',
-        name: p.name,
-        sku: p.sku,
-        image_url: p.image_url || null,
-        price: Number(p.price),
-        cost_price: Number(p.cost_price || 0),
-        stock: p.stock,
-        jasa_pasang: p.jasa_pasang || 0,
-        ongkir_asuransi: p.ongkir_asuransi || 0,
-        biaya_overhead: p.biaya_overhead || 0,
-        is_active: p.is_active
-    }));
-
-    return {
-        items,
-        pagination: {
-            page,
-            limit,
-            total: total_product,
-            total_pages,
-            has_next: page < total_pages,
-            has_prev: page > 1
+        if (opts.kategori_id && opts.kategori_id !== 'all') {
+            where.kategori_produk_id = opts.kategori_id;
         }
-    };
+
+        // base order
+        let order = [['created_at', 'DESC']];
+
+        if (opts.sort) {
+            // sort can be comma separated or array
+            const sortArr = Array.isArray(opts.sort) ? opts.sort : String(opts.sort).split(',');
+            const sortableMap = {
+                name: ['name'],
+                price: ['price'],
+                stock: ['stock'],
+                created_at: ['created_at'],
+                is_active: ['is_active'],
+                kategori_name: [{ model: KategoriProduk, as: 'kategori' }, 'name'],
+                sku: ['sku']
+            };
+
+            order = [];
+            for (const s of sortArr) {
+                if (!s) continue;
+                const parts = s.split(':');
+                const field = parts[0];
+                const dir = (parts[1] || 'asc').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+
+                const mapped = sortableMap[field];
+                if (mapped) {
+                    order.push([...mapped, dir]);
+                }
+            }
+
+            if (order.length === 0) order = [['created_at', 'DESC']];
+        }
+
+        const { count, rows } = await Product.findAndCountAll({
+            where,
+            include: [{ model: KategoriProduk, as: 'kategori', attributes: ['name'] }],
+            order,
+            limit,
+            offset
+        });
+
+        const total_product = count;
+        const total_pages = Math.ceil(total_product / limit);
+
+        const items = rows.map(p => ({
+            id: p.id,
+            kategori_produk_id: p.kategori_produk_id,
+            kategori_name: p.kategori?.name || '',
+            name: p.name,
+            sku: p.sku,
+            image_url: p.image_url || null,
+            price: Number(p.price),
+            cost_price: Number(p.cost_price || 0),
+            stock: p.stock,
+            jasa_pasang: p.jasa_pasang || 0,
+            ongkir_asuransi: p.ongkir_asuransi || 0,
+            biaya_overhead: p.biaya_overhead || 0,
+            is_active: p.is_active
+        }));
+
+        return {
+            items,
+            pagination: {
+                page,
+                limit,
+                total: total_product,
+                total_pages,
+                has_next: page < total_pages,
+                has_prev: page > 1
+            }
+        };
+    } catch (error) {
+        logger.error({ type: 'get_all_products_failed', message: error.message, stack: error.stack, store_id: storeId, opts });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to fetch products: ' + error.message, 500);
+    }
 };
 
 /**
@@ -116,30 +122,36 @@ const getAllProducts = async (opts, storeId) => {
  * @param {object} opts {search, sort}
  */
 const getProductCategoriesList = async (opts = {}) => {
-    const where = {};
-    if (opts.search) {
-        const Sequelize = db.Sequelize;
-        where.name = { [Sequelize.Op.iLike]: `%${opts.search}%` };
-    }
-
-    let order = [['name', 'ASC']];
-    if (opts.sort) {
-        const sortArr = Array.isArray(opts.sort) ? opts.sort : String(opts.sort).split(',');
-        order = [];
-        for (const s of sortArr) {
-            if (!s) continue;
-            const parts = s.split(':');
-            const field = parts[0];
-            const dir = (parts[1] || 'asc').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-            order.push([field, dir]);
+    try {
+        const where = {};
+        if (opts.search) {
+            const Sequelize = db.Sequelize;
+            where.name = { [Sequelize.Op.iLike]: `%${opts.search}%` };
         }
-        if (order.length === 0) order = [['name', 'ASC']];
+
+        let order = [['name', 'ASC']];
+        if (opts.sort) {
+            const sortArr = Array.isArray(opts.sort) ? opts.sort : String(opts.sort).split(',');
+            order = [];
+            for (const s of sortArr) {
+                if (!s) continue;
+                const parts = s.split(':');
+                const field = parts[0];
+                const dir = (parts[1] || 'asc').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+                order.push([field, dir]);
+            }
+            if (order.length === 0) order = [['name', 'ASC']];
+        }
+
+        const rows = await KategoriProduk.findAll({ where, order });
+        const items = rows.map(c => ({ id: c.id, name: c.name, description: c.description, is_active: c.is_active }));
+
+        return items;
+    } catch (error) {
+        logger.error({ type: 'get_product_categories_list_failed', message: error.message, stack: error.stack, opts });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to fetch product categories: ' + error.message, 500);
     }
-
-    const rows = await KategoriProduk.findAll({ where, order });
-    const items = rows.map(c => ({ id: c.id, name: c.name, description: c.description, is_active: c.is_active }));
-
-    return items;
 };
 
 /**
@@ -881,8 +893,17 @@ const exportProducts = async (storeId) => {
  * @param {object} data
  */
 const createCategory = async (data) => {
-    const category = await KategoriProduk.create(data);
-    return category;
+    const transaction = await db.sequelize.transaction();
+    try {
+        const category = await KategoriProduk.create(data, { transaction });
+        await transaction.commit();
+        return category;
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'create_category_failed', message: error.message, stack: error.stack, data });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to create product category: ' + error.message, 500);
+    }
 };
 
 /**
@@ -891,12 +912,22 @@ const createCategory = async (data) => {
  * @param {object} data
  */
 const updateCategory = async (id, data) => {
-    const category = await KategoriProduk.findByPk(id);
-    if (!category) {
-        throw new AppError('Category not found', 404);
+    const transaction = await db.sequelize.transaction();
+    try {
+        const category = await KategoriProduk.findByPk(id, { transaction });
+        if (!category) {
+            await transaction.rollback();
+            throw new AppError('Category not found', 404);
+        }
+        await category.update(data, { transaction });
+        await transaction.commit();
+        return category;
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'update_category_failed', message: error.message, stack: error.stack, id, data });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to update product category: ' + error.message, 500);
     }
-    await category.update(data);
-    return category;
 };
 
 /**
@@ -904,19 +935,30 @@ const updateCategory = async (id, data) => {
  * @param {string} id
  */
 const deleteCategory = async (id) => {
-    const category = await KategoriProduk.findByPk(id);
-    if (!category) {
-        throw new AppError('Category not found', 404);
-    }
+    const transaction = await db.sequelize.transaction();
+    try {
+        const category = await KategoriProduk.findByPk(id, { transaction });
+        if (!category) {
+            await transaction.rollback();
+            throw new AppError('Category not found', 404);
+        }
 
-    // Check if category is used by products
-    const productCount = await Product.count({ where: { kategori_produk_id: id } });
-    if (productCount > 0) {
-        throw new AppError('Cannot delete category. It is used by one or more products.', 400);
-    }
+        // Check if category is used by products
+        const productCount = await Product.count({ where: { kategori_produk_id: id }, transaction });
+        if (productCount > 0) {
+            await transaction.rollback();
+            throw new AppError('Cannot delete category. It is used by one or more products.', 400);
+        }
 
-    await category.destroy();
-    return category;
+        await category.destroy({ transaction });
+        await transaction.commit();
+        return category;
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'delete_category_failed', message: error.message, stack: error.stack, id });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to delete product category: ' + error.message, 500);
+    }
 };
 
 /**
@@ -925,27 +967,39 @@ const deleteCategory = async (id) => {
  * @param {string} storeId
  */
 const createProduct = async (data, storeId) => {
-    // Check if kategori exists
-    const kategori = await KategoriProduk.findByPk(data.kategori_produk_id);
-    if (!kategori) {
-        throw new AppError('Product category not found', 404);
+    const transaction = await db.sequelize.transaction();
+    try {
+        // Check if kategori exists
+        const kategori = await KategoriProduk.findByPk(data.kategori_produk_id, { transaction });
+        if (!kategori) {
+            await transaction.rollback();
+            throw new AppError('Product category not found', 404);
+        }
+
+        // Check SKU uniqueness per store
+        const existingSku = await Product.findOne({
+            where: { sku: data.sku, store_id: storeId },
+            transaction
+        });
+
+        if (existingSku) {
+            await transaction.rollback();
+            throw new AppError('SKU already exists in this store', 400);
+        }
+
+        const product = await Product.create({
+            ...data,
+            store_id: storeId
+        }, { transaction });
+
+        await transaction.commit();
+        return product;
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'create_product_failed', message: error.message, stack: error.stack, data, store_id: storeId });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to create product: ' + error.message, 500);
     }
-
-    // Check SKU uniqueness per store
-    const existingSku = await Product.findOne({
-        where: { sku: data.sku, store_id: storeId }
-    });
-
-    if (existingSku) {
-        throw new AppError('SKU already exists in this store', 400);
-    }
-
-    const product = await Product.create({
-        ...data,
-        store_id: storeId
-    });
-
-    return product;
 };
 
 /**
@@ -953,32 +1007,104 @@ const createProduct = async (data, storeId) => {
  * @param {string} id
  * @param {object} data
  * @param {string} storeId
+ * @param {object} user - Current user object
  */
-const updateProduct = async (id, data, storeId) => {
-    const product = await Product.findOne({ where: { id, store_id: storeId } });
-    if (!product) {
-        throw new AppError('Product not found', 404);
-    }
-
-    if (data.kategori_produk_id && data.kategori_produk_id !== product.kategori_produk_id) {
-        const kategori = await KategoriProduk.findByPk(data.kategori_produk_id);
-        if (!kategori) {
-            throw new AppError('Product category not found', 404);
+const updateProduct = async (id, data, storeId, user = null) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const product = await Product.findOne({ where: { id, store_id: storeId }, transaction });
+        if (!product) {
+            await transaction.rollback();
+            throw new AppError('Product not found', 404);
         }
-    }
 
-    if (data.sku && data.sku !== product.sku) {
-        const existingSku = await Product.findOne({
-            where: { sku: data.sku, store_id: storeId }
-        });
-
-        if (existingSku && existingSku.id !== id) {
-            throw new AppError('SKU already exists in this store', 400);
+        if (data.kategori_produk_id && data.kategori_produk_id !== product.kategori_produk_id) {
+            const kategori = await KategoriProduk.findByPk(data.kategori_produk_id, { transaction });
+            if (!kategori) {
+                await transaction.rollback();
+                throw new AppError('Product category not found', 404);
+            }
         }
-    }
 
-    await product.update(data);
-    return product;
+        if (data.sku && data.sku !== product.sku) {
+            const existingSku = await Product.findOne({
+                where: { sku: data.sku, store_id: storeId },
+                transaction
+            });
+
+            if (existingSku && existingSku.id !== id) {
+                await transaction.rollback();
+                throw new AppError('SKU already exists in this store', 400);
+            }
+        }
+
+        // Handle stock adjustments
+        const stockAdjustmentAdd = Number(data.stockAdjustmentAdd) || 0;
+        const stockAdjustmentSubtract = Number(data.stockAdjustmentSubtract) || 0;
+        const stockAdjustmentNotes = data.stockAdjustmentNotes || '';
+        let mutasiStokData = null;
+
+        if (stockAdjustmentAdd > 0 || stockAdjustmentSubtract > 0) {
+            if (stockAdjustmentAdd > 0 && stockAdjustmentSubtract > 0) {
+                await transaction.rollback();
+                throw new AppError('Tidak bisa menambahkan dan mengurangi stok sekaligus', 400);
+            }
+
+            let stokDiff = 0;
+            let jenisMutasi = null;
+            let keterangan = stockAdjustmentNotes;
+
+            if (stockAdjustmentAdd > 0) {
+                stokDiff = stockAdjustmentAdd;
+                jenisMutasi = JENIS_MUTASI_STOK.PENAMBAHAN_STOK;
+                await product.increment('stock', { by: stockAdjustmentAdd, transaction });
+                keterangan = `Penambahan stok: ${keterangan}`;
+            } else if (stockAdjustmentSubtract > 0) {
+                stokDiff = -stockAdjustmentSubtract;
+                jenisMutasi = JENIS_MUTASI_STOK.PENGURANGAN_STOK;
+                if (product.stock < stockAdjustmentSubtract) {
+                    await transaction.rollback();
+                    throw new AppError('Stok tidak cukup untuk pengurangan', 400);
+                }
+                await product.decrement('stock', { by: stockAdjustmentSubtract, transaction });
+                keterangan = `Pengurangan stok: ${keterangan}`;
+            }
+
+            // Create mutasi stok record
+            mutasiStokData = {
+                product_id: id,
+                jenis_mutasi: jenisMutasi,
+                stok: stokDiff,
+                keterangan: keterangan,
+                user_id: user?.user_id
+            };
+
+            await insertMutasiStok(mutasiStokData, { transaction });
+        }
+
+        // Remove stock adjustment fields from data before update
+        const { stockAdjustmentAdd: _, stockAdjustmentSubtract: __, stockAdjustmentNotes: ___, ...updateData } = data;
+
+        // Update product data except stock adjustment fields
+        await product.update(updateData, { transaction });
+
+        await transaction.commit();
+
+        // Return updated product with original product data plus stock adjustment info if needed
+        return {
+            ...product.toJSON(),
+            stockAdjustment: stockAdjustmentAdd > 0 || stockAdjustmentSubtract > 0 ? {
+                add: stockAdjustmentAdd,
+                subtract: stockAdjustmentSubtract,
+                notes: stockAdjustmentNotes
+            } : null
+        };
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'update_product_failed', message: error.message, stack: error.stack, id, data, store_id: storeId });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to update product: ' + error.message, 500);
+    }
 };
 
 /**
@@ -987,14 +1113,24 @@ const updateProduct = async (id, data, storeId) => {
  * @param {string} storeId
  */
 const deleteProduct = async (id, storeId) => {
-    const product = await Product.findOne({ where: { id, store_id: storeId } });
-    if (!product) {
-        throw new AppError('Product not found', 404);
+    const transaction = await db.sequelize.transaction();
+    try {
+        const product = await Product.findOne({ where: { id, store_id: storeId }, transaction });
+        if (!product) {
+            await transaction.rollback();
+            throw new AppError('Product not found', 404);
+        }
+
+        await product.destroy({ transaction });
+        await transaction.commit();
+
+        return { message: 'Product deleted successfully' };
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'delete_product_failed', message: error.message, stack: error.stack, id, store_id: storeId });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to delete product: ' + error.message, 500);
     }
-
-    await product.destroy();
-
-    return { message: 'Product deleted successfully' };
 };
 
 /**
@@ -1004,14 +1140,24 @@ const deleteProduct = async (id, storeId) => {
  * @param {string} storeId
  */
 const updateProductStatus = async (id, isActive, storeId) => {
-    const product = await Product.findOne({ where: { id, store_id: storeId } });
-    if (!product) {
-        throw new AppError('Product not found', 404);
+    const transaction = await db.sequelize.transaction();
+    try {
+        const product = await Product.findOne({ where: { id, store_id: storeId }, transaction });
+        if (!product) {
+            await transaction.rollback();
+            throw new AppError('Product not found', 404);
+        }
+
+        await product.update({ is_active: isActive }, { transaction });
+        await transaction.commit();
+
+        return { message: `Product ${isActive ? 'activated' : 'deactivated'} successfully` };
+    } catch (error) {
+        await transaction.rollback();
+        logger.error({ type: 'update_product_status_failed', message: error.message, stack: error.stack, id, is_active: isActive, store_id: storeId });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to update product status: ' + error.message, 500);
     }
-
-    await product.update({ is_active: isActive });
-
-    return { message: `Product ${isActive ? 'activated' : 'deactivated'} successfully` };
 };
 
 /**
@@ -1020,18 +1166,20 @@ const updateProductStatus = async (id, isActive, storeId) => {
  * @param {string} userId
  */
 const transferStock = async (data, userId) => {
-    const { sourceBranch, destinationBranch, items } = data;
-
-    if (sourceBranch === destinationBranch) {
-        throw new AppError('Source and destination branches cannot be the same', 400);
-    }
-
-    if (!items || items.length === 0) {
-        throw new AppError('No items to transfer', 400);
-    }
-
-    const transaction = await db.sequelize.transaction();
+    let transaction;
     try {
+        const { sourceBranch, destinationBranch, items } = data;
+
+        if (sourceBranch === destinationBranch) {
+            throw new AppError('Source and destination branches cannot be the same', 400);
+        }
+
+        if (!items || items.length === 0) {
+            throw new AppError('No items to transfer', 400);
+        }
+
+        transaction = await db.sequelize.transaction();
+
         const mutasiStokData = [];
 
         for (const item of items) {
@@ -1108,8 +1256,80 @@ const transferStock = async (data, userId) => {
         await transaction.commit();
         return { message: 'Stock transfer successful' };
     } catch (error) {
-        await transaction.rollback();
-        throw error;
+        if (transaction) {
+            await transaction.rollback();
+        }
+        logger.error({
+            type: 'transfer_stock_failed',
+            message: error.message,
+            stack: error.stack,
+            data,
+            user_id: userId
+        });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to transfer stock: ' + error.message, 500);
+    }
+};
+
+/**
+ * Get stock mutation history with pagination
+ * @param {object} opts {page, limit, product_id, store_id}
+ */
+const getStockMutations = async (opts) => {
+    try {
+        const page = opts.page || 1;
+        const limit = opts.limit || 10;
+        const offset = (page - 1) * limit;
+        const { product_id } = opts;
+
+        const where = {};
+        if (product_id) {
+            where.product_id = product_id;
+        }
+
+        const { count, rows } = await db.MutasiStokProduk.findAndCountAll({
+            where,
+            include: [
+                {
+                    model: db.Product,
+                    as: 'product',
+                    attributes: ['id', 'name', 'sku']
+                }
+            ],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset
+        });
+
+        const total_pages = Math.ceil(count / limit);
+
+        const items = rows.map(mutasi => ({
+            id: mutasi.id,
+            product_id: mutasi.product_id,
+            product_name: mutasi.product?.name || 'Unknown Product',
+            product_sku: mutasi.product?.sku || 'Unknown SKU',
+            jenis_mutasi: mutasi.jenis_mutasi.replace('_', ' '),
+            keterangan: mutasi.keterangan,
+            stok: mutasi.stok,
+            created_at: mutasi.created_at,
+            updated_at: mutasi.updated_at
+        }));
+
+        return {
+            items,
+            pagination: {
+                page,
+                limit,
+                total: count,
+                total_pages,
+                has_next: page < total_pages,
+                has_prev: page > 1
+            }
+        };
+    } catch (error) {
+        logger.error({ type: 'get_stock_mutations_failed', message: error.message, stack: error.stack, opts });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to fetch stock mutations: ' + error.message, 500);
     }
 };
 
@@ -1125,6 +1345,7 @@ module.exports = {
     updateProduct,
     deleteProduct,
     updateProductStatus,
-    transferStock
+    transferStock,
+    getStockMutations
 };
 

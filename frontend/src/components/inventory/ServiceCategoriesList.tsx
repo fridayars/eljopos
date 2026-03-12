@@ -62,7 +62,7 @@ export function ServiceCategoriesList({
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={category.id}
-                                className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-5 hover:border-blue-500/40 transition-all group"
+                                className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-5 transition-all group"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
@@ -75,7 +75,7 @@ export function ServiceCategoriesList({
                                             {category.description || 'Tidak ada deskripsi spesifik.'}
                                         </p>
                                     </div>
-                                    <div className="flex flex-col gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex flex-col gap-2 ml-4">
                                         <button
                                             onClick={() => onEdit(category)}
                                             className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer"

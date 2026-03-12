@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Search, Plus, Edit, Trash2, Package, Box } from 'lucide-react';
-import { ProductsPage, Product } from './ProductsPage';
+import { ProductsPage } from './ProductsPage';
+import { Product } from './ProductGrid';
+import { StockHistoryPage } from './StockHistoryPage';
 import { toast } from 'sonner';
 
 type ProductInventoryTab = 'product-category' | 'produk-barang';
@@ -30,6 +32,7 @@ export function ProductInventoryPage({ products, onUpdateProduct, onImportProduc
   const [activeTab, setActiveTab] = useState<ProductInventoryTab>('product-category');
   const [productCategories, setProductCategories] = useState<ProductCategory[]>(initialProductCategories);
   const [searchCategory, setSearchCategory] = useState('');
+  const [viewingStockProduct, setViewingStockProduct] = useState<Product | null>(null);
 
   // Filter categories by search
   const filteredCategories = productCategories.filter((cat) =>
@@ -40,6 +43,15 @@ export function ProductInventoryPage({ products, onUpdateProduct, onImportProduc
     setProductCategories((prev) => prev.filter((cat) => cat.id !== id));
     toast.success('Product category deleted');
   };
+
+  if (viewingStockProduct) {
+    return (
+      <StockHistoryPage 
+        product={viewingStockProduct} 
+        onBack={() => setViewingStockProduct(null)} 
+      />
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden h-full">
@@ -156,6 +168,7 @@ export function ProductInventoryPage({ products, onUpdateProduct, onImportProduc
               products={products}
               onUpdateProduct={onUpdateProduct}
               onImportProducts={onImportProducts}
+              onViewStockHistory={(product) => setViewingStockProduct(product)}
             />
           </div>
         )}

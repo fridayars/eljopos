@@ -170,7 +170,7 @@ const updateProduct = async (req, res, next) => {
         }
 
         const data = req.body;
-        const product = await productService.updateProduct(id, data, storeId);
+        const product = await productService.updateProduct(id, data, storeId, req.user);
 
         return res.json({ success: true, data: product, message: 'Product updated successfully' });
     } catch (error) {
@@ -240,6 +240,24 @@ const transferStock = async (req, res, next) => {
     }
 };
 
+const getStockMutations = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const productId = req.query.product_id;
+
+        const result = await productService.getStockMutations({
+            page,
+            limit,
+            product_id: productId
+        });
+
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     exportProducts,
     getAllProducts,
@@ -252,5 +270,6 @@ module.exports = {
     updateProduct,
     deleteProduct,
     updateProductStatus,
-    transferStock
+    transferStock,
+    getStockMutations
 };

@@ -356,15 +356,15 @@ export function ServiceInventoryPage() {
                             transition={{ duration: 0.2 }}
                             className="relative w-full h-full flex flex-col"
                         >
-                                <ServiceCategoriesList
-                                    categories={categories}
-                                    searchQuery={searchCategory}
-                                    onSearchChange={setSearchCategory}
-                                    onAdd={handleOpenAddCategory}
-                                    onEdit={handleOpenEditCategory}
-                                    onDelete={handleDeleteCategory}
-                                />
-                            </motion.div>
+                            <ServiceCategoriesList
+                                categories={categories}
+                                searchQuery={searchCategory}
+                                onSearchChange={setSearchCategory}
+                                onAdd={handleOpenAddCategory}
+                                onEdit={handleOpenEditCategory}
+                                onDelete={handleDeleteCategory}
+                            />
+                        </motion.div>
                     )}
 
                     {/* --- SERVICES TAB --- */}
