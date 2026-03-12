@@ -49,13 +49,13 @@ export function StockHistoryPage({ product, onBack }: StockHistoryPageProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#0A0A0B]">
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--background)' }}>
       {/* Header */}
-      <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0">
+      <div className="p-4 md:p-6 border-b border-purple-500/10 shrink-0" style={{ background: 'var(--surface-overlay)' }}>
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-white hover:border-purple-500/50 transition-all"
+            className="p-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -74,17 +74,17 @@ export function StockHistoryPage({ product, onBack }: StockHistoryPageProps) {
         <div className="space-y-6">
           {/* Summary Card */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/5 border border-purple-500/20 rounded-2xl p-5">
+            <div className="border border-purple-500/20 rounded-2xl p-5" style={{ background: 'var(--card)' }}>
               <p className="text-sm text-gray-500 mb-1">Stok Saat Ini</p>
               <p className="text-2xl font-bold text-gray-200">{product.stock}</p>
             </div>
           </div>
 
           {/* Mutation Table */}
-          <div className="bg-white/5 border border-purple-500/20 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="border border-purple-500/20 rounded-2xl overflow-hidden shadow-2xl" style={{ background: 'var(--card)' }}>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-[#121214] border-b border-purple-500/20">
+                <thead className="border-b border-purple-500/20" style={{ background: 'var(--surface-overlay-header)' }}>
                   <tr>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Waktu</th>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th>
@@ -170,14 +170,14 @@ export function StockHistoryPage({ product, onBack }: StockHistoryPageProps) {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 hover:text-white disabled:opacity-50 transition-all"
+                    className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 disabled:opacity-50 transition-all font-bold"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 hover:text-white disabled:opacity-50 transition-all"
+                    className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 disabled:opacity-50 transition-all font-bold"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
