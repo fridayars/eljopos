@@ -3,6 +3,8 @@ const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, S
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 const { Op, fn, col, literal } = require('sequelize');
+const { insertMutasiStok } = require('../utils/mutasiStok.helper');
+const { JENIS_MUTASI_STOK } = require('../utils/enums');
 
 /**
  * Generate receipt number format: INV/YYYYMMDD/NNN
@@ -181,12 +183,27 @@ const createTransaksi = async (data, userId) => {
         await TransaksiPayment.bulkCreate(paymentRecords, { transaction: t });
 
         // 7. Kurangi stok produk (direct product items)
+        const mutasiMap = new Map();
+
         for (const item of productItems) {
             await Product.decrement('stock', {
                 by: item.quantity,
                 where: { id: item.item_id, store_id },
                 transaction: t
             });
+
+            const existing = mutasiMap.get(item.item_id);
+            if (existing) {
+                existing.stok -= item.quantity;
+            } else {
+                mutasiMap.set(item.item_id, {
+                    product_id: item.item_id,
+                    jenis_mutasi: JENIS_MUTASI_STOK.PENJUALAN,
+                    reference_id: transaksi.id,
+                    stok: -item.quantity,
+                    keterangan: `${receiptNumber}`
+                });
+            }
         }
 
         // 7b. Kurangi stok produk yang digunakan oleh layanan
@@ -196,9 +213,28 @@ const createTransaksi = async (data, userId) => {
                 where: { id: reduction.product_id, store_id },
                 transaction: t
             });
+
+            const existing = mutasiMap.get(reduction.product_id);
+            if (existing) {
+                existing.stok -= reduction.totalQty;
+            } else {
+                mutasiMap.set(reduction.product_id, {
+                    product_id: reduction.product_id,
+                    jenis_mutasi: JENIS_MUTASI_STOK.PENJUALAN,
+                    reference_id: transaksi.id,
+                    stok: -reduction.totalQty,
+                    keterangan: `${receiptNumber}`
+                });
+            }
         }
 
-        // 8. Commit transaction
+        // 8. Bulk insert mutasi stok
+        const mutasiData = Array.from(mutasiMap.values());
+        if (mutasiData.length > 0) {
+            await insertMutasiStok(mutasiData, { transaction: t });
+        }
+
+        // 9. Commit transaction
         await t.commit();
 
         logger.info({
@@ -448,6 +484,9 @@ const deleteTransaksi = async (transaksiId) => {
         const storeId = transaksi.store_id;
 
         // 1. Kembalikan stok
+        const mutasiMap = new Map();
+        const receiptNumber = transaksi.receipt_number;
+
         for (const item of details) {
             if (item.item_type === 'product') {
                 await Product.increment('stock', {
@@ -455,6 +494,19 @@ const deleteTransaksi = async (transaksiId) => {
                     where: { id: item.item_id, store_id: storeId },
                     transaction: t
                 });
+
+                const existing = mutasiMap.get(item.item_id);
+                if (existing) {
+                    existing.stok += item.quantity;
+                } else {
+                    mutasiMap.set(item.item_id, {
+                        product_id: item.item_id,
+                        jenis_mutasi: JENIS_MUTASI_STOK.HAPUS_TRANSAKSI,
+                        reference_id: transaksiId,
+                        stok: item.quantity,
+                        keterangan: `${receiptNumber}`
+                    });
+                }
             } else if (item.item_type === 'layanan') {
                 const produkLayananList = await ProdukLayanan.findAll({
                     where: { layanan_id: item.item_id },
@@ -468,11 +520,30 @@ const deleteTransaksi = async (transaksiId) => {
                         where: { id: pl.product_id, store_id: storeId },
                         transaction: t
                     });
+
+                    const existing = mutasiMap.get(pl.product_id);
+                    if (existing) {
+                        existing.stok += requiredQty;
+                    } else {
+                        mutasiMap.set(pl.product_id, {
+                            product_id: pl.product_id,
+                            jenis_mutasi: JENIS_MUTASI_STOK.HAPUS_TRANSAKSI,
+                            reference_id: transaksiId,
+                            stok: requiredQty,
+                            keterangan: `${receiptNumber}`
+                        });
+                    }
                 }
             }
         }
 
-        // 2. Soft-delete transaksi
+        // 2. Bulk insert mutasi stok
+        const mutasiData = Array.from(mutasiMap.values());
+        if (mutasiData.length > 0) {
+            await insertMutasiStok(mutasiData, { transaction: t });
+        }
+
+        // 3. Soft-delete transaksi
         await transaksi.destroy({ transaction: t });
 
         await t.commit();

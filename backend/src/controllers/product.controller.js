@@ -46,7 +46,7 @@ const importProducts = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'file is required' });
         }
 
-        const result = await productService.importProducts(req.file.buffer, storeId, req.user);
+        const result = await productService.importProducts(req.file.buffer, storeId, req.user, req.file.originalname);
 
         return res.json({ success: true, data: result });
     } catch (error) {

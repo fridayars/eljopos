@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'product_id',
                 as: 'logTransfer'
             });
+            Product.hasMany(models.MutasiStokProduk, {
+                foreignKey: 'product_id',
+                as: 'mutasiStok'
+            });
         }
     }
     Product.init({

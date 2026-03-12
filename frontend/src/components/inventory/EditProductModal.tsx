@@ -33,9 +33,8 @@ function CategorySelect({
         <div className="relative w-full" ref={dropdownRef}>
             <div
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${
-                    isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
-                }`}
+                className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${isOpen ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                    }`}
                 style={{
                     color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
                     borderColor: isOpen ? 'var(--primary)' : undefined,
@@ -295,13 +294,14 @@ export function EditProductModal({ isOpen, onClose, product, categories, onSave 
 
                                     {/* Stock */}
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Stok</label>
+                                        <label className="block text-sm text-gray-400 mb-2">Stok (Tidak bisa diubah)</label>
                                         <input
                                             type="number"
                                             value={formData.stock || 0}
                                             onChange={(e) => handleChange('stock', Number(e.target.value))}
                                             className={inputClass}
                                             min="0"
+                                            disabled
                                         />
                                     </div>
 

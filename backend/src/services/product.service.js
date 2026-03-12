@@ -2,7 +2,9 @@ const ExcelJS = require('exceljs');
 const db = require('../models');
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
-const { Product, KategoriProduk, Store, Layanan, KategoriLayanan, ProdukLayanan } = db;
+const { insertMutasiStok } = require('../utils/mutasiStok.helper');
+const { JENIS_MUTASI_STOK } = require('../utils/enums');
+const { Product, KategoriProduk, Store, Layanan, KategoriLayanan, ProdukLayanan, LogImport } = db;
 
 /**
  * Get all products with pagination, search and sorting
@@ -146,8 +148,9 @@ const getProductCategoriesList = async (opts = {}) => {
  * @param {Buffer} buffer
  * @param {string} storeId
  * @param {object} user
+ * @param {string} fileName
  */
-const importProducts = async (buffer, storeId, user) => {
+const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
     const transaction = await db.sequelize.transaction();
     try {
         const workbook = new ExcelJS.Workbook();
@@ -175,8 +178,9 @@ const importProducts = async (buffer, storeId, user) => {
                 const ongkir_asuransi = row.getCell('I').value || 0;
                 const biaya_overhead = row.getCell('J').value || 0;
                 const is_active = String(row.getCell('K').value || '').toUpperCase() === 'YES';
+                const keterangan_stok = row.getCell('L').value ? String(row.getCell('L').value).trim() : null;
 
-                incomingProducts.push({ id, kategori_name, name, sku, stock, price, cost_price, jasa_pasang, ongkir_asuransi, biaya_overhead, is_active, row: rowNumber });
+                incomingProducts.push({ id, kategori_name, name, sku, stock, price, cost_price, jasa_pasang, ongkir_asuransi, biaya_overhead, is_active, keterangan_stok, row: rowNumber });
             });
         }
 
@@ -249,11 +253,25 @@ const importProducts = async (buffer, storeId, user) => {
         // Delete products not accounted for by import — only consider active records
         const toDelete = activeExistingProducts.filter(p => p.store_id === storeId && !preservedIds.has(p.id));
 
-        // Perform DB ops
-        let inserted = 0, updated = 0, deleted = 0, skipped = errors.length;
+        // ══════════════════════════════════════════════════
+        // OPTIMIZED DB OPERATIONS (Batch/Bulk)
+        // ══════════════════════════════════════════════════
 
-        for (const ins of toInsert) {
-            await Product.create({
+        const Sequelize = db.Sequelize;
+        const mutasiStokData = [];
+
+        // --- Build lookup Maps for O(1) keterangan_stok access ---
+        const incomingByIdMap = new Map();
+        const incomingBySkuMap = new Map();
+        incomingProducts.forEach(ip => {
+            if (ip.id) incomingByIdMap.set(ip.id, ip);
+            if (ip.sku) incomingBySkuMap.set(ip.sku, ip);
+        });
+
+        // --- BULK INSERT products ---
+        let inserted = 0;
+        if (toInsert.length > 0) {
+            const insertData = toInsert.map(ins => ({
                 id: ins.id || undefined,
                 store_id: storeId,
                 kategori_produk_id: ins.kategori_id,
@@ -266,19 +284,87 @@ const importProducts = async (buffer, storeId, user) => {
                 ongkir_asuransi: ins.ongkir_asuransi,
                 biaya_overhead: ins.biaya_overhead,
                 is_active: ins.is_active
-            }, { transaction });
-            inserted++;
+            }));
+
+            const createdProducts = await Product.bulkCreate(insertData, { transaction, returning: true });
+            inserted = createdProducts.length;
+
+            // Collect mutasi stok for new products
+            createdProducts.forEach((cp, idx) => {
+                const stockVal = Number(toInsert[idx].stock) || 0;
+                if (stockVal !== 0) {
+                    const incoming = incomingBySkuMap.get(toInsert[idx].sku);
+                    mutasiStokData.push({
+                        product_id: cp.id,
+                        jenis_mutasi: JENIS_MUTASI_STOK.IMPORT_DATA,
+                        stok: stockVal,
+                        keterangan: incoming?.keterangan_stok || `Import produk baru (stok awal: ${stockVal})`
+                    });
+                }
+            });
         }
 
-        for (const upd of toUpdate) {
-            await upd.existing.update(upd.data, { transaction });
-            updated++;
+        // --- BULK UPDATE products using bulkCreate + updateOnDuplicate ---
+        let updated = 0;
+        if (toUpdate.length > 0) {
+            // Collect mutasi stok BEFORE update (need oldStock)
+            for (const upd of toUpdate) {
+                const oldStock = Number(upd.existing.stock) || 0;
+                const newStock = Number(upd.data.stock) || 0;
+                const stokDiff = newStock - oldStock;
+
+                if (stokDiff !== 0) {
+                    const incoming = incomingByIdMap.get(upd.existing.id) || incomingBySkuMap.get(upd.existing.sku);
+                    mutasiStokData.push({
+                        product_id: upd.existing.id,
+                        jenis_mutasi: JENIS_MUTASI_STOK.IMPORT_DATA,
+                        stok: stokDiff,
+                        keterangan: incoming?.keterangan_stok || `Import update stok (${oldStock} → ${newStock})`
+                    });
+                }
+            }
+
+            // Prepare upsert data with existing IDs
+            const updateData = toUpdate.map(upd => ({
+                id: upd.existing.id,
+                store_id: storeId,
+                kategori_produk_id: upd.data.kategori_produk_id,
+                name: upd.data.name,
+                sku: upd.data.sku,
+                stock: upd.data.stock,
+                price: upd.data.price,
+                cost_price: upd.data.cost_price,
+                jasa_pasang: upd.data.jasa_pasang,
+                ongkir_asuransi: upd.data.ongkir_asuransi,
+                biaya_overhead: upd.data.biaya_overhead,
+                is_active: upd.data.is_active
+            }));
+
+            await Product.bulkCreate(updateData, {
+                updateOnDuplicate: ['kategori_produk_id', 'name', 'sku', 'stock', 'price', 'cost_price', 'jasa_pasang', 'ongkir_asuransi', 'biaya_overhead', 'is_active', 'updated_at'],
+                transaction
+            });
+            updated = toUpdate.length;
         }
 
-        for (const del of toDelete) {
-            await del.destroy({ transaction });
-            deleted++;
+        // --- BATCH DELETE products ---
+        let deleted = 0;
+        if (toDelete.length > 0) {
+            const deleteIds = toDelete.map(d => d.id);
+            await Product.destroy({ where: { id: { [Sequelize.Op.in]: deleteIds } }, transaction });
+            deleted = deleteIds.length;
         }
+
+        let skipped = errors.length;
+
+        // --- BULK INSERT mutasi stok ---
+        if (mutasiStokData.length > 0) {
+            await insertMutasiStok(mutasiStokData, { transaction });
+        }
+
+        // ══════════════════════════════════════════════════
+        // SERVICE SECTION (Optimized)
+        // ══════════════════════════════════════════════════
 
         // --- Process Service sheet ---
         const serviceSheet = workbook.getWorksheet('Service');
@@ -333,7 +419,6 @@ const importProducts = async (buffer, storeId, user) => {
         for (const is of incomingServices) {
             const kategori_id = is.kategori_name ? serviceKategoriMap[is.kategori_name] : null;
             if (is.id) {
-                // Has ID -> try update by ID
                 sPreservedIds.add(is.id);
                 const existing = existingServiceById[is.id];
                 if (!existing) {
@@ -342,15 +427,12 @@ const importProducts = async (buffer, storeId, user) => {
                     sToUpdate.push({ existing, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, description: is.description, is_active: is.is_active, products: is.products } });
                 }
             } else {
-                // No ID -> match by name
                 const nameKey = `${is.name}::${storeId}`;
                 const existingByName = activeServiceByName[nameKey];
                 if (existingByName) {
-                    // Name exists in DB -> update existing service
                     sPreservedIds.add(existingByName.id);
                     sToUpdate.push({ existing: existingByName, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, description: is.description, is_active: is.is_active, products: is.products } });
                 } else {
-                    // Name not in DB -> insert new service
                     sToInsert.push({ ...is, kategori_id });
                 }
             }
@@ -360,76 +442,138 @@ const importProducts = async (buffer, storeId, user) => {
 
         let sInserted = 0, sUpdated = 0, sDeleted = 0, sSkipped = 0;
 
-        // Insert services
-        for (const ins of sToInsert) {
-            const created = await Layanan.create({ id: ins.id || undefined, store_id: storeId, kategori_layanan_id: ins.kategori_id, name: ins.name, price: ins.price, cost_price: ins.cost_price, biaya_overhead: ins.biaya_overhead, description: ins.description, is_active: ins.is_active }, { transaction });
-            // link products by sku
-            for (const p of ins.products || []) {
-                const prod = await Product.findOne({ where: { sku: p.sku, store_id: storeId }, transaction });
-                if (prod) {
-                    const existingLink = await ProdukLayanan.findOne({ where: { layanan_id: created.id, product_id: prod.id }, paranoid: false, transaction });
-                    if (existingLink) {
-                        if (existingLink.deletedAt) await existingLink.restore({ transaction });
-                    } else {
-                        try {
-                            await ProdukLayanan.create({ layanan_id: created.id, product_id: prod.id }, { transaction });
-                        } catch (err) {
-                            logger.warn({ type: 'produk_layanan_create_error', layanan: created.id, sku: p.sku, message: err.message });
-                            const conflict = await ProdukLayanan.findOne({ where: { layanan_id: created.id, product_id: prod.id }, paranoid: false, transaction });
-                            if (conflict && conflict.deletedAt) {
-                                await conflict.restore({ transaction });
-                            } else {
-                                throw err;
-                            }
-                        }
-                    }
-                } else {
-                    const msg = `Product SKU '${p.sku}' not found for service '${ins.name}'`;
-                    logger.warn({ type: 'import_service_product_missing', layanan: created.id, sku: p.sku });
-                    serviceErrors.push({ field: `service_${ins.name}`, message: msg });
-                }
-            }
-            sInserted++;
+        // --- Pre-build SKU → Product Map for service product linking (O(1) lookup) ---
+        const allProductsInStore = await Product.findAll({ where: { store_id: storeId }, attributes: ['id', 'sku'], transaction });
+        const productBySkuMap = new Map();
+        allProductsInStore.forEach(p => productBySkuMap.set(p.sku, p));
+
+        // --- Pre-fetch ALL existing ProdukLayanan for this store's services ---
+        const allServiceIds = [...new Set([
+            ...sToInsert.filter(s => s.id).map(s => s.id),
+            ...sToUpdate.map(s => s.existing.id),
+        ])];
+        const existingProdukLayananMap = new Map();
+        if (allServiceIds.length > 0) {
+            const existingLinks = await ProdukLayanan.findAll({
+                where: { layanan_id: { [Sequelize.Op.in]: allServiceIds } },
+                paranoid: false,
+                transaction
+            });
+            existingLinks.forEach(link => {
+                const key = `${link.layanan_id}::${link.product_id}`;
+                existingProdukLayananMap.set(key, link);
+            });
         }
 
-        // Update services
-        for (const upd of sToUpdate) {
-            await upd.existing.update({ kategori_layanan_id: upd.data.kategori_layanan_id, name: upd.data.name, price: upd.data.price, cost_price: upd.data.cost_price, biaya_overhead: upd.data.biaya_overhead, description: upd.data.description, is_active: upd.data.is_active }, { transaction });
-            // replace produk_layanan links: remove existing then insert from file
-            await ProdukLayanan.destroy({ where: { layanan_id: upd.existing.id }, transaction });
-            for (const p of upd.data.products || []) {
-                const prod = await Product.findOne({ where: { sku: p.sku, store_id: storeId }, transaction });
-                if (prod) {
-                    const existingLink = await ProdukLayanan.findOne({ where: { layanan_id: upd.existing.id, product_id: prod.id }, paranoid: false, transaction });
-                    if (existingLink) {
-                        if (existingLink.deletedAt) await existingLink.restore({ transaction });
-                    } else {
-                        try {
-                            await ProdukLayanan.create({ layanan_id: upd.existing.id, product_id: prod.id }, { transaction });
-                        } catch (err) {
-                            logger.warn({ type: 'produk_layanan_create_error', layanan: upd.existing.id, sku: p.sku, message: err.message });
-                            const conflict = await ProdukLayanan.findOne({ where: { layanan_id: upd.existing.id, product_id: prod.id }, paranoid: false, transaction });
-                            if (conflict && conflict.deletedAt) {
-                                await conflict.restore({ transaction });
-                            } else {
-                                throw err;
-                            }
-                        }
-                    }
+        // Helper: link products to a service using Maps instead of individual queries
+        const linkProductsToService = async (serviceId, serviceName, products) => {
+            const linksToCreate = [];
+            const linksToRestore = [];
+
+            for (const p of products || []) {
+                const prod = productBySkuMap.get(p.sku);
+                if (!prod) {
+                    serviceErrors.push({ field: `service_${serviceName}`, message: `Product SKU '${p.sku}' not found for service '${serviceName}'` });
+                    continue;
+                }
+                const linkKey = `${serviceId}::${prod.id}`;
+                const existingLink = existingProdukLayananMap.get(linkKey);
+                if (existingLink) {
+                    if (existingLink.deletedAt) linksToRestore.push(existingLink);
+                    // else: already exists and not deleted, skip
                 } else {
-                    const msg = `Product SKU '${p.sku}' not found for service '${upd.data.name}'`;
-                    logger.warn({ type: 'import_service_product_missing', layanan: upd.existing.id, sku: p.sku });
-                    serviceErrors.push({ field: `service_${upd.data.name}`, message: msg });
+                    linksToCreate.push({ layanan_id: serviceId, product_id: prod.id });
                 }
             }
-            sUpdated++;
+
+            // Batch restore soft-deleted links
+            if (linksToRestore.length > 0) {
+                const restoreIds = linksToRestore.map(l => l.id);
+                await ProdukLayanan.update({ deleted_at: null }, {
+                    where: { id: { [Sequelize.Op.in]: restoreIds } },
+                    paranoid: false,
+                    transaction
+                });
+            }
+
+            // Batch insert new links
+            if (linksToCreate.length > 0) {
+                await ProdukLayanan.bulkCreate(linksToCreate, { transaction });
+            }
+        };
+
+        // --- BULK INSERT services ---
+        if (sToInsert.length > 0) {
+            const serviceInsertData = sToInsert.map(ins => ({
+                id: ins.id || undefined,
+                store_id: storeId,
+                kategori_layanan_id: ins.kategori_id,
+                name: ins.name,
+                price: ins.price,
+                cost_price: ins.cost_price,
+                biaya_overhead: ins.biaya_overhead,
+                description: ins.description,
+                is_active: ins.is_active
+            }));
+
+            const createdServices = await Layanan.bulkCreate(serviceInsertData, { transaction, returning: true });
+            sInserted = createdServices.length;
+
+            // Link products for each newly created service
+            for (let i = 0; i < createdServices.length; i++) {
+                await linkProductsToService(createdServices[i].id, sToInsert[i].name, sToInsert[i].products);
+            }
         }
 
-        // Delete services not in file
-        for (const del of sToDelete) {
-            await del.destroy({ transaction });
-            sDeleted++;
+        // --- BULK UPDATE services ---
+        if (sToUpdate.length > 0) {
+            const serviceUpdateData = sToUpdate.map(upd => ({
+                id: upd.existing.id,
+                store_id: storeId,
+                kategori_layanan_id: upd.data.kategori_layanan_id,
+                name: upd.data.name,
+                price: upd.data.price,
+                cost_price: upd.data.cost_price,
+                biaya_overhead: upd.data.biaya_overhead,
+                description: upd.data.description,
+                is_active: upd.data.is_active
+            }));
+
+            await Layanan.bulkCreate(serviceUpdateData, {
+                updateOnDuplicate: ['kategori_layanan_id', 'name', 'price', 'cost_price', 'biaya_overhead', 'description', 'is_active', 'updated_at'],
+                transaction
+            });
+            sUpdated = sToUpdate.length;
+
+            // Batch delete old produk_layanan links, then re-link
+            const updateServiceIds = sToUpdate.map(u => u.existing.id);
+            await ProdukLayanan.destroy({ where: { layanan_id: { [Sequelize.Op.in]: updateServiceIds } }, transaction });
+
+            // Re-link products for each updated service
+            for (const upd of sToUpdate) {
+                await linkProductsToService(upd.existing.id, upd.data.name, upd.data.products);
+            }
         }
+
+        // --- BATCH DELETE services ---
+        if (sToDelete.length > 0) {
+            const sDeleteIds = sToDelete.map(d => d.id);
+            await Layanan.destroy({ where: { id: { [Sequelize.Op.in]: sDeleteIds } }, transaction });
+            sDeleted = sDeleteIds.length;
+        }
+
+        // Insert LogImport
+        const allErrors = [...(errors.length > 0 ? errors : []), ...(serviceErrors.length > 0 ? serviceErrors : [])];
+        await LogImport.create({
+            user_id: user.user_id,
+            store_id: storeId,
+            file_name: fileName,
+            total_inserted: inserted + sInserted,
+            total_updated: updated + sUpdated,
+            total_deleted: deleted + sDeleted,
+            total_skipped: skipped + sSkipped,
+            errors: allErrors.length > 0 ? allErrors : null
+        }, { transaction });
 
         await transaction.commit();
 
@@ -484,7 +628,8 @@ const exportProducts = async (storeId) => {
             { header: 'jasa_pasang', key: 'jasa_pasang', width: 15 },
             { header: 'ongkir_asuransi', key: 'ongkir_asuransi', width: 15 },
             { header: 'biaya_overhead', key: 'biaya_overhead', width: 15 },
-            { header: 'is_active', key: 'is_active', width: 10 }
+            { header: 'is_active', key: 'is_active', width: 10 },
+            { header: 'keterangan_stok', key: 'keterangan_stok', width: 20 },
         ];
 
         productSheet.columns = productHeaders;
@@ -887,6 +1032,8 @@ const transferStock = async (data, userId) => {
 
     const transaction = await db.sequelize.transaction();
     try {
+        const mutasiStokData = [];
+
         for (const item of items) {
             const { productId, quantity } = item;
 
@@ -922,18 +1069,40 @@ const transferStock = async (data, userId) => {
                 throw new AppError(`Product SKU ${sourceProduct.sku} not found in destination branch`, 404);
             }
 
-            // 3. Update stock (using update instead of decrement/increment directly if paranoid prevents logic, wait no, increment/decrement works well. Though let's do safe math.)
+            // 3. Update stock
             await sourceProduct.decrement('stock', { by: quantity, transaction });
             await destinationProduct.increment('stock', { by: quantity, transaction });
 
             // 4. Create log
-            await db.LogTransferStok.create({
+            const logTransfer = await db.LogTransferStok.create({
                 product_id: sourceProduct.id,
                 from_store_id: sourceBranch,
                 to_store_id: destinationBranch,
                 quantity: quantity,
                 user_id: userId
             }, { transaction });
+
+            // 5. Collect mutasi stok (TRANSFER_STOK untuk source, TRANSFER_STOK untuk destination)
+            mutasiStokData.push({
+                product_id: sourceProduct.id,
+                jenis_mutasi: JENIS_MUTASI_STOK.TRANSFER_STOK,
+                reference_id: logTransfer.id,
+                stok: -quantity,
+                keterangan: `Transfer ke toko tujuan`
+            });
+
+            mutasiStokData.push({
+                product_id: destinationProduct.id,
+                jenis_mutasi: JENIS_MUTASI_STOK.TRANSFER_STOK,
+                reference_id: logTransfer.id,
+                stok: quantity,
+                keterangan: `Transfer dari toko asal`
+            });
+        }
+
+        // 6. Bulk insert mutasi stok
+        if (mutasiStokData.length > 0) {
+            await insertMutasiStok(mutasiStokData, { transaction });
         }
 
         await transaction.commit();
