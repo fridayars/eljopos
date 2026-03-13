@@ -24,5 +24,6 @@ router.use('/dashboard', require('./dashboard.route'))
 router.use('/upload', require('./upload.route'))
 router.use('/roles', require('./role.route'))
 router.use('/users', require('./user.route'))
+router.use('/stock-opname', require('./stockOpname.route'))
 
 module.exports = router

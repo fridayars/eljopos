@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, Edit, Trash2, Package, Box } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, Box, ClipboardList } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { getProducts, getCategories, addCategory, updateCategory, deleteCategory, addProduct, updateProduct, deleteProduct, updateProductStatus, importProductsFile, exportProductsFile } from '../services/productService'
@@ -15,8 +15,9 @@ import { AddCategoryModal } from '../components/inventory/AddCategoryModal'
 import { EditCategoryModal } from '../components/inventory/EditCategoryModal'
 import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmationModal'
 import { StockHistoryPage } from '../components/inventory/StockHistoryPage'
+import { StockOpnameTab } from '../components/stockOpname/StockOpnameTab'
 
-type InventoryTab = 'product-category' | 'produk-barang'
+type InventoryTab = 'product-category' | 'produk-barang' | 'stok-opname'
 
 export function ProductInventoryPage() {
     const [activeTab, setActiveTab] = useState<InventoryTab>('produk-barang')
@@ -336,6 +337,16 @@ export function ProductInventoryPage() {
                             <Box className="w-4 h-4" />
                             Produk Barang
                         </button>
+                        <button
+                            onClick={() => setActiveTab('stok-opname')}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'stok-opname'
+                                ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-[0_0_20px_rgba(249,115,22,0.4)]'
+                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                }`}
+                        >
+                            <ClipboardList className="w-4 h-4" />
+                            Stok Opname
+                        </button>
                     </div>
                 </div>
             </div>
@@ -464,6 +475,20 @@ export function ProductInventoryPage() {
                                 onEditStock={handleEditStock}
                                 onViewStockHistory={setViewingStockProduct}
                             />
+                        </motion.div>
+                    )}
+
+                    {/* --- STOCK OPNAME TAB --- */}
+                    {activeTab === 'stok-opname' && (
+                        <motion.div
+                            key="stock-opname-tab"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute inset-0"
+                        >
+                            <StockOpnameTab />
                         </motion.div>
                     )}
                 </AnimatePresence>

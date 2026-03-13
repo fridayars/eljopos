@@ -7,7 +7,7 @@ const JENIS_MUTASI_STOK = {
     PENAMBAHAN_STOK: 'PENAMBAHAN_STOK',   // Penambahan stok manual
     PENGURANGAN_STOK: 'PENGURANGAN_STOK', // Pengurangan stok manual (rusak, hilang, dll)
     TRANSFER_STOK: 'TRANSFER_STOK',       // Penyesuaian stok karena transfer dari toko lain
-    IMPORT_DATA: 'IMPORT_DATA',           // Penambahan stok dari import data excel/csv awal
+    IMPORT_DATA: 'IMPORT_DATA',           // Penyesuaian stok dari import data excel/csv awal
     HAPUS_TRANSAKSI: 'HAPUS_TRANSAKSI',   // Penambahan stok kembali karena transaksi dibatalkan/dihapus
     STOK_OPNAME: 'STOK_OPNAME',           // Penyesuaian stok dari hasil stok opname (bisa +/-)
 };
