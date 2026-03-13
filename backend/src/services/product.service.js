@@ -7,6 +7,72 @@ const { JENIS_MUTASI_STOK } = require('../utils/enums');
 const { Product, KategoriProduk, Store, Layanan, KategoriLayanan, ProdukLayanan, LogImport } = db;
 
 /**
+ * Helper to safely parse numeric values from Excel cells
+ * Handles: null, undefined, formula objects, "NaN" strings, and other non-numeric strings
+ */
+const parseSafeNumber = (val) => {
+    if (val === null || val === undefined) return 0;
+    
+    let num;
+    if (typeof val === 'object' && val.result !== undefined) {
+        val = val.result;
+    }
+    
+    if (typeof val === 'string') {
+        let clean = val.trim().toLowerCase();
+        if (clean === 'nan' || clean === '') return 0;
+        
+        // Remove currency symbols (e.g., Rp) and spaces, keep digits, commas, dots, and minus
+        clean = clean.replace(/[^0-9,.-]/g, '');
+
+        // Handle mixed separators (e.g., 1.200,50 or 1,200.50)
+        if (clean.includes(',') && clean.includes('.')) {
+            const firstComma = clean.indexOf(',');
+            const firstDot = clean.indexOf('.');
+            if (firstDot < firstComma) {
+                // Indonesian/European format: 1.200,50
+                clean = clean.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Western format: 1,200.50
+                clean = clean.replace(/,/g, '');
+            }
+        } else if (clean.includes(',')) {
+            // Only comma: could be decimal (1,5) or thousand (1,200,000)
+            const commas = clean.split(',').length - 1;
+            if (commas > 1) {
+                clean = clean.replace(/,/g, '');
+            } else {
+                // Single comma: check if followed by exactly 3 digits (likely thousand)
+                const parts = clean.split(',');
+                if (parts[parts.length - 1].length === 3) {
+                    clean = clean.replace(/,/g, '');
+                } else {
+                    clean = clean.replace(',', '.');
+                }
+            }
+        } else if (clean.includes('.')) {
+            // Only dot: could be thousand (1.200) or decimal (1.5)
+            const dots = clean.split('.').length - 1;
+            if (dots > 1) {
+                 clean = clean.replace(/\./g, '');
+            } else {
+                // Single dot: check if followed by exactly 3 digits (likely thousand)
+                const parts = clean.split('.');
+                if (parts[parts.length - 1].length === 3) {
+                    clean = clean.replace(/\./g, '');
+                }
+                // else: treat as standard decimal (1.5)
+            }
+        }
+        num = Number(clean);
+    } else {
+        num = Number(val);
+    }
+
+    return isNaN(num) ? 0 : num;
+};
+
+/**
  * Get all products with pagination, search and sorting
  * @param {object} opts {page, limit, search, sort}
  * @param {string} storeId
@@ -183,12 +249,12 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 const kategori_name = row.getCell('B').value ? String(row.getCell('B').value).trim() : null;
                 const name = row.getCell('C').value ? String(row.getCell('C').value).trim() : null;
                 const sku = row.getCell('D').value ? String(row.getCell('D').value).trim() : null;
-                const stock = row.getCell('E').value || 0;
-                const price = row.getCell('F').value || 0;
-                const cost_price = row.getCell('G').value || 0;
-                const jasa_pasang = row.getCell('H').value || 0;
-                const ongkir_asuransi = row.getCell('I').value || 0;
-                const biaya_overhead = row.getCell('J').value || 0;
+                const stock = parseSafeNumber(row.getCell('E').value);
+                const price = parseSafeNumber(row.getCell('F').value);
+                const cost_price = parseSafeNumber(row.getCell('G').value);
+                const jasa_pasang = parseSafeNumber(row.getCell('H').value);
+                const ongkir_asuransi = parseSafeNumber(row.getCell('I').value);
+                const biaya_overhead = parseSafeNumber(row.getCell('J').value);
                 const is_active = String(row.getCell('K').value || '').toUpperCase() === 'YES';
                 const keterangan_stok = row.getCell('L').value ? String(row.getCell('L').value).trim() : null;
 
@@ -289,12 +355,12 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 kategori_produk_id: ins.kategori_id,
                 name: ins.name,
                 sku: ins.sku,
-                stock: ins.stock,
-                price: ins.price,
-                cost_price: ins.cost_price,
-                jasa_pasang: ins.jasa_pasang,
-                ongkir_asuransi: ins.ongkir_asuransi,
-                biaya_overhead: ins.biaya_overhead,
+                stock: Number(ins.stock || 0),
+                price: Number(ins.price || 0),
+                cost_price: Number(ins.cost_price || 0),
+                jasa_pasang: Number(ins.jasa_pasang || 0),
+                ongkir_asuransi: Number(ins.ongkir_asuransi || 0),
+                biaya_overhead: Number(ins.biaya_overhead || 0),
                 is_active: ins.is_active
             }));
 
@@ -343,12 +409,12 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 kategori_produk_id: upd.data.kategori_produk_id,
                 name: upd.data.name,
                 sku: upd.data.sku,
-                stock: upd.data.stock,
-                price: upd.data.price,
-                cost_price: upd.data.cost_price,
-                jasa_pasang: upd.data.jasa_pasang,
-                ongkir_asuransi: upd.data.ongkir_asuransi,
-                biaya_overhead: upd.data.biaya_overhead,
+                stock: Number(upd.data.stock || 0),
+                price: Number(upd.data.price || 0),
+                cost_price: Number(upd.data.cost_price || 0),
+                jasa_pasang: Number(upd.data.jasa_pasang || 0),
+                ongkir_asuransi: Number(upd.data.ongkir_asuransi || 0),
+                biaya_overhead: Number(upd.data.biaya_overhead || 0),
                 is_active: upd.data.is_active
             }));
 
@@ -389,9 +455,9 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 const id = row.getCell('A').value ? String(row.getCell('A').value).trim() : null;
                 const kategori_name = row.getCell('B').value ? String(row.getCell('B').value).trim() : null;
                 const name = row.getCell('C').value ? String(row.getCell('C').value).trim() : null;
-                const price = row.getCell('D').value || 0;
-                const cost_price = row.getCell('E').value || 0;
-                const biaya_overhead = row.getCell('F').value || 0;
+                const price = parseSafeNumber(row.getCell('D').value);
+                const cost_price = parseSafeNumber(row.getCell('E').value);
+                const biaya_overhead = parseSafeNumber(row.getCell('F').value);
                 const description = row.getCell('G').value ? String(row.getCell('G').value).trim() : null;
                 const is_active = String(row.getCell('H').value || '').toUpperCase() === 'YES';
                 const product_sku = row.getCell('I').value ? String(row.getCell('I').value).trim() : null;
@@ -521,9 +587,9 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 store_id: storeId,
                 kategori_layanan_id: ins.kategori_id,
                 name: ins.name,
-                price: ins.price,
-                cost_price: ins.cost_price,
-                biaya_overhead: ins.biaya_overhead,
+                price: Number(ins.price || 0),
+                cost_price: Number(ins.cost_price || 0),
+                biaya_overhead: Number(ins.biaya_overhead || 0),
                 description: ins.description,
                 is_active: ins.is_active
             }));
@@ -544,9 +610,9 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 store_id: storeId,
                 kategori_layanan_id: upd.data.kategori_layanan_id,
                 name: upd.data.name,
-                price: upd.data.price,
-                cost_price: upd.data.cost_price,
-                biaya_overhead: upd.data.biaya_overhead,
+                price: Number(upd.data.price || 0),
+                cost_price: Number(upd.data.cost_price || 0),
+                biaya_overhead: Number(upd.data.biaya_overhead || 0),
                 description: upd.data.description,
                 is_active: upd.data.is_active
             }));
