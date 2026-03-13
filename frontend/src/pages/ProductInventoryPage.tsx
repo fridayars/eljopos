@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, Edit, Trash2, Package, Box, ClipboardList } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, Box, ClipboardList, History as HistoryIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { getProducts, getCategories, addCategory, updateCategory, deleteCategory, addProduct, updateProduct, deleteProduct, updateProductStatus, importProductsFile, exportProductsFile } from '../services/productService'
@@ -16,8 +16,9 @@ import { EditCategoryModal } from '../components/inventory/EditCategoryModal'
 import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmationModal'
 import { StockHistoryPage } from '../components/inventory/StockHistoryPage'
 import { StockOpnameTab } from '../components/stockOpname/StockOpnameTab'
+import { StockMutationsTab } from '../components/inventory/StockMutationsTab'
 
-type InventoryTab = 'product-category' | 'produk-barang' | 'stok-opname'
+type InventoryTab = 'product-category' | 'produk-barang' | 'stok-opname' | 'riwayat-stok'
 
 export function ProductInventoryPage() {
     const [activeTab, setActiveTab] = useState<InventoryTab>('produk-barang')
@@ -347,6 +348,16 @@ export function ProductInventoryPage() {
                             <ClipboardList className="w-4 h-4" />
                             Stok Opname
                         </button>
+                        <button
+                            onClick={() => setActiveTab('riwayat-stok')}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${activeTab === 'riwayat-stok'
+                                ? 'bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)]'
+                                : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                }`}
+                        >
+                            <HistoryIcon className="w-4 h-4" />
+                            Riwayat Stok
+                        </button>
                     </div>
                 </div>
             </div>
@@ -489,6 +500,20 @@ export function ProductInventoryPage() {
                             className="absolute inset-0"
                         >
                             <StockOpnameTab />
+                        </motion.div>
+                    )}
+
+                    {/* --- STOCK MUTATIONS TAB --- */}
+                    {activeTab === 'riwayat-stok' && (
+                        <motion.div
+                            key="stock-mutations-tab"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute inset-0"
+                        >
+                            <StockMutationsTab />
                         </motion.div>
                     )}
                 </AnimatePresence>

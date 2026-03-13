@@ -465,7 +465,7 @@ export const exportProductsFile = async (storeId?: string): Promise<{ success: b
     }
 }
 
-export const getStockMutations = async (productId: string, params: { page?: number, limit?: number } = {}): Promise<{
+export const getStockMutations = async (productId?: string, params: { page?: number, limit?: number, search?: string, startDate?: string, endDate?: string } = {}): Promise<{
     success: boolean;
     data: {
         items: StockMutation[];
@@ -482,7 +482,10 @@ export const getStockMutations = async (productId: string, params: { page?: numb
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page.toString());
         if (params.limit) queryParams.append('limit', params.limit.toString());
-        queryParams.append('product_id', productId);
+        if (params.search) queryParams.append('search', params.search);
+        if (params.startDate) queryParams.append('start_date', params.startDate);
+        if (params.endDate) queryParams.append('end_date', params.endDate);
+        if (productId) queryParams.append('product_id', productId);
         
         const response = await api.get(`/master/products/mutasi?${queryParams.toString()}`);
         return response.data;

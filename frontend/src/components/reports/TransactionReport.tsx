@@ -29,9 +29,8 @@ const formatCurrency = (value: number) => {
 export function TransactionReport() {
     // Date range filter
     const today = new Date().toISOString().split('T')[0];
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const [startDate, setStartDate] = useState(thirtyDaysAgo);
+    const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(today);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');

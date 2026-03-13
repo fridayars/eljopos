@@ -1346,22 +1346,45 @@ const getStockMutations = async (opts) => {
         const page = opts.page || 1;
         const limit = opts.limit || 10;
         const offset = (page - 1) * limit;
-        const { product_id } = opts;
+        const { product_id, search, start_date, end_date } = opts;
 
         const where = {};
         if (product_id) {
             where.product_id = product_id;
         }
 
+        if (start_date || end_date) {
+            const Sequelize = db.Sequelize;
+            where.created_at = {};
+            if (start_date) {
+                where.created_at[Sequelize.Op.gte] = new Date(start_date + 'T00:00:00.000Z');
+            }
+            if (end_date) {
+                where.created_at[Sequelize.Op.lte] = new Date(end_date + 'T23:59:59.999Z');
+            }
+        }
+
+        const include = [
+            {
+                model: db.Product,
+                as: 'product',
+                attributes: ['id', 'name', 'sku']
+            }
+        ];
+
+        if (search) {
+            const Sequelize = db.Sequelize;
+            include[0].where = {
+                [Sequelize.Op.or]: [
+                    { name: { [Sequelize.Op.iLike]: `%${search}%` } },
+                    { sku: { [Sequelize.Op.iLike]: `%${search}%` } }
+                ]
+            };
+        }
+
         const { count, rows } = await db.MutasiStokProduk.findAndCountAll({
             where,
-            include: [
-                {
-                    model: db.Product,
-                    as: 'product',
-                    attributes: ['id', 'name', 'sku']
-                }
-            ],
+            include,
             order: [['created_at', 'DESC']],
             limit,
             offset

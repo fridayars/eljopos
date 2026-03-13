@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Search, Filter, Calendar, User, FileText, CheckCircle2, XCircle, Clock, ChevronRight, Eye, ClipboardList, ChevronDown } from 'lucide-react'
+import { Plus, Search, Filter, Calendar, User, FileText, CheckCircle2, XCircle, Clock, ChevronRight, Eye, ClipboardList, ChevronDown, ChevronLeft } from 'lucide-react'
 import type { StockOpname } from '../../services/stockOpnameService'
 import { stockOpnameService } from '../../services/stockOpnameService'
 import { CreateStockOpnameModal } from './CreateStockOpnameModal'
@@ -154,6 +154,26 @@ export function StockOpnameTab() {
         }
     }
 
+    const getPageNumbers = () => {
+        const pages = []
+        const maxVisible = 5
+        const { total_pages, page } = pagination
+
+        if (total_pages <= maxVisible) {
+            for (let i = 1; i <= total_pages; i++) pages.push(i)
+        } else {
+            let start = Math.max(1, page - 2)
+            let end = Math.min(total_pages, start + maxVisible - 1)
+
+            if (end === total_pages) {
+                start = Math.max(1, end - maxVisible + 1)
+            }
+
+            for (let i = start; i <= end; i++) pages.push(i)
+        }
+        return pages
+    }
+
     return (
         <div className="flex-1 flex flex-col h-full overscroll-none overflow-hidden bg-[var(--background)]">
             {/* Header section */}
@@ -188,7 +208,10 @@ export function StockOpnameTab() {
                             type="text"
                             placeholder="Cari nomor opname..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => {
+                                setSearch(e.target.value)
+                                setPagination(prev => ({ ...prev, page: 1 }))
+                            }}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all duration-200 outline-none"
                             style={{
                                 background: 'var(--surface-overlay)',
@@ -310,27 +333,44 @@ export function StockOpnameTab() {
                 </div>
                 
                 {/* Pagination */}
-                {opnames.length > 0 && (
-                    <div className="mt-4 flex items-center justify-between px-2">
+                {opnames.length > 0 && pagination.total_pages > 1 && (
+                    <div className="mt-4 flex flex-col md:flex-row items-center justify-between px-2 gap-4">
                         <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                            Halaman {pagination.page} dari {pagination.total_pages}
+                            Menampilkan halaman <span style={{ color: 'var(--foreground)', fontWeight: 'bold' }}>{pagination.page}</span> dari <span style={{ color: 'var(--foreground)', fontWeight: 'bold' }}>{pagination.total_pages}</span>
                         </p>
                         <div className="flex items-center gap-2">
                             <button 
                                 disabled={pagination.page === 1}
                                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                                className="px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-30 transition-all border border-[var(--border-subtle)] cursor-pointer"
+                                className="p-2 rounded-xl text-xs font-medium disabled:opacity-30 transition-all border border-[var(--border-subtle)] cursor-pointer"
                                 style={{ background: 'var(--surface-overlay)', color: 'var(--foreground)' }}
                             >
-                                Sebelumnya
+                                <ChevronLeft className="w-4 h-4" />
                             </button>
+                            
+                            <div className="flex items-center gap-1">
+                                {getPageNumbers().map((pageNum) => (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
+                                        className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-all ${
+                                            pagination.page === pageNum
+                                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/20'
+                                                : 'bg-white/5 border border-purple-500/10 text-gray-400 hover:text-[var(--foreground)] hover:border-[#3B82F6]/30'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                ))}
+                            </div>
+
                             <button 
                                 disabled={pagination.page === pagination.total_pages}
                                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                                className="px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-30 transition-all border border-[var(--border-subtle)] cursor-pointer"
+                                className="p-2 rounded-xl text-xs font-medium disabled:opacity-30 transition-all border border-[var(--border-subtle)] cursor-pointer"
                                 style={{ background: 'var(--surface-overlay)', color: 'var(--foreground)' }}
                             >
-                                Selanjutnya
+                                <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
