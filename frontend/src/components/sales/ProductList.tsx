@@ -39,7 +39,7 @@ export function ProductList({ products, onAddToCart }: ProductListProps) {
 
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-sm md:text-base text-gray-200 mb-1 group-hover:text-blue-400 transition-colors line-clamp-1">
+                            <h3 className="text-sm md:text-base text-gray-200 mb-1 group-hover:text-blue-400 transition-colors">
                                 {product.name}
                             </h3>
                             <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs text-gray-500">

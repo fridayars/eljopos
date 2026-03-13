@@ -49,7 +49,7 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
                     {/* Product Info */}
                     <div className="p-3 md:p-4 space-y-2 md:space-y-3 flex-1 flex flex-col justify-between">
                         <div>
-                            <h3 className="text-sm md:text-base text-gray-200 mb-1 group-hover:text-blue-400 transition-colors line-clamp-2">
+                            <h3 className="text-sm md:text-base text-gray-200 mb-1 group-hover:text-blue-400 transition-colors">
                                 {product.name}
                             </h3>
                             {product.item_type !== 'layanan' && (
