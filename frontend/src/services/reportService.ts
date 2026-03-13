@@ -124,6 +124,37 @@ export interface TransactionDetailResponse {
 }
 
 // =============================================
+// Types — Ranking Reports (real API)
+// =============================================
+export interface ProductRankingItem {
+    id: string;
+    name: string;
+    total_qty: number;
+    total_value: number;
+}
+
+export interface CustomerRankingItem {
+    id: string;
+    name: string;
+    total_transactions: number;
+    total_value: number;
+}
+
+export interface RankingResponse<T> {
+    success: boolean;
+    data: {
+        items: T[];
+        meta: {
+            page: number;
+            limit: number;
+            total: number;
+            total_pages: number;
+        };
+    };
+    message?: string;
+}
+
+// =============================================
 // General Report Services (mock)
 // =============================================
 const USE_MOCK_DATA = true;
@@ -147,6 +178,56 @@ export const getSalesTable = async (period: 'daily' | 'monthly' | 'yearly'): Pro
         return { success: true, data: (reportsMock.salesTable as any)[period] };
     }
     return { success: false, data: [] };
+};
+
+// =============================================
+// Ranking Services (real API)
+// =============================================
+
+/**
+ * GET /api/laporan/ranking-produk
+ */
+export const getProductRanking = async (params: { start_date: string; end_date: string; store_id?: string; page?: number; limit?: number }): Promise<RankingResponse<ProductRankingItem>> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/ranking-produk', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: {
+                items: [],
+                meta: { page: 1, limit: 10, total: 0, total_pages: 0 }
+            },
+            message: error.response?.data?.message || 'Gagal memuat peringkat produk'
+        };
+    }
+};
+
+/**
+ * GET /api/laporan/ranking-customer
+ */
+export const getCustomerRanking = async (params: { start_date: string; end_date: string; store_id?: string; page?: number; limit?: number }): Promise<RankingResponse<CustomerRankingItem>> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/ranking-customer', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: {
+                items: [],
+                meta: { page: 1, limit: 10, total: 0, total_pages: 0 }
+            },
+            message: error.response?.data?.message || 'Gagal memuat peringkat customer'
+        };
+    }
 };
 
 // =============================================

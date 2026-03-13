@@ -16,7 +16,7 @@ const createStockOpname = async (req, res, next) => {
 
 const getAllStockOpnames = async (req, res, next) => {
     try {
-        const storeId = req.user.store_id;
+        const storeId = req.query.store_id || req.user.store_id;
         const opts = {
             page: parseInt(req.query.page, 10) || 1,
             limit: parseInt(req.query.limit, 10) || 10,

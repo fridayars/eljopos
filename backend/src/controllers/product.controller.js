@@ -246,11 +246,15 @@ const getStockMutations = async (req, res, next) => {
         const limit = parseInt(req.query.limit, 10) || 10;
         const productId = req.query.product_id;
 
+        const storeId = req.query.store_id || req.user.store_id;
         const result = await productService.getStockMutations({
             page,
             limit,
-            product_id: productId
-        });
+            product_id: productId,
+            search: req.query.search,
+            start_date: req.query.start_date,
+            end_date: req.query.end_date
+        }, storeId);
 
         return res.json({ success: true, data: result });
     } catch (error) {

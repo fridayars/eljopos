@@ -74,4 +74,63 @@ const deleteTransaksi = async (req, res, next) => {
     }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi };
+/**
+ * Laporan Peringkat Produk — GET /api/laporan/ranking-produk
+ */
+const getProductRanking = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const { start_date, end_date, store_id } = req.query;
+
+        const result = await transaksiService.getProductRanking({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id,
+            page,
+            limit
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Laporan Peringkat Customer — GET /api/laporan/ranking-customer
+ */
+const getCustomerRanking = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const { start_date, end_date, store_id } = req.query;
+
+        const result = await transaksiService.getCustomerRanking({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id,
+            page,
+            limit
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = {
+    createTransaksi,
+    getTransaksiDetail,
+    getLaporanPenjualan,
+    deleteTransaksi,
+    getProductRanking,
+    getCustomerRanking
+};

@@ -1341,12 +1341,16 @@ const transferStock = async (data, userId) => {
  * Get stock mutation history with pagination
  * @param {object} opts {page, limit, product_id, store_id}
  */
-const getStockMutations = async (opts) => {
+const getStockMutations = async (opts, storeId) => {
     try {
         const page = opts.page || 1;
         const limit = opts.limit || 10;
         const offset = (page - 1) * limit;
         const { product_id, search, start_date, end_date } = opts;
+
+        if (!storeId) {
+            throw new AppError('store_id is required', 400);
+        }
 
         const where = {};
         if (product_id) {
@@ -1368,7 +1372,8 @@ const getStockMutations = async (opts) => {
             {
                 model: db.Product,
                 as: 'product',
-                attributes: ['id', 'name', 'sku']
+                attributes: ['id', 'name', 'sku'],
+                where: { store_id: storeId }
             }
         ];
 

@@ -40,8 +40,18 @@ export interface StockOpnameResponse {
 }
 
 export const stockOpnameService = {
-    getAll: async (params: { page?: number; limit?: number; search?: string; status?: string }) => {
-        const response = await api.get('/stock-opname', { params });
+    getAll: async (params: { page?: number; limit?: number; search?: string; status?: string; store_id?: string }) => {
+        const userRaw = localStorage.getItem('user');
+        let storeId = params.store_id;
+        if (!storeId && userRaw) {
+            try {
+                const user = JSON.parse(userRaw);
+                storeId = user.store_id;
+            } catch (e) {
+                // ignore
+            }
+        }
+        const response = await api.get('/stock-opname', { params: { ...params, store_id: storeId } });
         return response.data;
     },
 

@@ -571,4 +571,159 @@ const deleteTransaksi = async (transaksiId) => {
     }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi };
+/**
+ * Laporan Peringkat Produk
+ * - Mengambil peringkat produk berdasarkan kuantitas penjualan terbanyak
+ */
+const getProductRanking = async ({ start_date, end_date, store_id, page = 1, limit = 20 }) => {
+    try {
+        const offset = (page - 1) * limit;
+
+        const whereClause = {
+            item_type: 'product'
+        };
+
+        const trxWhere = {};
+        if (store_id) trxWhere.store_id = store_id;
+        if (start_date && end_date) {
+            trxWhere.created_at = {
+                [Op.between]: [
+                    new Date(`${start_date}T00:00:00`),
+                    new Date(`${end_date}T23:59:59`)
+                ]
+            };
+        }
+
+        const { count, rows } = await TransaksiDetail.findAndCountAll({
+            where: whereClause,
+            attributes: [
+                'item_id',
+                'item_name',
+                [fn('SUM', col('TransaksiDetail.quantity')), 'total_qty'],
+                [fn('SUM', col('TransaksiDetail.subtotal')), 'total_value']
+            ],
+            include: [{
+                model: Transaksi,
+                as: 'transaksi',
+                attributes: [],
+                where: trxWhere,
+                required: true
+            }],
+            group: ['item_id', 'item_name'],
+            order: [[literal('total_qty'), 'DESC']],
+            limit,
+            offset,
+            raw: true
+        });
+
+        // total_items untuk pagination di group by sedikit tricky
+        // Untuk PostgreSQL/MySQL, count dari findAndCountAll dengan group by akan mengembalikan array of counts
+        const totalItemsRes = await TransaksiDetail.findAll({
+            where: whereClause,
+            attributes: [[fn('COUNT', fn('DISTINCT', col('item_id'))), 'total']],
+            include: [{
+                model: Transaksi,
+                as: 'transaksi',
+                attributes: [],
+                where: trxWhere,
+                required: true
+            }],
+            raw: true
+        });
+
+        const totalItems = parseInt(totalItemsRes[0].total, 10) || 0;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            items: rows.map(r => ({
+                id: r.item_id,
+                name: r.item_name,
+                total_qty: parseFloat(r.total_qty) || 0,
+                total_value: parseFloat(r.total_value) || 0
+            })),
+            meta: {
+                page,
+                limit,
+                total: totalItems,
+                total_pages: totalPages
+            }
+        };
+    } catch (error) {
+        logger.error({ type: 'get_product_ranking_failed', message: error.message });
+        throw new AppError('Failed to get product ranking', 500);
+    }
+};
+
+/**
+ * Laporan Peringkat Customer
+ * - Mengambil peringkat customer berdasarkan jumlah transaksi terbanyak
+ */
+const getCustomerRanking = async ({ start_date, end_date, store_id, page = 1, limit = 20 }) => {
+    try {
+        const offset = (page - 1) * limit;
+
+        const whereClause = {
+            customer_id: { [Op.ne]: null }
+        };
+
+        if (store_id) whereClause.store_id = store_id;
+        if (start_date && end_date) {
+            whereClause.created_at = {
+                [Op.between]: [
+                    new Date(`${start_date}T00:00:00`),
+                    new Date(`${end_date}T23:59:59`)
+                ]
+            };
+        }
+
+        const { count, rows } = await Transaksi.findAndCountAll({
+            where: whereClause,
+            attributes: [
+                'customer_id',
+                [fn('COUNT', col('Transaksi.id')), 'total_transactions'],
+                [fn('SUM', col('Transaksi.total_amount')), 'total_value']
+            ],
+            include: [{
+                model: Customer,
+                as: 'customer',
+                attributes: ['name'],
+                required: true
+            }],
+            group: ['customer_id', 'customer.id', 'customer.name'],
+            order: [[literal('total_transactions'), 'DESC']],
+            limit,
+            offset,
+            raw: true,
+            nest: true
+        });
+
+        const totalItemsRes = await Transaksi.findAll({
+            where: whereClause,
+            attributes: [[fn('COUNT', fn('DISTINCT', col('customer_id'))), 'total']],
+            raw: true
+        });
+
+        const totalItems = parseInt(totalItemsRes[0].total, 10) || 0;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            items: rows.map(r => ({
+                id: r.customer_id,
+                name: r.customer.name,
+                total_transactions: parseInt(r.total_transactions, 10) || 0,
+                total_value: parseFloat(r.total_value) || 0
+            })),
+            meta: {
+                page,
+                limit,
+                total: totalItems,
+                total_pages: totalPages
+            }
+        };
+    } catch (error) {
+        logger.error({ type: 'get_customer_ranking_failed', message: error.message });
+        throw new AppError('Failed to get customer ranking', 500);
+    }
+};
+
+module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking };

@@ -7,6 +7,9 @@ import {
     TrendingDown,
     Calendar,
     Download,
+    Award,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import {
     AreaChart,
@@ -25,17 +28,22 @@ import {
     getSalesReport,
     getCashFlow,
     getSalesTable,
+    getProductRanking,
+    getCustomerRanking,
 } from '../services/reportService';
 import type {
     SalesReportItem,
     CashFlowItem,
     SalesTableItem,
+    ProductRankingItem,
+    CustomerRankingItem,
 } from '../services/reportService';
 
 import { TransactionReport } from '../components/reports/TransactionReport';
 
-type ReportCategory = 'general' | 'financial' | 'transaction';
+type ReportCategory = 'general' | 'financial' | 'transaction' | 'rankings';
 type ReportPeriod = 'daily' | 'monthly' | 'yearly';
+type RankingSubTab = 'product' | 'customer';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -71,6 +79,19 @@ export function ReportsPage() {
         return []
     })
 
+    const [currentStoreId] = useState<string | undefined>(() => {
+        try {
+            const userRaw = localStorage.getItem('user')
+            if (userRaw) {
+                const user = JSON.parse(userRaw)
+                return user.store_id || undefined
+            }
+        } catch {
+            // ignore
+        }
+        return undefined
+    })
+
     const [selectedCategory, setSelectedCategory] = useState<ReportCategory>(() => {
         if (userPermissions.includes('report.general')) return 'general';
         if (userPermissions.includes('report.finance')) return 'financial';
@@ -82,13 +103,64 @@ export function ReportsPage() {
     const [salesData, setSalesData] = useState<SalesReportItem[]>([]);
     const [cashFlowData, setCashFlowData] = useState<CashFlowItem[]>([]);
     const [salesTableData, setSalesTableData] = useState<SalesTableItem[]>([]);
+    
+    // Rankings State
+    const [rankingSubTab, setRankingSubTab] = useState<RankingSubTab>('product');
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [productRankings, setProductRankings] = useState<ProductRankingItem[]>([]);
+    const [customerRankings, setCustomerRankings] = useState<CustomerRankingItem[]>([]);
+    const [rankingPage, setRankingPage] = useState(1);
+    const [rankingMeta, setRankingMeta] = useState({ total_pages: 0, total: 0 });
+
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (selectedCategory === 'general') {
             fetchReportData();
+        } else if (selectedCategory === 'rankings') {
+            fetchRankingData();
         }
-    }, [selectedCategory, selectedPeriod]);
+    }, [selectedCategory, selectedPeriod, rankingSubTab, startDate, endDate, rankingPage, currentStoreId]);
+
+    const fetchRankingData = async () => {
+        setIsLoading(true);
+        try {
+            if (rankingSubTab === 'product') {
+                const res = await getProductRanking({ 
+                    start_date: startDate, 
+                    end_date: endDate, 
+                    page: rankingPage,
+                    store_id: currentStoreId
+                });
+                if (res.success) {
+                    setProductRankings(res.data.items);
+                    setRankingMeta({ 
+                        total_pages: res.data.meta.total_pages, 
+                        total: res.data.meta.total 
+                    });
+                }
+            } else {
+                const res = await getCustomerRanking({ 
+                    start_date: startDate, 
+                    end_date: endDate, 
+                    page: rankingPage,
+                    store_id: currentStoreId
+                });
+                if (res.success) {
+                    setCustomerRankings(res.data.items);
+                    setRankingMeta({ 
+                        total_pages: res.data.meta.total_pages, 
+                        total: res.data.meta.total 
+                    });
+                }
+            }
+        } catch (error) {
+            toast.error('Gagal memuat data peringkat');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchReportData = async () => {
         setIsLoading(true);
@@ -189,6 +261,18 @@ export function ReportsPage() {
                             >
                                 <Receipt className="w-4 h-4" />
                                 Riwayat Transaksi
+                            </button>
+                        )}
+                        {true && ( // Assuming permissions for simplicity, or check for specific permission if exists
+                            <button
+                                onClick={() => setSelectedCategory('rankings')}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'rankings'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-bold'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                    }`}
+                            >
+                                <Award className="w-4 h-4" />
+                                Laporan Peringkat
                             </button>
                         )}
                     </div>
@@ -456,6 +540,139 @@ export function ReportsPage() {
                             exit={{ opacity: 0, x: -20 }}
                         >
                             <TransactionReport />
+                        </motion.div>
+                    )}
+
+                    {selectedCategory === 'rankings' && (
+                        <motion.div
+                            key="rankings"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="p-4 md:p-6 space-y-6"
+                        >
+                            {/* Ranking Sub-tabs and Date Filter */}
+                            <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => { setRankingSubTab('product'); setRankingPage(1); }}
+                                        className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${rankingSubTab === 'product'
+                                            ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-medium'
+                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                            }`}
+                                    >
+                                        Peringkat Produk
+                                    </button>
+                                    <button
+                                        onClick={() => { setRankingSubTab('customer'); setRankingPage(1); }}
+                                        className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${rankingSubTab === 'customer'
+                                            ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-medium'
+                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                            }`}
+                                    >
+                                        Peringkat Customer
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 bg-white/5 border border-purple-500/20 rounded-xl px-3 py-1.5">
+                                        <Calendar className="w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => { setStartDate(e.target.value); setRankingPage(1); }}
+                                            className="bg-transparent text-sm text-gray-200 border-none focus:ring-0"
+                                        />
+                                        <span className="text-gray-500">—</span>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => { setEndDate(e.target.value); setRankingPage(1); }}
+                                            className="bg-transparent text-sm text-gray-200 border-none focus:ring-0"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ranking Content */}
+                            <div className="bg-white/5 backdrop-blur-xl border border-purple-500/10 rounded-2xl p-6 shadow-xl">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-lg text-gray-200 font-bold">
+                                        {rankingSubTab === 'product' ? 'Tabel Peringkat Produk' : 'Tabel Peringkat Customer'}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 italic">Total: {rankingMeta.total} data</p>
+                                </div>
+                                <div className="overflow-x-auto min-h-[300px]">
+                                    {isLoading ? (
+                                        <div className="h-[300px] flex items-center justify-center text-gray-500 italic">Memproses data...</div>
+                                    ) : (
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className="border-b border-purple-500/10">
+                                                    <th className="text-left text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">#</th>
+                                                    <th className="text-left text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">{rankingSubTab === 'product' ? 'Nama Produk' : 'Nama Customer'}</th>
+                                                    <th className="text-right text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">{rankingSubTab === 'product' ? 'Total Kuantitas' : 'Total Transaksi'}</th>
+                                                    <th className="text-right text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">Total Nilai</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-purple-500/5">
+                                                {rankingSubTab === 'product' ? (
+                                                    productRankings.length > 0 ? (
+                                                        productRankings.map((item, index) => (
+                                                            <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                                                                <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
+                                                                <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>
+                                                                <td className="py-4 text-right text-sm text-cyan-400 font-medium">{item.total_qty}</td>
+                                                                <td className="py-4 text-right text-sm text-green-400 font-medium">{formatCurrency(item.total_value)}</td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr><td colSpan={4} className="py-8 text-center text-gray-500 italic">Tidak ada data untuk periode ini</td></tr>
+                                                    )
+                                                ) : (
+                                                    customerRankings.length > 0 ? (
+                                                        customerRankings.map((item, index) => (
+                                                            <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                                                                <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
+                                                                <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>
+                                                                <td className="py-4 text-right text-sm text-cyan-400 font-medium">{item.total_transactions}</td>
+                                                                <td className="py-4 text-right text-sm text-green-400 font-medium">{formatCurrency(item.total_value)}</td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr><td colSpan={4} className="py-8 text-center text-gray-500 italic">Tidak ada data untuk periode ini</td></tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+
+                                {/* Pagination Controls */}
+                                {!isLoading && rankingMeta.total_pages > 1 && (
+                                    <div className="mt-8 flex items-center justify-between border-t border-purple-500/10 pt-6">
+                                        <p className="text-xs text-gray-500 italic">
+                                            Menampilkan Halaman <span className="text-gray-300 font-bold">{rankingPage}</span> dari <span className="text-gray-300 font-bold">{rankingMeta.total_pages}</span>
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                disabled={rankingPage === 1}
+                                                onClick={() => setRankingPage(prev => prev - 1)}
+                                                className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-white transition-all"
+                                            >
+                                                <ChevronLeft className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                disabled={rankingPage === rankingMeta.total_pages}
+                                                onClick={() => setRankingPage(prev => prev + 1)}
+                                                className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-white transition-all"
+                                            >
+                                                <ChevronRight className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
