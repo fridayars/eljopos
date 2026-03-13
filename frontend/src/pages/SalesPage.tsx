@@ -13,9 +13,10 @@ import { SelectCustomerModal } from '../components/sales/SelectCustomerModal'
 import { AddCustomerModal } from '../components/sales/AddCustomerModal'
 import { BarcodeScannerModal } from '../components/sales/BarcodeScannerModal'
 import { TransactionSuccessModal } from '../components/sales/TransactionSuccessModal'
-import { Search, Loader2, ScanLine } from 'lucide-react'
+import { Search, Loader2, ScanLine, ChevronDown } from 'lucide-react'
+import { useRef } from 'react'
 
-import { getProducts, getServiceProducts, type ProductItem } from '../services/productService'
+import { getProducts, getServiceProducts, getCategories, getServiceCategories, type ProductItem, type Category, type ServiceCategory } from '../services/productService'
 import { createCustomer, type Customer } from '../services/customerService'
 import { createTransaction, type CreateTransactionPayload, type TransactionItemPayload } from '../services/transactionService'
 
@@ -24,10 +25,80 @@ interface UserData {
     store_id: string
 }
 
+function CategoryFilterSelect({
+    value,
+    categories,
+    onChange
+}: {
+    value: string;
+    categories: { id: string, name: string }[];
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedCategory = value === 'all'
+        ? { id: 'all', name: 'Semua Kategori' }
+        : categories.find(c => c.id === value);
+
+    const allOptions = [
+        { id: 'all', name: 'Semua Kategori' },
+        ...categories
+    ];
+
+    return (
+        <div className="relative w-full sm:w-48 md:w-56" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full h-10 bg-white/5 border rounded-xl px-4 text-sm flex items-center justify-between cursor-pointer focus:outline-none transition-all ${isOpen ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'border-purple-500/20 hover:border-purple-500/40'
+                    }`}
+            >
+                <span className="text-gray-200 truncate pr-2">{selectedCategory?.name || 'Semua Kategori'}</span>
+                <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-4 h-4" />
+                </span>
+            </div>
+
+            {isOpen && (
+                <div
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out] bg-[#1a1625] border border-purple-500/20"
+                >
+                    <ul className="max-h-60 overflow-y-auto">
+                        {allOptions.map((cat) => (
+                            <li
+                                key={cat.id}
+                                className={`px-4 py-3 text-sm cursor-pointer transition-colors ${value === cat.id ? 'text-purple-400 bg-purple-500/10' : 'text-gray-300 hover:bg-white/5'
+                                    }`}
+                                onClick={() => {
+                                    onChange(cat.id);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                {cat.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function SalesPage() {
     const [view, setView] = useState<'grid' | 'list'>(() => window.innerWidth < 1024 ? 'list' : 'grid')
-    const [activeTab, setActiveTab] = useState<'produk' | 'layanan'>('produk')
+    const [activeTab, setActiveTab] = useState<'produk' | 'layanan'>('layanan')
     const [searchQuery, setSearchQuery] = useState('')
+    const [selectedCategoryId, setSelectedCategoryId] = useState('all')
     const [cart, setCart] = useState<CartItem[]>([])
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -44,6 +115,8 @@ export function SalesPage() {
 
     // Data State
     const [displayItems, setDisplayItems] = useState<ProductItem[]>([])
+    const [productCategories, setProductCategories] = useState<Category[]>([])
+    const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([])
 
     const [isLoading, setIsLoading] = useState(false)
     const [isTransacting, setIsTransacting] = useState(false)
@@ -79,7 +152,8 @@ export function SalesPage() {
                     limit: ITEMS_PER_PAGE,
                     search: searchQuery,
                     store_id: storeId || undefined,
-                    status: 'true'
+                    status: 'true',
+                    kategori_id: selectedCategoryId !== 'all' ? selectedCategoryId : undefined
                 })
 
                 if (response.success) {
@@ -98,7 +172,8 @@ export function SalesPage() {
                     limit: ITEMS_PER_PAGE,
                     search: searchQuery,
                     store_id: storeId || undefined,
-                    status: 'true'
+                    status: 'true',
+                    kategori_layanan_id: selectedCategoryId !== 'all' ? selectedCategoryId : undefined
                 })
 
                 if (response.success) {
@@ -128,11 +203,28 @@ export function SalesPage() {
         }
     }
 
-    // Effect for activeTab or searchQuery changes
+    // Effects for initial data
+    useEffect(() => {
+        const fetchCategoriesData = async () => {
+            try {
+                const [pCats, sCats] = await Promise.all([
+                    getCategories(),
+                    getServiceCategories()
+                ])
+                if (pCats.success) setProductCategories(pCats.data)
+                if (sCats.success) setServiceCategories(sCats.data)
+            } catch (error) {
+                console.error('Error fetching categories:', error)
+            }
+        }
+        fetchCategoriesData()
+    }, [])
+
+    // Effect for activeTab, searchQuery, or selectedCategoryId changes
     useEffect(() => {
         setDisplayItems([])
         fetchItems(1, true)
-    }, [activeTab, searchQuery, storeId])
+    }, [activeTab, searchQuery, selectedCategoryId, storeId])
 
     // Intersection Observer for Infinite Scroll
     useEffect(() => {
@@ -153,7 +245,8 @@ export function SalesPage() {
 
     const handleTabChange = (tab: 'produk' | 'layanan') => {
         setActiveTab(tab)
-        setSearchQuery('') // Reset keyword as requested
+        setSearchQuery('')
+        setSelectedCategoryId('all')
     }
 
     // Cart Actions
@@ -321,22 +414,30 @@ export function SalesPage() {
                             </button>
                         </div>
 
-                        <div className="relative w-full sm:w-64 md:w-80">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder={`Cari ${activeTab === 'produk' ? 'produk...' : 'layanan...'}`}
-                                className="w-full pl-10 pr-10 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all"
+                        <div className="flex flex-col sm:flex-row gap-4 items-center w-full sm:w-auto">
+                            <CategoryFilterSelect
+                                value={selectedCategoryId}
+                                categories={activeTab === 'produk' ? productCategories : serviceCategories}
+                                onChange={setSelectedCategoryId}
                             />
-                            <button
-                                onClick={() => setIsScannerOpen(true)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
-                                title="Scan Barcode"
-                            >
-                                <ScanLine className="w-4 h-4" />
-                            </button>
+
+                            <div className="relative w-full sm:w-64 md:w-80">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-50" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder={`Cari ${activeTab === 'produk' ? 'produk...' : 'layanan...'}`}
+                                    className="w-full pl-10 pr-10 py-2 bg-white/5 border border-purple-500/20 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all h-10"
+                                />
+                                <button
+                                    onClick={() => setIsScannerOpen(true)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                                    title="Scan Barcode"
+                                >
+                                    <ScanLine className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
