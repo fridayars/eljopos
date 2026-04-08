@@ -52,8 +52,9 @@ const startServer = async () => {
         try {
             logger.info({ message: 'Menjalankan database migration...' })
             const { execSync } = require('child_process')
-            // Eksekusi npx sequelize-cli db:migrate sebelum server dijalankan
-            const stdout = execSync('npx sequelize-cli db:migrate', { encoding: 'utf8' })
+            // Hostinger/cPanel environment biasanya tidak mengenali perintah 'npx' global di child_process
+            // Jadi kita gunakan path binary lokal dari module yang diinstall
+            const stdout = execSync('./node_modules/.bin/sequelize db:migrate', { encoding: 'utf8' })
             logger.info({ message: `Migration success:\n${stdout}` })
         } catch (migrationError) {
             logger.error({ 
