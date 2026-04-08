@@ -52,9 +52,9 @@ const startServer = async () => {
         try {
             logger.info({ message: 'Menjalankan database migration...' })
             const { execSync } = require('child_process')
-            // Menambahkan 'node' di depannya (node path-to-script) mengatasi masalah "Permission denied" 
-            // akibat file script yang kehilangan akses execute (chmod +x) di server shared hosting.
-            const stdout = execSync('node ./node_modules/sequelize-cli/lib/sequelize db:migrate', { encoding: 'utf8' })
+            // Menggunakan process.execPath (path absolut ke binary Node yang berjalan) 
+            // karena environment /bin/sh Hostinger (Passenger) sangat minimal & memblokir akses ke global perintah node/npx
+            const stdout = execSync(`"${process.execPath}" ./node_modules/sequelize-cli/lib/sequelize db:migrate`, { encoding: 'utf8' })
             logger.info({ message: `Migration success:\n${stdout}` })
         } catch (migrationError) {
             logger.error({ 
