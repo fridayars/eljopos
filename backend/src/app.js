@@ -48,8 +48,24 @@ const startServer = async () => {
         await sequelize.sequelize.authenticate()
         logger.info({ message: 'Database connected successfully' })
 
-        await sequelize.sequelize.sync()
-        logger.info({ message: 'Database synced' })
+        // ─── Menjalankan Migration di Shared Hosting ───
+        try {
+            logger.info({ message: 'Menjalankan database migration...' })
+            const { execSync } = require('child_process')
+            // Eksekusi npx sequelize-cli db:migrate sebelum server dijalankan
+            const stdout = execSync('npx sequelize-cli db:migrate', { encoding: 'utf8' })
+            logger.info({ message: `Migration success:\n${stdout}` })
+        } catch (migrationError) {
+            logger.error({ 
+                message: 'Migration gagal dijalankan', 
+                error: migrationError.stdout || migrationError.message 
+            })
+        }
+
+        // Catatan: Jika sudah full menggunakan migration, amannya sequelize.sync() dinonaktifkan
+        // agar tidak bentrok dengan tabel migration, atau gunakan environment khusus
+        // await sequelize.sequelize.sync()
+        // logger.info({ message: 'Database synced' })
 
         app.listen(PORT, () => {
             logger.info({ message: `Server running on port ${PORT}` })
