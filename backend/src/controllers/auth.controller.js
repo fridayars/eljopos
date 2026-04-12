@@ -36,4 +36,29 @@ const logout = async (req, res, next) => {
     }
 }
 
-module.exports = { login, logout }
+/**
+ * Switch Store — POST /api/auth/switch-store
+ */
+const switchStore = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1]
+        const { store_id } = req.body
+        const ip = req.ip
+        const userAgent = req.get('User-Agent')
+
+        if (!store_id) {
+            return res.status(400).json({ success: false, message: 'store_id is required' })
+        }
+
+        const data = await authService.switchStore(req.user.user_id, store_id, token, { ip, userAgent })
+
+        return res.json({
+            success: true,
+            data
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+module.exports = { login, logout, switchStore }

@@ -45,12 +45,12 @@ export function CustomerSelector({
                 <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-500">Customer</p>
                     <motion.p
-                        key={selectedCustomer?.id || 'walk-in'}
+                        key={selectedCustomer?.id || 'none'}
                         initial={{ opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-sm text-gray-200 truncate"
+                        className={`text-sm truncate ${selectedCustomer ? 'text-gray-200' : 'text-red-400 font-medium'}`}
                     >
-                        {selectedCustomer?.name || 'Walk-in Customer'}
+                        {selectedCustomer?.name || 'Pilih Customer (Wajib)'}
                     </motion.p>
                 </div>
 

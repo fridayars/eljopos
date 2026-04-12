@@ -25,9 +25,6 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
 import {
-    getSalesReport,
-    getCashFlow,
-    getSalesTable,
     getProductRanking,
     getCustomerRanking,
 } from '../services/reportService';
@@ -165,15 +162,10 @@ export function ReportsPage() {
     const fetchReportData = async () => {
         setIsLoading(true);
         try {
-            const [salesRes, cashRes, tableRes] = await Promise.all([
-                getSalesReport(selectedPeriod),
-                getCashFlow(selectedPeriod),
-                getSalesTable(selectedPeriod),
-            ]);
-
-            if (salesRes.success) setSalesData(salesRes.data);
-            if (cashRes.success) setCashFlowData(cashRes.data);
-            if (tableRes.success) setSalesTableData(tableRes.data);
+            // Temporary: API and data resource are not complete, set to empty for now
+            setSalesData([]);
+            setCashFlowData([]);
+            setSalesTableData([]);
         } catch (error) {
             toast.error('Gagal memuat data laporan');
         } finally {

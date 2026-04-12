@@ -12,4 +12,7 @@ router.post('/login', loginValidation, validate, authController.login)
 // POST /api/auth/logout
 router.post('/logout', authMiddleware, authController.logout)
 
+// POST /api/auth/switch-store
+router.post('/switch-store', authMiddleware, authController.switchStore)
+
 module.exports = router

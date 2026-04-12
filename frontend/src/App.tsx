@@ -46,13 +46,7 @@ const App = () => {
         {/* Print Route without DashboardLayout */}
         <Route
           path="/print-invoice/:id"
-          element={
-            isAuthenticated ? (
-              <InvoicePrintPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
+          element={<InvoicePrintPage />}
         />
 
         {/* Protected Routes */}

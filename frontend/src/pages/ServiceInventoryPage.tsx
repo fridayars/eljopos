@@ -15,6 +15,8 @@ import {
     getProducts,
     updateServiceStatus,
     getServiceDetail,
+    updateServiceCategory,
+    removeServiceCategory,
 } from '../services/productService';
 import type {
     ServiceCategory,
@@ -67,6 +69,7 @@ export function ServiceInventoryPage() {
     const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
     const [isServiceDetailModalOpen, setIsServiceDetailModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
 
     // Selected editable data
     const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
@@ -84,6 +87,7 @@ export function ServiceInventoryPage() {
     });
     const [serviceToView, setServiceToView] = useState<ServiceProduct | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<{ id: string; name: string } | null>(null);
+    const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
 
     // Initial load
     useEffect(() => {
@@ -140,8 +144,13 @@ export function ServiceInventoryPage() {
     const handleSaveCategory = async (id: string, updates: { name: string; description?: string }) => {
         try {
             if (id) {
-                // TODO: backend update not implemented yet
-                toast.error('Update kategori belum tersedia');
+                const res = await updateServiceCategory(id, updates);
+                if (res.success && res.data) {
+                    setCategories(categories.map((c) => (c.id === id ? res.data! : c)));
+                    toast.success('Kategori layanan berhasil diperbarui');
+                } else {
+                    toast.error('Gagal memperbarui kategori');
+                }
             } else {
                 const res = await addServiceCategory({ name: updates.name, description: updates.description || '' });
                 if (res.success && res.data) {
@@ -156,8 +165,29 @@ export function ServiceInventoryPage() {
         }
     };
 
-    const handleDeleteCategory = async () => {
-        toast.error('Hapus kategori belum tersedia');
+    const handleDeleteCategoryClick = (id: string) => {
+        const cat = categories.find(c => c.id === id);
+        if (cat) {
+            setCategoryToDelete(cat);
+            setIsDeleteCategoryModalOpen(true);
+        }
+    };
+
+    const handleConfirmDeleteCategory = async () => {
+        if (!categoryToDelete) return;
+        try {
+            const res = await removeServiceCategory(categoryToDelete.id);
+            if (res.success) {
+                setCategories(categories.filter((c) => c.id !== categoryToDelete.id));
+                toast.success('Kategori layanan berhasil dihapus');
+            } else {
+                toast.error(res.message || 'Gagal menghapus kategori (pastikan kategori tidak digunakan oleh layanan)');
+            }
+        } catch {
+            toast.error('Gagal menghapus kategori layanan');
+        }
+        setIsDeleteCategoryModalOpen(false);
+        setCategoryToDelete(null);
     };
 
     // --- Service Actions ---
@@ -362,7 +392,7 @@ export function ServiceInventoryPage() {
                                 onSearchChange={setSearchCategory}
                                 onAdd={handleOpenAddCategory}
                                 onEdit={handleOpenEditCategory}
-                                onDelete={handleDeleteCategory}
+                                onDelete={handleDeleteCategoryClick}
                             />
                         </motion.div>
                     )}
@@ -443,6 +473,13 @@ export function ServiceInventoryPage() {
                 onClose={() => { setIsDeleteModalOpen(false); setServiceToDelete(null); }}
                 onConfirm={handleConfirmDelete}
                 itemName={serviceToDelete?.name || ''}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteCategoryModalOpen}
+                onClose={() => { setIsDeleteCategoryModalOpen(false); setCategoryToDelete(null); }}
+                onConfirm={handleConfirmDeleteCategory}
+                itemName={categoryToDelete?.name || ''}
             />
         </div>
     );

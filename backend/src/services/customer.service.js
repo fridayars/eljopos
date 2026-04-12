@@ -66,6 +66,12 @@ const createCustomer = async (data) => {
             phone: data.phone,
             email: data.email || null,
             address: data.address || null,
+            province_code: data.province_code || null,
+            province_name: data.province_name || null,
+            regency_code: data.regency_code || null,
+            regency_name: data.regency_name || null,
+            district_code: data.district_code || null,
+            district_name: data.district_name || null,
             is_active: true
         });
 
@@ -107,7 +113,13 @@ const updateCustomer = async (id, data) => {
             name: data.name !== undefined ? data.name : customer.name,
             phone: data.phone !== undefined ? data.phone : customer.phone,
             email: data.email !== undefined ? data.email : customer.email,
-            address: data.address !== undefined ? data.address : customer.address
+            address: data.address !== undefined ? data.address : customer.address,
+            province_code: data.province_code !== undefined ? data.province_code : customer.province_code,
+            province_name: data.province_name !== undefined ? data.province_name : customer.province_name,
+            regency_code: data.regency_code !== undefined ? data.regency_code : customer.regency_code,
+            regency_name: data.regency_name !== undefined ? data.regency_name : customer.regency_name,
+            district_code: data.district_code !== undefined ? data.district_code : customer.district_code,
+            district_name: data.district_name !== undefined ? data.district_name : customer.district_name
         });
 
         logger.info({ type: 'customer_updated', customer_id: id });

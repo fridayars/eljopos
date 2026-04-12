@@ -40,6 +40,7 @@ export interface CreateTransactionPayload {
     discount?: number
     payment_method: PaymentMethodPayload[]
     items: TransactionItemPayload[]
+    transaction_date?: string  // custom date (YYYY-MM-DD), used when casier.changedate permission granted
 }
 
 export interface CreateTransactionResponse {

@@ -15,7 +15,10 @@ interface RoleModalProps {
 const PERMISSION_GROUPS = [
     {
         label: 'Kasir',
-        items: [{ value: 'casier', label: 'Akses Kasir' }]
+        items: [
+            { value: 'casier', label: 'Akses Kasir' },
+            { value: 'casier.changedate', label: 'Ubah Tanggal' },
+        ]
     },
     {
         label: 'Produk',

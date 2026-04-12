@@ -196,3 +196,27 @@ h6 {
 [data-theme="light"] .placeholder\:text-gray-600::placeholder { color: #AAAABB !important; }
 [data-theme="light"] .placeholder-gray-500::placeholder       { color: #AAAABB !important; }
 [data-theme="light"] .placeholder-gray-600::placeholder       { color: #AAAABB !important; }
+
+/* ========================================
+   Date Input — fix calendar icon color
+   'color-scheme' tells the browser which
+   native UI (icons, scrollbars) palette to use
+   ======================================== */
+
+/* Dark mode default: light calendar icon */
+:root input[type="date"],
+:root input[type="datetime-local"],
+:root input[type="month"],
+:root input[type="week"],
+:root input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Light mode: dark calendar icon */
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="datetime-local"],
+[data-theme="light"] input[type="month"],
+[data-theme="light"] input[type="week"],
+[data-theme="light"] input[type="time"] {
+  color-scheme: light;
+}

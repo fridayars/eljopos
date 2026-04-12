@@ -1,6 +1,6 @@
 import { Bell, ChevronDown, Store as StoreIcon, LogOut, User, Loader2, Sun, Moon } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { logout as logoutApi, getStores } from '../services/authService'
+import { logout as logoutApi, getStores, switchStore as switchStoreApi } from '../services/authService'
 import type { Store } from '../services/authService'
 import { useTheme } from '../hooks/useTheme'
 
@@ -90,23 +90,32 @@ export function TopBar({ onLogout, onStoreChange }: TopBarProps) {
         }
     }
 
-    const handleStoreSwitch = (store: Store) => {
+    const handleStoreSwitch = async (store: Store) => {
         if (store.id === user?.store_id) {
             setIsStoreDropdownOpen(false)
             return
         }
 
-        // Update localStorage
-        const updatedUser = { ...user!, store_id: store.id }
-        localStorage.setItem('user', JSON.stringify(updatedUser))
-        localStorage.setItem('store_name', store.name)
+        try {
+            const res = await switchStoreApi(store.id)
+            if (res.success && res.data) {
+                const updatedUser = { ...user!, ...res.data.user, store_id: store.id }
+                
+                // Update localStorage with new token and user data
+                localStorage.setItem('token', res.data.token)
+                localStorage.setItem('user', JSON.stringify(updatedUser))
+                localStorage.setItem('store_name', store.name)
 
-        setStoreName(store.name)
-        setUser(updatedUser)
-        setIsStoreDropdownOpen(false)
+                setStoreName(store.name)
+                setUser(updatedUser)
+                setIsStoreDropdownOpen(false)
 
-        if (onStoreChange) {
-            onStoreChange(store.id, store.name)
+                if (onStoreChange) {
+                    onStoreChange(store.id, store.name)
+                }
+            }
+        } catch (error) {
+            console.error('Failed to switch store:', error)
         }
     }
 

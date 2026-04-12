@@ -8,6 +8,13 @@ router.get('/categories', authMiddleware, layananController.getServiceCategories
 
 // POST /api/master/layanan/categories
 router.post('/categories', authMiddleware, layananController.createServiceCategory);
+
+// PUT /api/master/layanan/categories/:id
+router.put('/categories/:id', authMiddleware, layananController.updateServiceCategory);
+
+// DELETE /api/master/layanan/categories/:id
+router.delete('/categories/:id', authMiddleware, layananController.deleteServiceCategory);
+
 // GET /api/master/layanan
 router.get('/', authMiddleware, layananController.getAllServices);
 

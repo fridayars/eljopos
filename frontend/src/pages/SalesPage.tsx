@@ -140,6 +140,21 @@ export function SalesPage() {
         return ''
     })
 
+    // Check if user has casier.changedate permission
+    const [canChangeDate] = useState<boolean>(() => {
+        try {
+            const token = localStorage.getItem('token')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                const perms: string[] = payload.permissions || []
+                return perms.includes('casier.changedate')
+            }
+        } catch {
+            // ignore
+        }
+        return false
+    })
+
     // Fetch Items with Pagination and Search
     const fetchItems = async (targetPage: number, reset: boolean = false) => {
         if (isLoading) return
@@ -294,7 +309,7 @@ export function SalesPage() {
 
     const handleRemoveCustomer = () => {
         setSelectedCustomer(null)
-        toast.info('Customer dihapus - transaksi akan dicatat sebagai Walk-in')
+        toast.info('Customer dihapus - Silakan pilih customer untuk melanjutkan pembayaran')
     }
 
     const handleAddCustomer = async (customerData: Omit<Customer, 'id'>) => {
@@ -307,6 +322,12 @@ export function SalesPage() {
                 phone: customerData.phone,
                 email: customerData.email,
                 address: customerData.address,
+                province_code: customerData.province_code,
+                province_name: customerData.province_name,
+                regency_code: customerData.regency_code,
+                regency_name: customerData.regency_name,
+                district_code: customerData.district_code,
+                district_name: customerData.district_name,
             })
             toast.success(`${response.data.name} berhasil ditambahkan dan dipilih`)
         } else {
@@ -346,6 +367,7 @@ export function SalesPage() {
             total_amount: grandTotal,
             payment_method: data.payments.map(p => ({ method: p.method, amount: p.amount })),
             items: transactionItems,
+            transaction_date: data.date,
         }
 
         const response = await createTransaction(payload)
@@ -505,6 +527,7 @@ export function SalesPage() {
                         ? (cart.reduce((sum, item) => sum + item.price * item.quantity, 0) * discountValue) / 100
                         : discountValue),
                 )}
+                canChangeDate={canChangeDate}
                 onConfirm={handleConfirmPayment}
             />
 

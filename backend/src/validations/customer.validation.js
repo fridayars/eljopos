@@ -25,7 +25,14 @@ const createCustomerValidation = [
         .optional({ checkFalsy: true })
         .isString()
         .withMessage('Address must be a string')
-        .trim()
+        .trim(),
+
+    body('province_code').optional({ checkFalsy: true }).isString().trim(),
+    body('province_name').optional({ checkFalsy: true }).isString().trim(),
+    body('regency_code').optional({ checkFalsy: true }).isString().trim(),
+    body('regency_name').optional({ checkFalsy: true }).isString().trim(),
+    body('district_code').optional({ checkFalsy: true }).isString().trim(),
+    body('district_name').optional({ checkFalsy: true }).isString().trim()
 ]
 
 const updateCustomerValidation = [
@@ -51,7 +58,14 @@ const updateCustomerValidation = [
         .optional({ checkFalsy: true })
         .isString()
         .withMessage('Address must be a string')
-        .trim()
+        .trim(),
+
+    body('province_code').optional({ checkFalsy: true }).isString().trim(),
+    body('province_name').optional({ checkFalsy: true }).isString().trim(),
+    body('regency_code').optional({ checkFalsy: true }).isString().trim(),
+    body('regency_name').optional({ checkFalsy: true }).isString().trim(),
+    body('district_code').optional({ checkFalsy: true }).isString().trim(),
+    body('district_name').optional({ checkFalsy: true }).isString().trim()
 ]
 
 module.exports = { createCustomerValidation, updateCustomerValidation }

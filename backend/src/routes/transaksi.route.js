@@ -9,7 +9,7 @@ const validate = require('../middlewares/validate.middleware');
 router.post('/', authMiddleware, createTransaksiValidation, validate, transaksiController.createTransaksi);
 
 // GET /api/transaksi/:id
-router.get('/:id', authMiddleware, transaksiController.getTransaksiDetail);
+router.get('/:id', transaksiController.getTransaksiDetail);
 
 // DELETE /api/transaksi/:id
 router.delete('/:id', authMiddleware, transaksiController.deleteTransaksi);

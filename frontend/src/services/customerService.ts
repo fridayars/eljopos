@@ -6,6 +6,12 @@ export interface Customer {
     phone: string
     email?: string
     address?: string
+    province_code?: string
+    province_name?: string
+    regency_code?: string
+    regency_name?: string
+    district_code?: string
+    district_name?: string
 }
 
 export interface CustomerPagination {

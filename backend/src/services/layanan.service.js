@@ -173,6 +173,63 @@ const createServiceCategory = async (data) => {
 };
 
 /**
+ * Update an existing service category
+ * @param {string} id
+ * @param {object} data
+ */
+const updateServiceCategory = async (id, data) => {
+    try {
+        const category = await KategoriLayanan.findByPk(id);
+        if (!category) {
+            throw new AppError('Service category not found', 404);
+        }
+
+        const errors = [];
+        if (data.name !== undefined && !data.name) errors.push({ field: 'name', message: 'Name cannot be empty' });
+        if (errors.length > 0) throw new AppError('Validation error', 400, errors);
+
+        await category.update({
+            name: data.name !== undefined ? data.name : category.name,
+            description: data.description !== undefined ? data.description : category.description,
+            is_active: data.is_active !== undefined ? data.is_active : category.is_active
+        });
+
+        return { id: category.id, name: category.name, description: category.description, is_active: category.is_active };
+    } catch (error) {
+        logger.error({ type: 'update_service_category_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to update service category: ' + error.message, 500);
+    }
+};
+
+/**
+ * Delete a service category
+ * @param {string} id
+ */
+const deleteServiceCategory = async (id) => {
+    try {
+        const category = await KategoriLayanan.findByPk(id);
+        if (!category) {
+            throw new AppError('Service category not found', 404);
+        }
+
+        // Check if there are services using this category
+        const usedCount = await Layanan.count({ where: { kategori_layanan_id: id } });
+        if (usedCount > 0) {
+            throw new AppError('Kategori masih digunakan oleh layanan aktif', 400);
+        }
+
+        await category.destroy();
+
+        return { message: 'Service category deleted successfully' };
+    } catch (error) {
+        logger.error({ type: 'delete_service_category_failed', message: error.message, stack: error.stack });
+        if (error instanceof AppError) throw error;
+        throw new AppError('Failed to delete service category: ' + error.message, 500);
+    }
+};
+
+/**
  * Helper: link products to a service by SKU array
  * @param {string} layananId
  * @param {Array} products - [{sku: 'xxx'}, ...]
@@ -422,6 +479,8 @@ module.exports = {
     getAllServices,
     getServiceCategoriesList,
     createServiceCategory,
+    updateServiceCategory,
+    deleteServiceCategory,
     createService,
     updateService,
     deleteService,

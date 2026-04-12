@@ -10,12 +10,16 @@ const { JENIS_MUTASI_STOK } = require('../utils/enums');
  * Generate receipt number format: INV/YYYYMMDD/NNN
  * Auto-increment per hari
  */
-const generateReceiptNumber = async (transaction) => {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+const generateReceiptNumber = async (transaction, dateOverride) => {
+    const base = dateOverride ? new Date(dateOverride) : new Date();
+    // Use local time components to avoid UTC offset shifting the date
+    const y = base.getFullYear();
+    const m = String(base.getMonth() + 1).padStart(2, '0');
+    const d = String(base.getDate()).padStart(2, '0');
+    const dateStr = `${y}${m}${d}`;
     const prefix = `INV/${dateStr}/`;
 
-    // Cari nomor terakhir hari ini
+    // Cari nomor terakhir pada tanggal ini
     const lastTransaksi = await Transaksi.findOne({
         where: {
             receipt_number: {
@@ -48,7 +52,18 @@ const createTransaksi = async (data, userId) => {
     const t = await sequelize.transaction();
 
     try {
-        const { store_id, customer_id, total_amount, subtotal, discount_type, discount, payment_method, items } = data;
+        const { store_id, customer_id, total_amount, subtotal, discount_type, discount, payment_method, items, transaction_date } = data;
+
+        // Resolve custom date (must not be in the future)
+        let resolvedDate = null;
+        if (transaction_date) {
+            const parsed = new Date(`${transaction_date}T00:00:00`);
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            if (!isNaN(parsed.getTime()) && parsed <= todayStart) {
+                resolvedDate = parsed;
+            }
+        }
 
         // 1. Validasi jika total_amount 0 (Strict Validation)
         if (parseFloat(total_amount) === 0) {
@@ -144,10 +159,10 @@ const createTransaksi = async (data, userId) => {
         }
 
         // 3. Generate receipt number
-        const receiptNumber = await generateReceiptNumber(t);
+        const receiptNumber = await generateReceiptNumber(t, resolvedDate);
 
         // 4. Insert transaksi
-        const transaksi = await Transaksi.create({
+        const transaksiData = {
             store_id,
             user_id: userId,
             customer_id: customer_id || null,
@@ -157,7 +172,15 @@ const createTransaksi = async (data, userId) => {
             discount: discount || 0,
             total_amount,
             payment_status: 'PAID'
-        }, { transaction: t });
+        };
+
+        // If a custom past date is provided, override createdAt
+        if (resolvedDate) {
+            transaksiData.created_at = resolvedDate;
+            transaksiData.createdAt = resolvedDate;
+        }
+
+        const transaksi = await Transaksi.create(transaksiData, { transaction: t });
 
         // 5. Insert detail items (bulk)
         const detailRecords = items.map(item => ({
@@ -362,8 +385,10 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
             raw: true
         });
 
+        const totalRevenue = parseFloat(summary.total_revenue) || 0;
+
         // 1b. Payment Summary — breakdown per method
-        const paymentSummary = await TransaksiPayment.findAll({
+        const paymentSummaryData = await TransaksiPayment.findAll({
             attributes: [
                 ['payment_method', 'method'],
                 [fn('SUM', col('nominal')), 'total']
@@ -378,6 +403,30 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
             group: ['payment_method'],
             raw: true
         });
+
+        let totalGrossPayment = 0;
+        const processedPaymentSummary = paymentSummaryData.map(p => {
+            const total = parseFloat(p.total) || 0;
+            totalGrossPayment += total;
+            return {
+                method: p.method,
+                total
+            };
+        });
+
+        const totalChange = totalGrossPayment - totalRevenue;
+
+        if (totalChange > 0 && processedPaymentSummary.length > 0) {
+            let cashMethod = processedPaymentSummary.find(p => 
+                p.method.toLowerCase() === 'cash' || p.method.toLowerCase() === 'tunai'
+            );
+            if (cashMethod) {
+                cashMethod.total -= totalChange;
+            } else {
+                processedPaymentSummary.sort((a, b) => b.total - a.total);
+                processedPaymentSummary[0].total -= totalChange;
+            }
+        }
 
         // 2. Paginated items
         const { count: total, rows: transaksiList } = await Transaksi.findAndCountAll({
@@ -428,11 +477,11 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
 
         return {
             summary: {
-                total_revenue: parseFloat(summary.total_revenue) || 0,
+                total_revenue: totalRevenue,
                 total_transactions: parseInt(summary.total_transactions, 10) || 0,
-                payment_summary: paymentSummary.map(p => ({
+                payment_summary: processedPaymentSummary.map(p => ({
                     method: p.method.replace('_', ' '),
-                    total: parseFloat(p.total) || 0
+                    total: p.total
                 }))
             },
             items,

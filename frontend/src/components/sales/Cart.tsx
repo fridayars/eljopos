@@ -218,12 +218,17 @@ export function Cart({
                         </button>
                         <button
                             onClick={onCheckout}
-                            disabled={items.length === 0 || isLoading}
+                            disabled={items.length === 0 || !selectedCustomer || isLoading}
                             className="flex-1 h-11 md:h-12 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base cursor-pointer"
                         >
                             {isLoading ? 'Memproses...' : 'Bayar'}
                         </button>
                     </div>
+                    {items.length > 0 && !selectedCustomer && (
+                        <p className="text-[10px] md:text-xs text-red-400 text-center mt-2 animate-pulse font-medium">
+                            * Silakan pilih customer terlebih dahulu untuk melanjutkan pembayaran
+                        </p>
+                    )}
                 </div>
             </div>
         </>

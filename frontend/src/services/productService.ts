@@ -524,7 +524,9 @@ export const getServiceCategories = async (): Promise<{ success: boolean; data: 
 
 export const addServiceCategory = async (category: Omit<ServiceCategory, 'id'>): Promise<{ success: boolean; data?: ServiceCategory }> => {
     try {
-        const response = await api.post('/master/layanan/categories', category)
+        const storeId = getCurrentStoreId();
+        const payload = { ...category, store_id: storeId };
+        const response = await api.post('/master/layanan/categories', payload)
         const cat = response.data?.data
         if (cat) {
             return { success: true, data: { id: cat.id, name: cat.name, description: cat.description || '' } }
@@ -536,16 +538,29 @@ export const addServiceCategory = async (category: Omit<ServiceCategory, 'id'>):
 }
 
 export const handleDeleteCategoryAsync = async (_id: string) => {
-    console.warn('Hbagai ini belum tersedia');
+    console.warn('Fungsi ini sudah tidak dipakai, gunakan removeServiceCategory');
 };
-export const updateServiceCategory = async (_id: string, _updates: Partial<ServiceCategory>): Promise<{ success: boolean; data?: ServiceCategory }> => {
-    // TODO: implement backend update kategori layanan endpoint
-    return { success: false }
+
+export const updateServiceCategory = async (id: string, updates: Partial<ServiceCategory>): Promise<{ success: boolean; data?: ServiceCategory; message?: string }> => {
+    try {
+        const storeId = getCurrentStoreId();
+        const payload = { ...updates, store_id: storeId };
+        const response = await api.put(`/master/layanan/categories/${id}`, payload);
+        return response.data;
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal memperbarui kategori layanan' };
+    }
 }
 
-export const removeServiceCategory = async (_id: string): Promise<{ success: boolean }> => {
-    // TODO: implement backend delete kategori layanan endpoint
-    return { success: false }
+export const removeServiceCategory = async (id: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+        const storeId = getCurrentStoreId();
+        const url = storeId ? `/master/layanan/categories/${id}?store_id=${storeId}` : `/master/layanan/categories/${id}`;
+        const response = await api.delete(url);
+        return response.data;
+    } catch (error: any) {
+        return { success: false, message: error.response?.data?.message || 'Gagal menghapus kategori layanan' };
+    }
 }
 
 interface GetServiceProductsParams {

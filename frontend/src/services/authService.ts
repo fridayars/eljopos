@@ -113,3 +113,11 @@ export const logout = async (): Promise<{ success: boolean }> => {
 
   return { success: true }
 }
+
+/**
+ * Switch store — get new token from backend with updated store_id
+ */
+export const switchStore = async (storeId: string): Promise<LoginResponse> => {
+  const response = await api.post('/auth/switch-store', { store_id: storeId })
+  return response.data
+}

@@ -55,6 +55,32 @@ const createServiceCategory = async (req, res, next) => {
 };
 
 /**
+ * Update Service Category — PUT /api/master/layanan/categories/:id
+ */
+const updateServiceCategory = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await layananService.updateServiceCategory(id, req.body);
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Delete Service Category — DELETE /api/master/layanan/categories/:id
+ */
+const deleteServiceCategory = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await layananService.deleteServiceCategory(id);
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Create Service — POST /api/master/layanan
  */
 const createService = async (req, res, next) => {
@@ -163,6 +189,8 @@ module.exports = {
     getAllServices,
     getServiceCategories,
     createServiceCategory,
+    updateServiceCategory,
+    deleteServiceCategory,
     createService,
     updateService,
     deleteService,

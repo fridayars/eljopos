@@ -96,21 +96,23 @@ interface PaymentModalProps {
     isOpen: boolean
     onClose: () => void
     grandTotal: number
+    canChangeDate?: boolean
     onConfirm: (data: { date: string; cashbox: string; cashPaid: number; payments: Payment[] }) => void
 }
 
-export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, grandTotal, canChangeDate = false, onConfirm }: PaymentModalProps) {
     const [date, setDate] = useState('')
     const [payments, setPayments] = useState<Payment[]>([
         { method: 'CASH', amount: 0 }
     ])
 
+    const today = new Date().toISOString().split('T')[0]
+
     useEffect(() => {
         // Set current date and reset payments when modal opens
         if (isOpen) {
-            const today = new Date().toISOString().split('T')[0]
             setDate(today)
-            setPayments([{ method: 'CASH', amount: 0 }])
+            setPayments([{ method: 'CASH', amount: grandTotal }])
         }
     }, [isOpen, grandTotal])
 
@@ -198,12 +200,23 @@ export function PaymentModal({ isOpen, onClose, grandTotal, onConfirm }: Payment
                                     <label className="flex items-center gap-2 text-sm text-gray-400">
                                         <Calendar className="w-4 h-4" />
                                         Tanggal Transaksi
+                                        {!canChangeDate && (
+                                            <span className="text-xs text-gray-600">(terkunci)</span>
+                                        )}
                                     </label>
                                     <input
                                         type="date"
                                         value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className="w-full h-11 md:h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-300 focus:outline-none focus:border-blue-500/50 transition-all"
+                                        max={today}
+                                        onChange={(e) => {
+                                            if (canChangeDate) setDate(e.target.value)
+                                        }}
+                                        disabled={!canChangeDate}
+                                        className={`w-full h-11 md:h-12 border border-purple-500/20 rounded-xl px-4 text-gray-300 focus:outline-none focus:border-blue-500/50 transition-all ${
+                                            canChangeDate
+                                                ? 'bg-white/5 cursor-pointer'
+                                                : 'bg-white/[0.02] opacity-60 cursor-not-allowed'
+                                        }`}
                                     />
                                 </div>
 
