@@ -295,7 +295,7 @@ export function TransactionReport() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-500/10">
-                            {isLoading ? (
+                            {isLoading && transactions.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="py-12 text-center">
                                         <div className="flex items-center justify-center gap-2 text-gray-500">
