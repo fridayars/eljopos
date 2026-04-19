@@ -74,7 +74,7 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                    className="relative w-full max-w-md max-h-[90vh] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
                     style={{ background: 'var(--surface-modal)' }}
                 >
                     <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02]">
@@ -92,7 +92,7 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
                         </button>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-6 overflow-y-auto">
                         <form id="arusUangForm" onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>

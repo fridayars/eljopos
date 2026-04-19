@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, Wallet, Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { arusUangService } from '../services/arusUangService'
@@ -12,7 +12,7 @@ export function ArusUangPage() {
     const [hasMore, setHasMore] = useState(true)
     const [isLoading, setIsLoading] = useState(true)
     const [isSyncing, setIsSyncing] = useState(false)
-    
+
     // Filters
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
@@ -62,25 +62,23 @@ export function ArusUangPage() {
     }, [fetchData])
 
     // Intersection Observer for Infinite Scroll
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMore && !isLoading) {
-                    fetchData(page + 1, false)
-                }
-            },
-            { threshold: 0.1 }
-        )
+    const observer = useRef<IntersectionObserver | null>(null)
+    const loadMoreTriggerRef = useCallback((node: HTMLDivElement | null) => {
+        if (isLoading) return
+        if (observer.current) observer.current.disconnect()
 
-        const loadMoreTrigger = document.getElementById('load-more-trigger')
-        if (loadMoreTrigger) observer.observe(loadMoreTrigger)
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                fetchData(page + 1, false)
+            }
+        }, { threshold: 0.1 })
 
-        return () => observer.disconnect()
-    }, [hasMore, isLoading, page, fetchData])
+        if (node) observer.current.observe(node)
+    }, [isLoading, hasMore, page, fetchData])
 
     const handleSync = async () => {
         if (!window.confirm('Apakah Anda yakin ingin menyinkronkan data histori transaksi ke ledger Arus Uang? Proses ini aman dan hanya menambahkan data yang belum ada.')) return
-        
+
         setIsSyncing(true)
         try {
             const result = await arusUangService.syncData()
@@ -113,9 +111,9 @@ export function ArusUangPage() {
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-y-auto p-6 gap-6 relative" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+        <div className="flex-1 flex flex-col h-full p-6 gap-6 relative" style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: 0, overflow: 'hidden' }}>
             {/* Header & Actions */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" style={{ flexShrink: 0 }}>
                 <div>
                     <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">
                         Arus Uang
@@ -158,7 +156,7 @@ export function ArusUangPage() {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ flexShrink: 0 }}>
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="p-5 rounded-2xl border border-white/5 relative overflow-hidden" style={{ background: 'var(--surface-color)' }}>
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <ArrowDownCircle className="w-16 h-16 text-emerald-500" />
@@ -168,7 +166,7 @@ export function ArusUangPage() {
                         {summary ? formatCurrency(summary.total_in) : 'Rp 0'}
                     </p>
                 </motion.div>
-                
+
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="p-5 rounded-2xl border border-white/5 relative overflow-hidden" style={{ background: 'var(--surface-color)' }}>
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <ArrowUpCircle className="w-16 h-16 text-red-500" />
@@ -191,33 +189,33 @@ export function ArusUangPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl border border-white/5" style={{ background: 'var(--surface-color)' }}>
+            <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl border border-white/5" style={{ background: 'var(--surface-color)', flexShrink: 0 }}>
                 <div className="flex-1">
                     <label className="block text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>Dari Tanggal</label>
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={startDate}
                         onChange={e => setStartDate(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none" 
+                        className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none"
                         style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
                     />
                 </div>
                 <div className="flex-1">
                     <label className="block text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>Sampai Tanggal</label>
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={endDate}
                         onChange={e => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none" 
+                        className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none"
                         style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
                     />
                 </div>
                 <div className="flex-1">
                     <label className="block text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>Jenis Transaksi</label>
-                    <select 
+                    <select
                         value={typeFilter}
                         onChange={e => setTypeFilter(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none" 
+                        className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none"
                         style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
                     >
                         <option value="">Semua Jenis</option>
@@ -226,7 +224,7 @@ export function ArusUangPage() {
                     </select>
                 </div>
                 <div className="flex items-end">
-                    <button 
+                    <button
                         onClick={() => { setStartDate(''); setEndDate(''); setTypeFilter(''); }}
                         className="px-4 py-2 rounded-xl text-sm border border-white/10 hover:bg-white/5"
                     >
@@ -236,8 +234,8 @@ export function ArusUangPage() {
             </div>
 
             {/* Data Table */}
-            <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'var(--surface-color)' }}>
-                <div className="overflow-x-auto">
+            <div className="rounded-2xl border border-white/5 flex flex-col" style={{ background: 'var(--surface-color)', flex: '1 1 0%', minHeight: 0, overflow: 'hidden' }}>
+                <div style={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr style={{ background: 'var(--surface-subtle)', color: 'var(--muted-foreground)' }}>
@@ -267,7 +265,7 @@ export function ArusUangPage() {
                                 data.map((item) => (
                                     <tr key={item.id} className="border-t border-white/5 transition-colors hover:bg-white/[0.02]">
                                         <td className="p-4 text-sm whitespace-nowrap">
-                                            {new Date(item.date).toLocaleDateString('id-ID', { year:'numeric', month:'short', day:'numeric' })}
+                                            {new Date(item.date).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })}
                                         </td>
                                         <td className="p-4 text-sm">
                                             <div className="font-medium">{item.description || '-'}</div>
@@ -292,9 +290,9 @@ export function ArusUangPage() {
                                         </td>
                                         <td className="p-4 text-sm text-center">
                                             {item.source === 'MANUAL' && (
-                                                ((item.type === 'IN' && hasPermission('arusuang.delete_in')) || 
-                                                 (item.type === 'OUT' && hasPermission('arusuang.delete_out'))) && (
-                                                    <button 
+                                                ((item.type === 'IN' && hasPermission('arusuang.delete_in')) ||
+                                                    (item.type === 'OUT' && hasPermission('arusuang.delete_out'))) && (
+                                                    <button
                                                         onClick={() => handleDelete(item.id)}
                                                         className="p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors"
                                                         title="Hapus Manual"
@@ -312,7 +310,7 @@ export function ArusUangPage() {
                 </div>
 
                 {/* Infinite Scroll Trigger */}
-                <div id="load-more-trigger" className="h-20 flex flex-col items-center justify-center border-t border-white/5 shrink-0">
+                <div ref={loadMoreTriggerRef} id="load-more-trigger" className="h-20 flex flex-col items-center justify-center border-t border-white/5 shrink-0">
                     {isLoading && (
                         <div className="flex items-center gap-2" style={{ color: 'var(--muted-foreground)' }}>
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -323,7 +321,7 @@ export function ArusUangPage() {
             </div>
 
             {isModalOpen && (
-                <ArusUangModal 
+                <ArusUangModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     type={modalType}

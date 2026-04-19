@@ -39,9 +39,9 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
 
             <Sidebar activeTab={pathname || 'dashboard'} onTabChange={handleTabChange} />
 
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div className="flex-1 flex flex-col overflow-hidden relative" style={{ minHeight: 0 }}>
                 <TopBar onLogout={onLogout} onStoreChange={handleStoreChange} />
-                <main className="flex-1 flex overflow-hidden">
+                <main className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
                     <Outlet />
                 </main>
             </div>
