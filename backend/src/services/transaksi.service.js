@@ -1,5 +1,5 @@
 const db = require('../models');
-const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, ProdukLayanan, sequelize } = db;
+const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, ProdukLayanan, ArusUang, sequelize } = db;
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 const { Op, fn, col, literal } = require('sequelize');
@@ -204,6 +204,43 @@ const createTransaksi = async (data, userId) => {
         }));
 
         await TransaksiPayment.bulkCreate(paymentRecords, { transaction: t });
+
+        // 6b. Insert ke ArusUang (Ledger Kas)
+        let paymentsToSync = payment_method.map(pm => ({
+            method: pm.method,
+            nominal: parseFloat(pm.amount)
+        }));
+        const totalGrossPayment = paymentsToSync.reduce((sum, pm) => sum + pm.nominal, 0);
+        const totalRevenue = parseFloat(total_amount);
+        const totalChange = totalGrossPayment - totalRevenue;
+        
+        if (totalChange > 0 && paymentsToSync.length > 0) {
+            let cashMethod = paymentsToSync.find(p => 
+                p.method.toLowerCase() === 'cash' || p.method.toLowerCase() === 'tunai'
+            );
+            if (cashMethod) {
+                cashMethod.nominal -= totalChange;
+            } else {
+                paymentsToSync.sort((a, b) => b.nominal - a.nominal);
+                paymentsToSync[0].nominal -= totalChange;
+            }
+        }
+
+        const arusUangTime = resolvedDate || new Date();
+        const arusUangRecords = paymentsToSync.map(pm => ({
+            store_id,
+            type: 'IN',
+            source: 'TRANSAKSI',
+            reference_id: transaksi.id,
+            payment_method: pm.method,
+            amount: pm.nominal,
+            description: `Penjualan ${receiptNumber}`,
+            date: arusUangTime,
+            created_by: userId,
+            created_at: arusUangTime,
+            updated_at: arusUangTime
+        }));
+        await ArusUang.bulkCreate(arusUangRecords, { transaction: t });
 
         // 7. Kurangi stok produk (direct product items)
         const mutasiMap = new Map();
@@ -591,6 +628,12 @@ const deleteTransaksi = async (transaksiId) => {
         if (mutasiData.length > 0) {
             await insertMutasiStok(mutasiData, { transaction: t });
         }
+
+        // 2b. Hapus dari Arus Uang Ledger
+        await ArusUang.destroy({
+            where: { reference_id: transaksiId, source: 'TRANSAKSI' },
+            transaction: t
+        });
 
         // 3. Soft-delete transaksi
         await transaksi.destroy({ transaction: t });

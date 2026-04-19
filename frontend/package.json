@@ -10,7 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@point-of-sale/receipt-printer-encoder": "^3.0.3",
     "axios": "^1.13.5",
+    "esc-pos-encoder": "^3.0.0",
+    "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.575.0",
     "motion": "^12.34.3",

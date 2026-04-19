@@ -3,6 +3,7 @@ env
 backend/node_modules/
 backend/.env
 backend/docker-compose.yml
+backend/logs/
 
 #frontend
 frontend/node_modules/

@@ -55,7 +55,7 @@ export function TransactionSuccessModal({
                                     <CheckCircle2 className="w-12 h-12 text-green-400" />
                                 </div>
                             </div>
-                            
+
                             <h2 className="text-2xl font-bold text-gray-200 mb-2">Transaksi Berhasil!</h2>
                             <p className="text-gray-400 mb-6">Invoice: <span className="text-cyan-400 font-medium">{invoiceNumber}</span></p>
 
@@ -87,9 +87,9 @@ export function TransactionSuccessModal({
                                         if (phone.startsWith('0')) {
                                             phone = '62' + phone.substring(1);
                                         }
-                                        const storeName = 'eljoPOS';
+                                        const storeName = localStorage.getItem('store_name');
                                         const invoiceUrl = `${window.location.origin}/print-invoice/${transactionId}?cetak=false`;
-                                        const text = encodeURIComponent(`Halo ${customerName || 'Pelanggan'},\n\nTerima kasih telah berbelanja di ${storeName}.\n\nBerikut adalah link invoice Anda:\n${invoiceUrl}\n\nTerima kasih!`);
+                                        const text = encodeURIComponent(`Halo ${customerName || 'Pelanggan'},\n\nTerima kasih telah berbelanja di ${storeName}.\n\nBerikut adalah link nota Anda:\n${invoiceUrl}\n\nTerima kasih!`);
                                         window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
                                     }}
                                     className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] transition-all font-bold"
@@ -97,7 +97,7 @@ export function TransactionSuccessModal({
                                     <MessageCircle className="w-5 h-5" />
                                     Kirim WhatsApp
                                 </button>
-                                
+
                                 <button
                                     onClick={onClose}
                                     className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-purple-500/30 text-gray-300 hover:text-white hover:border-purple-500/50 hover:bg-purple-500/10 transition-all font-medium"

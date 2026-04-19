@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Download, Calendar, Eye, X, ChevronLeft, ChevronRight, Loader2, Store, MessageCircle, Trash2 } from 'lucide-react';
+import { Search, Download, Calendar, Eye, X, Loader2, Store, MessageCircle, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -12,7 +12,6 @@ import {
 import type {
     TransactionHistoryItem,
     TransactionHistorySummary,
-    TransactionHistoryMeta,
     TransactionDetailData,
 } from '../../services/reportService';
 import { DeleteTransactionModal } from './DeleteTransactionModal';
@@ -51,7 +50,7 @@ export function TransactionReport() {
     // Data
     const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
     const [summary, setSummary] = useState<TransactionHistorySummary>({ total_revenue: 0, total_transactions: 0, payment_summary: [] });
-    const [meta, setMeta] = useState<TransactionHistoryMeta>({ page: 1, limit: 20, total: 0, total_pages: 0 });
+
 
     // Detail modal
     const [selectedDetail, setSelectedDetail] = useState<TransactionDetailData | null>(null);
@@ -65,6 +64,7 @@ export function TransactionReport() {
     // Loading
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
 
     // Debounce search
     useEffect(() => {
@@ -75,7 +75,7 @@ export function TransactionReport() {
     }, [searchQuery]);
 
     // Fetch transactions when filters change
-    const fetchTransactions = useCallback(async (page: number) => {
+    const fetchTransactions = useCallback(async (page: number, reset: boolean = false) => {
         setIsLoading(true);
         try {
             const res = await getTransactionHistory({
@@ -86,9 +86,9 @@ export function TransactionReport() {
             });
 
             if (res.success) {
-                setTransactions(res.data.items);
+                setTransactions(prev => reset ? res.data.items : [...prev, ...res.data.items]);
+                setHasMore(res.data.meta.page < res.data.meta.total_pages);
                 setSummary(res.data.summary);
-                setMeta(res.data.meta);
                 setCurrentPage(page);
             } else {
                 toast.error(res.message || 'Gagal memuat data transaksi');
@@ -101,8 +101,25 @@ export function TransactionReport() {
     }, [startDate, endDate]);
 
     useEffect(() => {
-        fetchTransactions(1);
+        fetchTransactions(1, true);
     }, [fetchTransactions]);
+
+    // Intersection Observer for Infinite Scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                    fetchTransactions(currentPage + 1, false);
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        const loadMoreTrigger = document.getElementById('load-more-trigger');
+        if (loadMoreTrigger) observer.observe(loadMoreTrigger);
+
+        return () => observer.disconnect();
+    }, [hasMore, isLoading, currentPage, fetchTransactions]);
 
     // Client-side search filter (search on already-fetched page)
     const filteredTransactions = transactions.filter((t) => {
@@ -155,12 +172,6 @@ export function TransactionReport() {
         toast.success('Laporan transaksi berhasil diekspor ke Excel');
     };
 
-    // Pagination
-    const handlePageChange = (page: number) => {
-        if (page < 1 || page > meta.total_pages) return;
-        fetchTransactions(page);
-    };
-
     const confirmDelete = (e: React.MouseEvent, transaction: TransactionHistoryItem) => {
         e.stopPropagation();
         setTransactionToDelete(transaction);
@@ -174,7 +185,7 @@ export function TransactionReport() {
             const res = await deleteTransaction(transactionToDelete.id);
             if (res.success) {
                 toast.success('Transaksi berhasil dihapus');
-                fetchTransactions(currentPage);
+                fetchTransactions(1, true);
                 if (isDetailOpen && selectedDetail?.id === transactionToDelete.id) {
                     setIsDetailOpen(false);
                 }
@@ -349,54 +360,18 @@ export function TransactionReport() {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                {meta.total_pages > 1 && (
-                    <div className="p-4 border-t border-purple-500/20 flex items-center justify-between">
-                        <p className="text-xs text-gray-500">
-                            Menampilkan {((currentPage - 1) * meta.limit) + 1}–{Math.min(currentPage * meta.limit, meta.total)} dari {meta.total} transaksi
-                        </p>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage <= 1}
-                                className="w-8 h-8 rounded-lg bg-white/5 border border-purple-500/20 flex items-center justify-center text-gray-400 hover:text-gray-200 hover:border-purple-500/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            {Array.from({ length: Math.min(meta.total_pages, 5) }, (_, i) => {
-                                let pageNum: number;
-                                if (meta.total_pages <= 5) {
-                                    pageNum = i + 1;
-                                } else if (currentPage <= 3) {
-                                    pageNum = i + 1;
-                                } else if (currentPage >= meta.total_pages - 2) {
-                                    pageNum = meta.total_pages - 4 + i;
-                                } else {
-                                    pageNum = currentPage - 2 + i;
-                                }
-                                return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => handlePageChange(pageNum)}
-                                        className={`w-8 h-8 rounded-lg text-sm font-medium transition-all cursor-pointer ${currentPage === pageNum
-                                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/40'
-                                            }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
-                            <button
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage >= meta.total_pages}
-                                className="w-8 h-8 rounded-lg bg-white/5 border border-purple-500/20 flex items-center justify-center text-gray-400 hover:text-gray-200 hover:border-purple-500/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
+                {/* Infinite Scroll Trigger */}
+                <div id="load-more-trigger" className="h-20 flex flex-col items-center justify-center border-t border-purple-500/10 shrink-0">
+                    {isLoading && (
+                        <div className="flex items-center gap-2 text-purple-400">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="text-sm">Memuat lebih banyak...</span>
                         </div>
-                    </div>
-                )}
+                    )}
+                    {!hasMore && filteredTransactions.length > 0 && (
+                        <p className="text-xs text-gray-600 italic">Semua transaksi telah dimuat</p>
+                    )}
+                </div>
             </div>
 
             {/* Transaction Detail Modal */}
@@ -574,7 +549,7 @@ export function TransactionReport() {
                                                         phone = '62' + phone.substring(1);
                                                     }
                                                     const invoiceUrl = `${window.location.origin}/print-invoice/${selectedDetail.id}?cetak=false`;
-                                                    const text = encodeURIComponent(`Halo ${selectedDetail.customer.name},\n\nTerima kasih telah berbelanja di ${selectedDetail.store?.name || 'eljoPOS'}.\n\nBerikut adalah link invoice Anda:\n${invoiceUrl}\n\nTerima kasih!`);
+                                                    const text = encodeURIComponent(`Halo ${selectedDetail.customer.name},\n\nTerima kasih telah berbelanja di ${selectedDetail.store?.name}.\n\nBerikut adalah link nota Anda:\n${invoiceUrl}\n\nTerima kasih!`);
                                                     window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
                                                 }}
                                                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] transition-all text-sm cursor-pointer font-bold"

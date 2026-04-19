@@ -43,7 +43,7 @@ export function EditStockModal({ isOpen, onClose, product, onSave }: EditStockMo
             toast.error('Tidak bisa menambahkan dan mengurangi stok sekaligus')
             return
         }
-        if (stockAdjustmentSubtract > product.stock - stockAdjustmentAdd) {
+        if (stockAdjustmentSubtract > product.stock) {
             toast.error('Stok tidak cukup untuk pengurangan')
             return
         }

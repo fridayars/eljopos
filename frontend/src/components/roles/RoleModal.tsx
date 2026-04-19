@@ -11,68 +11,79 @@ interface RoleModalProps {
     onSave: (id: string | null, data: any) => Promise<void>
 }
 
-// Master Permissions
-const PERMISSION_GROUPS = [
-    {
-        label: 'Kasir',
-        items: [
-            { value: 'casier', label: 'Akses Kasir' },
-            { value: 'casier.changedate', label: 'Ubah Tanggal' },
-        ]
-    },
-    {
-        label: 'Produk',
-        items: [
-            { value: 'product.view', label: 'Lihat' },
-            { value: 'product.create', label: 'Tambah' },
-            { value: 'product.edit', label: 'Edit' },
-            { value: 'product.delete', label: 'Hapus' },
-            { value: 'product.transfer', label: 'Transfer Stok' },
-            { value: 'product.import', label: 'Import' },
-            { value: 'product.export', label: 'Export' },
-        ]
-    },
-    {
-        label: 'User',
-        items: [
-            { value: 'user.view', label: 'Lihat' },
-            { value: 'user.create', label: 'Tambah' },
-            { value: 'user.edit', label: 'Edit' },
-            { value: 'user.delete', label: 'Hapus' },
-        ]
-    },
-    {
-        label: 'Role',
-        items: [
-            { value: 'role.view', label: 'Lihat' },
-            { value: 'role.create', label: 'Tambah' },
-            { value: 'role.edit', label: 'Edit' },
-            { value: 'role.delete', label: 'Hapus' },
-        ]
-    },
-    {
-        label: 'Layanan',
-        items: [
-            { value: 'service.view', label: 'Lihat' },
-            { value: 'service.create', label: 'Tambah' },
-            { value: 'service.edit', label: 'Edit' },
-            { value: 'service.delete', label: 'Hapus' },
-            { value: 'service.import', label: 'Import' },
-            { value: 'service.export', label: 'Export' },
-        ]
-    },
-    {
-        label: 'Laporan',
-        items: [
-            { value: 'report.general', label: 'Ringkasan Umum' },
-            { value: 'report.finance', label: 'Keuangan' },
-            { value: 'report.transaction', label: 'Riwayat Transaksi' },
-            { value: 'report.deletetransaction', label: 'Hapus Transaksi' },
-        ]
-    }
-]
-
 export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
+    // Master Permissions moved inside component for proper HMR hot-reloading
+    const PERMISSION_GROUPS = [
+        {
+            label: 'Kasir',
+            items: [
+                { value: 'casier', label: 'Akses Kasir' },
+                { value: 'casier.changedate', label: 'Ubah Tanggal' },
+            ]
+        },
+        {
+            label: 'Produk',
+            items: [
+                { value: 'product.view', label: 'Lihat' },
+                { value: 'product.create', label: 'Tambah' },
+                { value: 'product.edit', label: 'Edit' },
+                { value: 'product.delete', label: 'Hapus' },
+                { value: 'product.transfer', label: 'Transfer Stok' },
+                { value: 'product.import', label: 'Import' },
+                { value: 'product.export', label: 'Export' },
+            ]
+        },
+        {
+            label: 'User',
+            items: [
+                { value: 'user.view', label: 'Lihat' },
+                { value: 'user.create', label: 'Tambah' },
+                { value: 'user.edit', label: 'Edit' },
+                { value: 'user.delete', label: 'Hapus' },
+            ]
+        },
+        {
+            label: 'Role',
+            items: [
+                { value: 'role.view', label: 'Lihat' },
+                { value: 'role.create', label: 'Tambah' },
+                { value: 'role.edit', label: 'Edit' },
+                { value: 'role.delete', label: 'Hapus' },
+            ]
+        },
+        {
+            label: 'Layanan',
+            items: [
+                { value: 'service.view', label: 'Lihat' },
+                { value: 'service.create', label: 'Tambah' },
+                { value: 'service.edit', label: 'Edit' },
+                { value: 'service.delete', label: 'Hapus' },
+                { value: 'service.import', label: 'Import' },
+                { value: 'service.export', label: 'Export' },
+            ]
+        },
+        {
+            label: 'Arus Uang',
+            items: [
+                { value: 'arusuang.view', label: 'Lihat riwayat kas' },
+                { value: 'arusuang.create_in', label: 'Tambah uang masuk manual' },
+                { value: 'arusuang.create_out', label: 'Tambah uang keluar manual' },
+                { value: 'arusuang.delete_in', label: 'Hapus uang masuk' },
+                { value: 'arusuang.delete_out', label: 'Hapus uang keluar' },
+                { value: 'arusuang.changedate', label: 'Ubah Tanggal' },
+            ]
+        },
+        {
+            label: 'Laporan',
+            items: [
+                { value: 'report.general', label: 'Ringkasan Umum' },
+                { value: 'report.finance', label: 'Keuangan' },
+                { value: 'report.transaction', label: 'Riwayat Transaksi' },
+                { value: 'report.deletetransaction', label: 'Hapus Transaksi' },
+            ]
+        }
+    ]
+
     const [name, setName] = useState('')
     const [permissions, setPermissions] = useState<string[]>([])
     const [isSaving, setIsSaving] = useState(false)

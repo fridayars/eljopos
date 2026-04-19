@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTransactionDetail } from '../services/reportService';
 import type { TransactionDetailData } from '../services/reportService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bluetooth } from 'lucide-react';
+import html2canvas from 'html2canvas';
+// @ts-ignore - Library tidak memiliki tipe data TypeScript resmi
+import ReceiptPrinterEncoder from '@point-of-sale/receipt-printer-encoder';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -22,6 +25,8 @@ export function InvoicePrintPage() {
     const [detail, setDetail] = useState<TransactionDetailData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const invoiceRef = useRef<HTMLDivElement>(null);
+    const [isBluetoothPrinting, setIsBluetoothPrinting] = useState(false);
 
     useEffect(() => {
         if (!id) {
@@ -85,6 +90,205 @@ export function InvoicePrintPage() {
         minute: '2-digit',
     });
 
+    const handleDownloadImage = async () => {
+        if (!invoiceRef.current) return;
+
+        try {
+            const canvas = await html2canvas(invoiceRef.current, {
+                scale: 2, // Biar resolusinya bagus
+                backgroundColor: '#ffffff',
+                ignoreElements: (element) => element.classList.contains('no-print')
+            });
+
+            const image = canvas.toDataURL('image/jpeg', 1.0);
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `Invoice-${detail.receipt_number}.jpg`;
+            link.click();
+        } catch (err) {
+            console.error('Gagal mengunduh gambar:', err);
+        }
+    };
+
+    const handleBluetoothPrint = async () => {
+        if (!detail) return;
+        const nav = navigator as any;
+        if (!nav.bluetooth) {
+            alert('Browser Anda tidak mendukung Web Bluetooth API. Coba gunakan Google Chrome di Android/PC.');
+            return;
+        }
+
+        try {
+            setIsBluetoothPrinting(true);
+
+            const device = await nav.bluetooth.requestDevice({
+                filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+            }).catch(() => {
+                return nav.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+                });
+            });
+
+            if (!device || !device.gatt) throw new Error('Perangkat tidak ditemukan atau GATT tidak didukung');
+
+            const server = await device.gatt.connect();
+
+            let service;
+            try {
+                service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            } catch (e) {
+                const services = await server.getPrimaryServices();
+                if (services.length > 0) {
+                    service = services[0];
+                } else {
+                    throw new Error('Tidak ada layanan Bluetooth ditemukan');
+                }
+            }
+
+            const characteristics = await service.getCharacteristics();
+            const characteristic = characteristics.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
+
+            if (!characteristic) throw new Error('Tidak ada characteristic yang bisa ditulis');
+
+            const encoder = new ReceiptPrinterEncoder({
+                language: 'esc-pos',
+                width: 32, // Ukuran lebar 58mm
+            });
+
+            encoder.initialize()
+                .align('center')
+                .bold(true)
+                .line(detail.store?.name || 'eljoPOS')
+                .bold(false)
+                .line((detail.store as any)?.address || 'Cabang Utama')
+                .newline()
+                .rule({ style: 'dashed' })
+                .align('left')
+                .table(
+                    [
+                        { width: 10, align: 'left' },
+                        { width: 22, align: 'right' }
+                    ],
+                    [
+                        ['No:', detail.receipt_number],
+                        ['Tgl:', dateStr],
+                        ['Kasir:', detail.user?.username || '-'],
+                        ['Plgn:', detail.customer?.name || 'Walk-in']
+                    ]
+                )
+                .rule({ style: 'dashed' });
+
+            detail.details.forEach(item => {
+                encoder.line(item.item_name);
+                encoder.table(
+                    [
+                        { width: 18, align: 'left' },
+                        { width: 14, align: 'right' }
+                    ],
+                    [
+                        [`${item.quantity} x ${formatCurrency(item.price)}`, formatCurrency(item.subtotal)]
+                    ]
+                );
+            });
+
+            encoder.rule({ style: 'dashed' });
+
+            encoder.table(
+                [
+                    { width: 16, align: 'left' },
+                    { width: 16, align: 'right' }
+                ],
+                [
+                    ['Subtotal', formatCurrency(detail.subtotal || detail.total_amount)]
+                ]
+            );
+
+            if (detail.discount && Number(detail.discount) > 0) {
+                encoder.table(
+                    [
+                        { width: 16, align: 'left' },
+                        { width: 16, align: 'right' }
+                    ],
+                    [
+                        ['Diskon', `-${formatCurrency(Number(detail.discount))}`]
+                    ]
+                );
+            }
+
+            encoder.bold(true).table(
+                [
+                    { width: 16, align: 'left' },
+                    { width: 16, align: 'right' }
+                ],
+                [
+                    ['TOTAL', formatCurrency(detail.total_amount)]
+                ]
+            ).bold(false);
+
+            encoder.rule({ style: 'dashed' });
+
+            detail.payments?.forEach(payment => {
+                encoder.table(
+                    [
+                        { width: 16, align: 'left' },
+                        { width: 16, align: 'right' }
+                    ],
+                    [
+                        [payment.method.toUpperCase(), formatCurrency(payment.amount)]
+                    ]
+                );
+            });
+
+            const totalPaid = detail.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+            const change = totalPaid - detail.total_amount;
+            if (change > 0) {
+                encoder.rule({ style: 'dashed' });
+                encoder.table(
+                    [
+                        { width: 16, align: 'left' },
+                        { width: 16, align: 'right' }
+                    ],
+                    [
+                        ['Kembali', formatCurrency(change)]
+                    ]
+                );
+            }
+
+            encoder.newline().newline()
+                .align('center')
+                .bold(true)
+                .line('TERIMA KASIH')
+                .bold(false)
+                .line('Barang yang sudah dibeli')
+                .line('tidak dapat ditukar/dikembalikan')
+                .newline()
+                .newline()
+                .newline();
+
+            const result = encoder.encode();
+
+            const CHUNK_SIZE = 512;
+            for (let i = 0; i < result.length; i += CHUNK_SIZE) {
+                const chunk = result.slice(i, i + CHUNK_SIZE);
+                await characteristic.writeValue(chunk);
+            }
+
+            if (device.gatt.connected) {
+                device.gatt.disconnect();
+            }
+
+        } catch (err: any) {
+            console.error('Bluetooth Print Error:', err);
+            if (err.name !== 'NotFoundError') {
+                alert(`Gagal mencetak: ${err.message || 'Pastikan bluetooth menyala dan printer terhubung'}`);
+            }
+        } finally {
+            setIsBluetoothPrinting(false);
+        }
+    };
+
     return (
         <div className="bg-white min-h-screen">
             {/* Styling khusus untuk print thermal menggunakan ukuran 80mm */}
@@ -108,7 +312,10 @@ export function InvoicePrintPage() {
             </style>
 
             {/* Container struk */}
-            <div className="mx-auto w-full max-w-[80mm] p-4 text-black font-mono text-[11px] leading-tight flex flex-col items-center">
+            <div
+                ref={invoiceRef}
+                className="mx-auto w-full max-w-[80mm] p-4 text-black font-mono text-[11px] leading-tight flex flex-col items-center"
+            >
                 {/* Header */}
                 <div className="text-center w-full mb-4 border-b border-black border-dashed pb-3">
                     <h1 className="font-bold text-base mb-1">{detail.store?.name || 'eljoPOS'}</h1>
@@ -125,13 +332,13 @@ export function InvoicePrintPage() {
                         <span>Tgl:</span>
                         <span>{dateStr}</span>
                     </div>
-                    <div className="flex justify-between mb-1">
-                        <span>Kasir:</span>
-                        <span className="truncate max-w-[100px] text-right">{detail.user?.username || '-'}</span>
+                    <div className="flex justify-between mb-1 gap-2">
+                        <span className="shrink-0">Kasir:</span>
+                        <span className="text-right break-words">{detail.user?.username || '-'}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span>Plgn:</span>
-                        <span className="truncate max-w-[100px] text-right">{detail.customer?.name || 'Walk-in'}</span>
+                    <div className="flex justify-between gap-2">
+                        <span className="shrink-0">Plgn:</span>
+                        <span className="text-right break-words">{detail.customer?.name || 'Walk-in'}</span>
                     </div>
                 </div>
 
@@ -139,7 +346,7 @@ export function InvoicePrintPage() {
                 <div className="w-full mb-3 pb-2 border-b border-black border-dashed">
                     {detail.details.map((item, idx) => (
                         <div key={idx} className="mb-2">
-                            <div className="w-full truncate font-semibold mb-0.5">{item.item_name}</div>
+                            <div className="w-full break-words font-semibold mb-0.5 leading-tight">{item.item_name}</div>
                             <div className="flex justify-between">
                                 <span>{item.quantity} x {formatCurrency(item.price)}</span>
                                 <span>{formatCurrency(item.subtotal)}</span>
@@ -204,16 +411,30 @@ export function InvoicePrintPage() {
 
                 {/* Tombol aksi manual (hanya tampil di layar) */}
                 {isCetak && (
-                    <div className="mt-8 flex gap-2 no-print w-full justify-center">
+                    <div className="mt-8 flex gap-2 no-print w-full justify-center flex-wrap">
+                        <button
+                            onClick={handleBluetoothPrint}
+                            disabled={isBluetoothPrinting}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded text-xs font-sans flex items-center justify-center gap-1"
+                        >
+                            {isBluetoothPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bluetooth className="w-4 h-4" />}
+                            {isBluetoothPrinting ? 'Mencetak...' : 'Print BT'}
+                        </button>
+                        <button
+                            onClick={handleDownloadImage}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-sans flex items-center justify-center gap-1"
+                        >
+                            Download
+                        </button>
                         <button
                             onClick={() => window.print()}
-                            className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-sans"
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-sans"
                         >
-                            Cetak Ulang
+                            Cetak
                         </button>
                         <button
                             onClick={() => window.close()}
-                            className="px-4 py-2 bg-gray-600 text-white rounded text-xs font-sans"
+                            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs font-sans"
                         >
                             Tutup
                         </button>

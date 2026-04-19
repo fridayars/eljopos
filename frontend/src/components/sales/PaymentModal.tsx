@@ -122,10 +122,15 @@ export function PaymentModal({ isOpen, onClose, grandTotal, canChangeDate = fals
 
     const handleConfirm = () => {
         if (isValid) {
+            // Append current time to the selected date so it doesn't default to 00:00:00
+            const now = new Date()
+            const timeString = now.toTimeString().split(' ')[0] // HH:mm:ss
+            const finalDate = `${date} ${timeString}`
+
             // Flatten to first method for simple legacy handling if needed, 
             // but return full payments array for advanced split payment logic
             onConfirm({
-                date,
+                date: finalDate,
                 cashbox: payments[0].method,
                 cashPaid: totalPaid,
                 payments

@@ -16,6 +16,8 @@ interface WilayahDropdownProps {
     disabled?: boolean
     isLoading?: boolean
     error?: string
+    autoOpen?: boolean
+    onAutoOpenConsume?: () => void
 }
 
 function WilayahDropdown({
@@ -28,11 +30,28 @@ function WilayahDropdown({
     disabled = false,
     isLoading = false,
     error,
+    autoOpen,
+    onAutoOpenConsume,
 }: WilayahDropdownProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const ref = useRef<HTMLDivElement>(null)
     const searchRef = useRef<HTMLInputElement>(null)
+    const listRef = useRef<HTMLUListElement>(null)
+    const [highlightedIndex, setHighlightedIndex] = useState(0)
+
+    useEffect(() => {
+        setHighlightedIndex(0)
+    }, [searchQuery, isOpen])
+
+    useEffect(() => {
+        if (isOpen && listRef.current) {
+            const activeItem = listRef.current.children[highlightedIndex] as HTMLElement
+            if (activeItem) {
+                activeItem.scrollIntoView({ block: 'nearest' })
+            }
+        }
+    }, [highlightedIndex, isOpen])
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -61,56 +80,105 @@ function WilayahDropdown({
         }
     }, [isOpen])
 
+    // Handle autoOpen prop
+    useEffect(() => {
+        if (autoOpen && !disabled && !isLoading) {
+            setIsOpen(true)
+            if (onAutoOpenConsume) onAutoOpenConsume()
+        }
+    }, [autoOpen, disabled, isLoading, onAutoOpenConsume])
+
     const isDisabled = disabled || isLoading
 
     return (
         <div className="space-y-2" ref={ref}>
-            <label className="text-sm text-gray-400">
+            <label className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
                 {label} {required && <span className="text-red-400">*</span>}
             </label>
             <div
+                tabIndex={isDisabled ? -1 : 0}
+                onFocus={() => {
+                    if (!isDisabled) setIsOpen(true)
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        if (!isDisabled) setIsOpen((prev) => !prev)
+                    }
+                }}
                 onClick={() => !isDisabled && setIsOpen((prev) => !prev)}
-                className={`relative w-full h-12 border rounded-xl px-4 flex items-center justify-between transition-all
-                    ${isDisabled ? 'opacity-50 cursor-not-allowed bg-white/3' : 'cursor-pointer bg-white/5'}
+                className={`relative w-full h-12 rounded-xl px-4 flex items-center justify-between transition-all
+                    ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     ${error
                         ? 'border-red-500/50'
                         : isOpen
                             ? 'border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
-                            : 'border-purple-500/20 hover:border-purple-500/40'
+                            : ''
                     }`}
+                style={{
+                    background: isDisabled ? 'var(--surface-subtle)' : 'var(--surface-modal)',
+                    border: `1px solid ${error ? 'rgb(239 68 68 / 0.5)' : isOpen ? 'rgb(59 130 246 / 0.5)' : 'var(--border)'}`,
+                }}
             >
-                <span className={`text-sm truncate pr-2 ${value ? 'text-gray-200' : 'text-gray-600'}`}>
+                <span className={`text-sm truncate pr-2`} style={{ color: value ? 'var(--foreground)' : 'var(--muted-foreground)' }}>
                     {isLoading ? 'Memuat data...' : (value?.name || placeholder)}
                 </span>
                 {isLoading
-                    ? <Loader2 className="w-4 h-4 shrink-0 animate-spin text-gray-500" />
-                    : <ChevronDown className={`w-4 h-4 shrink-0 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" style={{ color: 'var(--muted-foreground)' }} />
+                    : <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--muted-foreground)' }} />
                 }
             </div>
 
             {isOpen && !isDisabled && (
-                <div className="absolute z-[70] left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 bg-[#1a1625]">
+                <div 
+                    className="absolute z-[70] left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-2xl"
+                    style={{ 
+                        background: 'var(--surface-dropdown)',
+                        border: '1px solid var(--border)'
+                    }}
+                >
                     {/* Search */}
-                    <div className="p-2 border-b border-purple-500/10">
+                    <div className="p-2 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
                         <input
                             ref={searchRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                const filtered = options.filter(o => o.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (filtered.length > 0) {
+                                        onChange(filtered[highlightedIndex]);
+                                        setIsOpen(false);
+                                    }
+                                } else if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setHighlightedIndex(prev => Math.min(prev + 1, Math.max(0, filtered.length - 1)));
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setHighlightedIndex(prev => Math.max(prev - 1, 0));
+                                }
+                            }}
                             placeholder="Cari..."
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full h-8 bg-white/5 border border-purple-500/20 rounded-lg px-3 text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/40 transition-all"
+                            className="w-full h-8 rounded-lg px-3 text-sm focus:outline-none transition-all"
+                            style={{
+                                background: 'var(--surface-subtle)',
+                                border: '1px solid var(--border)',
+                                color: 'var(--foreground)',
+                            }}
                         />
                     </div>
-                    <ul className="max-h-44 overflow-y-auto">
+                    <ul className="max-h-44 overflow-y-auto" ref={listRef}>
                         {(() => {
                             const filtered = options.filter((o) =>
                                 o.name.toLowerCase().includes(searchQuery.toLowerCase())
                             )
                             return filtered.length === 0 ? (
-                                <li className="px-4 py-3 text-sm text-gray-500 italic">Tidak ada data</li>
+                                <li className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted-foreground)' }}>Tidak ada data</li>
                             ) : (
-                                filtered.map((item) => (
+                                filtered.map((item, index) => (
                                     <li
                                         key={item.code}
                                         onClick={() => {
@@ -118,10 +186,13 @@ function WilayahDropdown({
                                             setIsOpen(false)
                                         }}
                                         className={`px-4 py-3 text-sm cursor-pointer transition-colors
-                                            ${value?.code === item.code
-                                                ? 'text-purple-400 bg-purple-500/10'
-                                                : 'text-gray-300 hover:bg-white/5'
+                                            ${value?.code === item.code || index === highlightedIndex
+                                                ? 'bg-purple-500/10'
+                                                : 'hover:bg-purple-500/5'
                                             }`}
+                                        style={{
+                                            color: value?.code === item.code ? 'var(--primary)' : 'var(--foreground)'
+                                        }}
                                     >
                                         {item.name}
                                     </li>
@@ -170,6 +241,8 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
     const [loadingRegencies, setLoadingRegencies] = useState(false)
     const [loadingDistricts, setLoadingDistricts] = useState(false)
 
+    const [autoOpenDropdown, setAutoOpenDropdown] = useState<'regency' | 'district' | null>(null)
+
     const [errors, setErrors] = useState<{ name?: string; phone?: string } & WilayahErrors>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -212,6 +285,7 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
             const res = await getRegencies(item.code)
             if (res.success) setRegencies(res.data)
             setLoadingRegencies(false)
+            setAutoOpenDropdown('regency')
         }
     }
 
@@ -227,12 +301,19 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
             const res = await getDistricts(item.code)
             if (res.success) setDistricts(res.data)
             setLoadingDistricts(false)
+            setAutoOpenDropdown('district')
         }
     }
 
     const handleDistrictChange = (item: WilayahItem | null) => {
         setSelectedDistrict(item)
         if (errors.district) setErrors((prev) => ({ ...prev, district: undefined }))
+        
+        if (item) {
+            setTimeout(() => {
+                document.getElementById('btn-submit-customer')?.focus()
+            }, 50)
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -399,6 +480,8 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
                                             disabled={!selectedProvince}
                                             isLoading={loadingRegencies}
                                             error={errors.regency}
+                                            autoOpen={autoOpenDropdown === 'regency'}
+                                            onAutoOpenConsume={() => setAutoOpenDropdown(null)}
                                         />
                                     </div>
 
@@ -413,6 +496,8 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
                                             disabled={!selectedRegency}
                                             isLoading={loadingDistricts}
                                             error={errors.district}
+                                            autoOpen={autoOpenDropdown === 'district'}
+                                            onAutoOpenConsume={() => setAutoOpenDropdown(null)}
                                         />
                                     </div>
 
@@ -427,9 +512,10 @@ export function AddCustomerModal({ isOpen, onClose, onAddCustomer }: AddCustomer
                                             Batal
                                         </button>
                                         <button
+                                            id="btn-submit-customer"
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             {isSubmitting ? (
                                                 <>
