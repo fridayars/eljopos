@@ -167,6 +167,7 @@ const syncArusUang = async (userId) => {
                     }
                 }
 
+                const trxDate = trx.transaction_date || trx.created_at;
                 const records = paymentsToSync.map(p => ({
                     store_id: trx.store_id,
                     type: 'IN',
@@ -175,10 +176,8 @@ const syncArusUang = async (userId) => {
                     payment_method: p.method,
                     amount: p.nominal,
                     description: `Penjualan ${trx.receipt_number}`,
-                    date: trx.created_at,
-                    created_by: trx.user_id || userId,
-                    created_at: trx.created_at,
-                    updated_at: trx.created_at
+                    date: trxDate,
+                    created_by: trx.user_id || userId
                 }));
 
                 await ArusUang.bulkCreate(records, { transaction: t });

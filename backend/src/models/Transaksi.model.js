@@ -44,6 +44,7 @@ module.exports = (sequelize, DataTypes) => {
         discount_type: DataTypes.ENUM('percentage', 'amount'),
         discount: DataTypes.DECIMAL(15, 2),
         payment_status: DataTypes.STRING,
+        transaction_date: DataTypes.DATE,
         created_at: DataTypes.DATE,
         updated_at: DataTypes.DATE,
         deleted_at: DataTypes.DATE

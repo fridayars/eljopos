@@ -57,10 +57,11 @@ const createTransaksi = async (data, userId) => {
         // Resolve custom date (must not be in the future)
         let resolvedDate = null;
         if (transaction_date) {
-            const parsed = new Date(`${transaction_date}T00:00:00`);
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-            if (!isNaN(parsed.getTime()) && parsed <= todayStart) {
+            // Normalize: replace space with T for ISO compliance
+            const normalized = String(transaction_date).trim().replace(' ', 'T');
+            const parsed = new Date(normalized);
+            const now = new Date();
+            if (!isNaN(parsed.getTime()) && parsed <= now) {
                 resolvedDate = parsed;
             }
         }
@@ -171,14 +172,9 @@ const createTransaksi = async (data, userId) => {
             discount_type: discount_type || null,
             discount: discount || 0,
             total_amount,
-            payment_status: 'PAID'
+            payment_status: 'PAID',
+            transaction_date: resolvedDate || new Date()
         };
-
-        // If a custom past date is provided, override createdAt
-        if (resolvedDate) {
-            transaksiData.created_at = resolvedDate;
-            transaksiData.createdAt = resolvedDate;
-        }
 
         const transaksi = await Transaksi.create(transaksiData, { transaction: t });
 
@@ -213,9 +209,9 @@ const createTransaksi = async (data, userId) => {
         const totalGrossPayment = paymentsToSync.reduce((sum, pm) => sum + pm.nominal, 0);
         const totalRevenue = parseFloat(total_amount);
         const totalChange = totalGrossPayment - totalRevenue;
-        
+
         if (totalChange > 0 && paymentsToSync.length > 0) {
-            let cashMethod = paymentsToSync.find(p => 
+            let cashMethod = paymentsToSync.find(p =>
                 p.method.toLowerCase() === 'cash' || p.method.toLowerCase() === 'tunai'
             );
             if (cashMethod) {
@@ -226,7 +222,7 @@ const createTransaksi = async (data, userId) => {
             }
         }
 
-        const arusUangTime = resolvedDate || new Date();
+        const arusUangTime = transaksi.transaction_date || new Date();
         const arusUangRecords = paymentsToSync.map(pm => ({
             store_id,
             type: 'IN',
@@ -236,9 +232,7 @@ const createTransaksi = async (data, userId) => {
             amount: pm.nominal,
             description: `Penjualan ${receiptNumber}`,
             date: arusUangTime,
-            created_by: userId,
-            created_at: arusUangTime,
-            updated_at: arusUangTime
+            created_by: userId
         }));
         await ArusUang.bulkCreate(arusUangRecords, { transaction: t });
 
@@ -336,7 +330,10 @@ const createTransaksi = async (data, userId) => {
 const getTransaksiDetail = async (transaksiId) => {
     try {
         const transaksi = await Transaksi.findByPk(transaksiId, {
-            attributes: ['id', 'receipt_number', 'subtotal', 'discount_type', 'discount', 'total_amount', 'payment_status', 'created_at'],
+            attributes: [
+                'id', 'receipt_number', 'subtotal', 'discount_type', 'discount', 'total_amount', 'payment_status',
+                [literal('COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at")'), 'created_at']
+            ],
             include: [
                 {
                     model: TransaksiDetail,
@@ -403,13 +400,13 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
             whereClause.store_id = store_id;
         }
 
+        // Use COALESCE(transaction_date, created_at) for date filtering
+        const dateColumn = literal("COALESCE(\"Transaksi\".\"transaction_date\", \"Transaksi\".\"created_at\")");
         if (start_date && end_date) {
-            whereClause.created_at = {
-                [Op.between]: [
-                    new Date(`${start_date}T00:00:00`),
-                    new Date(`${end_date}T23:59:59`)
-                ]
-            };
+            whereClause[Op.and] = [
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00'`),
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59'`)
+            ];
         }
 
         // 1. Summary — total revenue & total transactions (dari seluruh data yang match filter)
@@ -454,7 +451,7 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         const totalChange = totalGrossPayment - totalRevenue;
 
         if (totalChange > 0 && processedPaymentSummary.length > 0) {
-            let cashMethod = processedPaymentSummary.find(p => 
+            let cashMethod = processedPaymentSummary.find(p =>
                 p.method.toLowerCase() === 'cash' || p.method.toLowerCase() === 'tunai'
             );
             if (cashMethod) {
@@ -468,7 +465,10 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         // 2. Paginated items
         const { count: total, rows: transaksiList } = await Transaksi.findAndCountAll({
             where: whereClause,
-            attributes: ['id', 'receipt_number', 'total_amount', 'created_at'],
+            attributes: [
+                'id', 'receipt_number', 'total_amount',
+                [literal('COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at")'), 'created_at']
+            ],
             include: [
                 {
                     model: Customer,
@@ -492,7 +492,7 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
                     limit: 1 // hanya ambil 1 untuk menentukan type
                 }
             ],
-            order: [['created_at', 'DESC']],
+            order: [[literal('COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at")'), 'DESC']],
             limit,
             offset,
             distinct: true // agar count tidak kena duplikasi dari include
@@ -502,7 +502,7 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         const items = transaksiList.map(trx => ({
             id: trx.id,
             invoice_number: trx.receipt_number,
-            created_at: trx.created_at,
+            created_at: trx.get('created_at'),
             customer_name: trx.customer ? trx.customer.name : null,
             total_amount: trx.total_amount,
             type: trx.details && trx.details.length > 0 ? trx.details[0].item_type : null,
@@ -678,12 +678,10 @@ const getProductRanking = async ({ start_date, end_date, store_id, page = 1, lim
         const trxWhere = {};
         if (store_id) trxWhere.store_id = store_id;
         if (start_date && end_date) {
-            trxWhere.created_at = {
-                [Op.between]: [
-                    new Date(`${start_date}T00:00:00`),
-                    new Date(`${end_date}T23:59:59`)
-                ]
-            };
+            trxWhere[Op.and] = [
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00'`),
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59'`)
+            ];
         }
 
         const { count, rows } = await TransaksiDetail.findAndCountAll({
@@ -760,12 +758,10 @@ const getCustomerRanking = async ({ start_date, end_date, store_id, page = 1, li
 
         if (store_id) whereClause.store_id = store_id;
         if (start_date && end_date) {
-            whereClause.created_at = {
-                [Op.between]: [
-                    new Date(`${start_date}T00:00:00`),
-                    new Date(`${end_date}T23:59:59`)
-                ]
-            };
+            whereClause[Op.and] = [
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00'`),
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59'`)
+            ];
         }
 
         const { count, rows } = await Transaksi.findAndCountAll({
