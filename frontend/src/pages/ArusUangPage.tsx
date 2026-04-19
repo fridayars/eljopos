@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, Wallet } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, Wallet, Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { arusUangService } from '../services/arusUangService'
 import type { ArusUang, ArusUangSummary } from '../services/arusUangService'
@@ -9,7 +9,7 @@ export function ArusUangPage() {
     const [data, setData] = useState<ArusUang[]>([])
     const [summary, setSummary] = useState<ArusUangSummary | null>(null)
     const [page, setPage] = useState(1)
-    const [totalPages, setTotalPages] = useState(1)
+    const [hasMore, setHasMore] = useState(true)
     const [isLoading, setIsLoading] = useState(true)
     const [isSyncing, setIsSyncing] = useState(false)
     
@@ -36,29 +36,47 @@ export function ArusUangPage() {
 
     const hasPermission = (perm: string) => userPermissions.includes(perm)
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async (currentPage: number, reset: boolean = false) => {
         setIsLoading(true)
         try {
             const result = await arusUangService.getList({
-                page,
+                page: currentPage,
                 limit: 20,
                 start_date: startDate || undefined,
                 end_date: endDate || undefined,
                 type: typeFilter || undefined
             })
-            setData(result.items)
+            setData(prev => reset ? result.items : [...prev, ...result.items])
             setSummary(result.summary)
-            setTotalPages(result.meta.total_pages)
+            setHasMore(result.meta.page < result.meta.total_pages)
+            setPage(currentPage)
         } catch {
             // Error managed silently or can use toast
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [startDate, endDate, typeFilter])
 
     useEffect(() => {
-        fetchData()
-    }, [page, startDate, endDate, typeFilter])
+        fetchData(1, true)
+    }, [fetchData])
+
+    // Intersection Observer for Infinite Scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                    fetchData(page + 1, false)
+                }
+            },
+            { threshold: 0.1 }
+        )
+
+        const loadMoreTrigger = document.getElementById('load-more-trigger')
+        if (loadMoreTrigger) observer.observe(loadMoreTrigger)
+
+        return () => observer.disconnect()
+    }, [hasMore, isLoading, page, fetchData])
 
     const handleSync = async () => {
         if (!window.confirm('Apakah Anda yakin ingin menyinkronkan data histori transaksi ke ledger Arus Uang? Proses ini aman dan hanya menambahkan data yang belum ada.')) return
@@ -67,7 +85,7 @@ export function ArusUangPage() {
         try {
             const result = await arusUangService.syncData()
             alert(`Berhasil sinkronisasi. ${result.data?.synced_records} data baru ditambahkan.`)
-            fetchData()
+            fetchData(1, true)
         } catch (err: any) {
             alert(err?.response?.data?.message || 'Gagal sinkronisasi data')
         } finally {
@@ -79,7 +97,7 @@ export function ArusUangPage() {
         if (!window.confirm('Apakah Anda yakin ingin menghapus data arus kas ini?')) return
         try {
             await arusUangService.deleteManual(id)
-            fetchData()
+            fetchData(1, true)
         } catch (err: any) {
             alert(err?.response?.data?.message || 'Gagal menghapus data')
         }
@@ -209,7 +227,7 @@ export function ArusUangPage() {
                 </div>
                 <div className="flex items-end">
                     <button 
-                        onClick={() => { setStartDate(''); setEndDate(''); setTypeFilter(''); setPage(1); }}
+                        onClick={() => { setStartDate(''); setEndDate(''); setTypeFilter(''); }}
                         className="px-4 py-2 rounded-xl text-sm border border-white/10 hover:bg-white/5"
                     >
                         Reset
@@ -232,9 +250,14 @@ export function ArusUangPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {isLoading ? (
+                            {isLoading && data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>Memuat data...</td>
+                                    <td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Memuat data...
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : data.length === 0 ? (
                                 <tr>
@@ -288,32 +311,15 @@ export function ArusUangPage() {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                {!isLoading && data.length > 0 && (
-                    <div className="p-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <span className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-                            Halaman {page} dari {totalPages}
-                        </span>
-                        <div className="flex items-center gap-2">
-                            <button
-                                disabled={page === 1}
-                                onClick={() => setPage(page - 1)}
-                                className="px-3 py-1.5 text-sm rounded-lg border border-white/10 disabled:opacity-50 transition-colors cursor-pointer"
-                                style={{ background: 'var(--surface-subtle)' }}
-                            >
-                                Sebelumnya
-                            </button>
-                            <button
-                                disabled={page === totalPages}
-                                onClick={() => setPage(page + 1)}
-                                className="px-3 py-1.5 text-sm rounded-lg border border-white/10 disabled:opacity-50 transition-colors cursor-pointer"
-                                style={{ background: 'var(--surface-subtle)' }}
-                            >
-                                Selanjutnya
-                            </button>
+                {/* Infinite Scroll Trigger */}
+                <div id="load-more-trigger" className="h-20 flex flex-col items-center justify-center border-t border-white/5 shrink-0">
+                    {isLoading && (
+                        <div className="flex items-center gap-2" style={{ color: 'var(--muted-foreground)' }}>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="text-sm">Memuat lebih banyak...</span>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {isModalOpen && (
@@ -323,7 +329,7 @@ export function ArusUangPage() {
                     type={modalType}
                     onSuccess={() => {
                         setIsModalOpen(false)
-                        fetchData()
+                        fetchData(1, true)
                     }}
                 />
             )}
