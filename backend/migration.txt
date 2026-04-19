@@ -100,3 +100,5 @@ Contoh:
 
 =========================================================
 Catatan: Pastikan database PostgreSQL sudah menyala dan tabel database sudah terbuat sesuai dengan kredensial di file `.env` sebelum menjalankan perintah di atas.
+
+ping
