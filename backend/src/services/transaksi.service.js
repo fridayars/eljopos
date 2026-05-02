@@ -395,9 +395,11 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
 
         // Build where clause
         const whereClause = {};
+        const whereClausePayment = {};
 
         if (store_id) {
             whereClause.store_id = store_id;
+            whereClausePayment.store_id = store_id;
         }
 
         // Use COALESCE(transaction_date, created_at) for date filtering
@@ -406,6 +408,10 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
             whereClause[Op.and] = [
                 literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00'`),
                 literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59'`)
+            ];
+            whereClausePayment[Op.and] = [
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00'`),
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59'`)
             ];
         }
 
@@ -431,7 +437,7 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
                 model: Transaksi,
                 as: 'transaksi',
                 attributes: [],
-                where: whereClause,
+                where: whereClausePayment,
                 required: true
             }],
             group: ['payment_method'],
