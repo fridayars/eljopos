@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Download, Calendar, Eye, X, Loader2, Store, MessageCircle, Trash2 } from 'lucide-react';
+import { Search, Download, Eye, X, Loader2, Store, MessageCircle, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -15,6 +15,7 @@ import type {
     TransactionDetailData,
 } from '../../services/reportService';
 import { DeleteTransactionModal } from './DeleteTransactionModal';
+import { DateRangePicker } from '../ui/DateRangePicker';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -237,22 +238,14 @@ export function TransactionReport() {
             <div className="flex flex-col xl:flex-row gap-4 mb-6">
                 {/* Date Range */}
                 <div className="flex items-center gap-3 p-2 bg-white/5 border border-purple-500/10 rounded-2xl">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-purple-500/10">
-                        <Calendar className="w-4 h-4 text-purple-400" />
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-transparent border-none text-xs md:text-sm text-gray-200 focus:outline-none focus:ring-0 [color-scheme:dark]"
-                        />
-                        <span className="text-gray-600 text-xs font-bold px-1">s/d</span>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent border-none text-xs md:text-sm text-gray-200 focus:outline-none focus:ring-0 [color-scheme:dark]"
-                        />
-                    </div>
+                    <DateRangePicker
+                        startDate={startDate}
+                        endDate={endDate}
+                        onDateChange={(start, end) => {
+                            setStartDate(start);
+                            setEndDate(end);
+                        }}
+                    />
                 </div>
 
                 {/* Search & Export */}

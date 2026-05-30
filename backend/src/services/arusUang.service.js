@@ -12,8 +12,8 @@ const getListArusUang = async ({ store_id, start_date, end_date, type, page = 1,
         if (start_date && end_date) {
             whereClause.date = {
                 [Op.between]: [
-                    new Date(`${start_date}T00:00:00`),
-                    new Date(`${end_date}T23:59:59`)
+                    new Date(`${start_date}T00:00:00+07:00`),
+                    new Date(`${end_date}T23:59:59+07:00`)
                 ]
             };
         }

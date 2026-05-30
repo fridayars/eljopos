@@ -37,6 +37,7 @@ import type {
 } from '../services/reportService';
 
 import { TransactionReport } from '../components/reports/TransactionReport';
+import { DateRangePicker } from '../components/ui/DateRangePicker';
 
 type ReportCategory = 'general' | 'financial' | 'transaction' | 'rankings';
 type ReportPeriod = 'daily' | 'monthly' | 'yearly';
@@ -334,7 +335,7 @@ export function ReportsPage() {
                                     {isLoading ? (
                                         <div className="h-full w-full flex items-center justify-center text-gray-500 italic">Memproses data...</div>
                                     ) : (
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={100}>
                                             <AreaChart data={salesData}>
                                                 <defs>
                                                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
@@ -567,22 +568,15 @@ export function ReportsPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 bg-white/5 border border-purple-500/20 rounded-xl px-3 py-1.5">
-                                        <Calendar className="w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            value={startDate}
-                                            onChange={(e) => { setStartDate(e.target.value); setRankingPage(1); }}
-                                            className="bg-transparent text-sm text-gray-200 border-none focus:ring-0"
-                                        />
-                                        <span className="text-gray-500">—</span>
-                                        <input
-                                            type="date"
-                                            value={endDate}
-                                            onChange={(e) => { setEndDate(e.target.value); setRankingPage(1); }}
-                                            className="bg-transparent text-sm text-gray-200 border-none focus:ring-0"
-                                        />
-                                    </div>
+                                    <DateRangePicker 
+                                        startDate={startDate}
+                                        endDate={endDate}
+                                        onDateChange={(start, end) => {
+                                            setStartDate(start);
+                                            setEndDate(end);
+                                            setRankingPage(1);
+                                        }}
+                                    />
                                 </div>
                             </div>
 

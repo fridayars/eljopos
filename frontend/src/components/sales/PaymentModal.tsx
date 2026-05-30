@@ -122,10 +122,19 @@ export function PaymentModal({ isOpen, onClose, grandTotal, canChangeDate = fals
 
     const handleConfirm = () => {
         if (isValid) {
-            // Append current time to the selected date so it doesn't default to 00:00:00
+            // Include timezone offset to prevent backend from assuming GMT+0 in production
             const now = new Date()
             const timeString = now.toTimeString().split(' ')[0] // HH:mm:ss
-            const finalDate = `${date} ${timeString}`
+            
+            const tzo = -now.getTimezoneOffset();
+            const dif = tzo >= 0 ? '+' : '-';
+            const pad = (num: number) => {
+                const norm = Math.floor(Math.abs(num));
+                return (norm < 10 ? '0' : '') + norm;
+            };
+            const tzString = dif + pad(tzo / 60) + ':' + pad(tzo % 60);
+
+            const finalDate = `${date}T${timeString}${tzString}`
 
             // Flatten to first method for simple legacy handling if needed, 
             // but return full payments array for advanced split payment logic

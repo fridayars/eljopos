@@ -12,10 +12,9 @@ const { JENIS_MUTASI_STOK } = require('../utils/enums');
  */
 const generateReceiptNumber = async (transaction, dateOverride) => {
     const base = dateOverride ? new Date(dateOverride) : new Date();
-    // Use local time components to avoid UTC offset shifting the date
-    const y = base.getFullYear();
-    const m = String(base.getMonth() + 1).padStart(2, '0');
-    const d = String(base.getDate()).padStart(2, '0');
+    // Format date specifically for Asia/Jakarta (GMT+7) to avoid UTC offset shifting the date
+    const tzDateStr = base.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const [m, d, y] = tzDateStr.split('/');
     const dateStr = `${y}${m}${d}`;
     const prefix = `INV/${dateStr}/`;
 
@@ -61,7 +60,9 @@ const createTransaksi = async (data, userId) => {
             const normalized = String(transaction_date).trim().replace(' ', 'T');
             const parsed = new Date(normalized);
             const now = new Date();
-            if (!isNaN(parsed.getTime()) && parsed <= now) {
+            // Allow up to 5 minutes drift if client clock is slightly faster
+            const driftAllowance = new Date(now.getTime() + 5 * 60000);
+            if (!isNaN(parsed.getTime()) && parsed <= driftAllowance) {
                 resolvedDate = parsed;
             }
         }
@@ -406,12 +407,12 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         const dateColumn = literal("COALESCE(\"Transaksi\".\"transaction_date\", \"Transaksi\".\"created_at\")");
         if (start_date && end_date) {
             whereClause[Op.and] = [
-                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00'`),
-                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59'`)
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00+07:00'`),
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59+07:00'`)
             ];
             whereClausePayment[Op.and] = [
-                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00'`),
-                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59'`)
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00+07:00'`),
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59+07:00'`)
             ];
         }
 
@@ -685,8 +686,8 @@ const getProductRanking = async ({ start_date, end_date, store_id, page = 1, lim
         if (store_id) trxWhere.store_id = store_id;
         if (start_date && end_date) {
             trxWhere[Op.and] = [
-                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00'`),
-                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59'`)
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00+07:00'`),
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59+07:00'`)
             ];
         }
 
@@ -765,8 +766,8 @@ const getCustomerRanking = async ({ start_date, end_date, store_id, page = 1, li
         if (store_id) whereClause.store_id = store_id;
         if (start_date && end_date) {
             whereClause[Op.and] = [
-                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00'`),
-                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59'`)
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00+07:00'`),
+                literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59+07:00'`)
             ];
         }
 
