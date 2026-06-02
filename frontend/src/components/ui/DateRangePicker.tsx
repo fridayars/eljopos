@@ -7,9 +7,10 @@ interface DateRangePickerProps {
     endDate: string;
     onDateChange: (start: string, end: string) => void;
     className?: string;
+    align?: 'left' | 'right';
 }
 
-export function DateRangePicker({ startDate, endDate, onDateChange, className = '' }: DateRangePickerProps) {
+export function DateRangePicker({ startDate, endDate, onDateChange, className = '', align = 'left' }: DateRangePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     // Parse initial dates or fallback to today
@@ -159,7 +160,7 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute z-50 top-full right-0 mt-2 p-4 bg-[#1A1A24]/95 backdrop-blur-2xl border border-purple-500/30 rounded-2xl shadow-[0_10px_40px_rgba(139,92,246,0.2)] w-[320px]"
+                        className={`absolute z-50 top-full ${align === 'left' ? 'left-0' : 'right-0'} mt-2 p-4 bg-[#1A1A24]/95 backdrop-blur-2xl border border-purple-500/30 rounded-2xl shadow-[0_10px_40px_rgba(139,92,246,0.2)] w-[320px]`}
                     >
                         {/* Header info */}
                         <div className="flex items-center justify-between mb-4">

@@ -576,6 +576,7 @@ export function ReportsPage() {
                                             setEndDate(end);
                                             setRankingPage(1);
                                         }}
+                                        align="right"
                                     />
                                 </div>
                             </div>
