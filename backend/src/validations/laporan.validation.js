@@ -29,4 +29,28 @@ const laporanPenjualanValidation = [
         .withMessage('Limit must be between 1 and 100')
 ]
 
-module.exports = { laporanPenjualanValidation }
+const grafikPenjualanValidation = [
+    query('start_date')
+        .notEmpty()
+        .withMessage('Start date is required')
+        .isDate()
+        .withMessage('Start date must be a valid date (YYYY-MM-DD)'),
+
+    query('end_date')
+        .notEmpty()
+        .withMessage('End date is required')
+        .isDate()
+        .withMessage('End date must be a valid date (YYYY-MM-DD)'),
+
+    query('period')
+        .optional()
+        .isIn(['daily', 'monthly', 'yearly'])
+        .withMessage('Period must be daily, monthly, or yearly'),
+
+    query('store_id')
+        .optional()
+        .isUUID()
+        .withMessage('Store ID must be a valid UUID')
+];
+
+module.exports = { laporanPenjualanValidation, grafikPenjualanValidation }

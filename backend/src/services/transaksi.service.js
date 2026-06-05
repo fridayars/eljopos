@@ -2,7 +2,7 @@ const db = require('../models');
 const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, ProdukLayanan, ArusUang, sequelize } = db;
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
-const { Op, fn, col, literal } = require('sequelize');
+const { Op, fn, col, literal, QueryTypes } = require('sequelize');
 const { insertMutasiStok } = require('../utils/mutasiStok.helper');
 const { JENIS_MUTASI_STOK } = require('../utils/enums');
 
@@ -821,4 +821,344 @@ const getCustomerRanking = async ({ start_date, end_date, store_id, page = 1, li
     }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking };
+/**
+ * Helper: get all periods in a date range (inclusive)
+ */
+const getPeriodsInRange = (startDateStr, endDateStr, period) => {
+    const periods = [];
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return periods;
+    }
+    
+    const current = new Date(start);
+    
+    if (period === 'daily') {
+        while (current <= end) {
+            const yyyy = current.getFullYear();
+            const mm = String(current.getMonth() + 1).padStart(2, '0');
+            const dd = String(current.getDate()).padStart(2, '0');
+            periods.push(`${yyyy}-${mm}-${dd}`);
+            current.setDate(current.getDate() + 1);
+        }
+    } else if (period === 'monthly') {
+        current.setDate(1);
+        const endMonth = new Date(end);
+        endMonth.setDate(1);
+        while (current <= endMonth) {
+            const yyyy = current.getFullYear();
+            const mm = String(current.getMonth() + 1).padStart(2, '0');
+            periods.push(`${yyyy}-${mm}`);
+            current.setMonth(current.getMonth() + 1);
+        }
+    } else if (period === 'yearly') {
+        const startYear = start.getFullYear();
+        const endYear = end.getFullYear();
+        for (let y = startYear; y <= endYear; y++) {
+            periods.push(`${y}`);
+        }
+    }
+    return periods;
+};
+
+/**
+ * Format raw date label to human-readable format
+ */
+const formatDateLabel = (dateStr, period) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    if (period === 'daily') {
+        return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    } else if (period === 'monthly') {
+        return date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+    } else if (period === 'yearly') {
+        return date.toLocaleDateString('id-ID', { year: 'numeric' });
+    }
+    return dateStr;
+};
+
+/**
+ * Laporan Grafik Penjualan (Harian, Bulanan, Tahunan)
+ */
+const getGrafikPenjualan = async ({ start_date, end_date, store_id, period = 'daily' }) => {
+    try {
+        const whereClause = {};
+        if (store_id) {
+            whereClause.store_id = store_id;
+        }
+
+        whereClause[Op.and] = [
+            literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") >= '${start_date}T00:00:00+07:00'`),
+            literal(`COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") <= '${end_date}T23:59:59+07:00'`)
+        ];
+
+        let formatStr = 'YYYY-MM-DD';
+        if (period === 'monthly') {
+            formatStr = 'YYYY-MM';
+        } else if (period === 'yearly') {
+            formatStr = 'YYYY';
+        }
+
+        const dateGroupLiteral = literal(`to_char(COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at") AT TIME ZONE 'Asia/Jakarta', '${formatStr}')`);
+
+        const results = await Transaksi.findAll({
+            where: whereClause,
+            attributes: [
+                [dateGroupLiteral, 'period_label'],
+                [fn('COALESCE', fn('SUM', col('total_amount')), 0), 'total_sales']
+            ],
+            group: [dateGroupLiteral],
+            order: [[dateGroupLiteral, 'ASC']],
+            raw: true
+        });
+
+        // Map results to period_label -> total_sales
+        const salesMap = {};
+        results.forEach(row => {
+            salesMap[row.period_label] = parseFloat(row.total_sales) || 0;
+        });
+
+        // Generate full period range
+        const periods = getPeriodsInRange(start_date, end_date, period);
+
+        // Fill in missing periods & format labels
+        const data = periods.map(p => {
+            const label = formatDateLabel(p, period);
+            return {
+                label,
+                sales: salesMap[p] || 0
+            };
+        });
+
+        return data;
+    } catch (error) {
+        logger.error({ type: 'get_grafik_penjualan_failed', message: error.message });
+        throw new AppError('Failed to get sales chart data', 500);
+    }
+};
+
+/**
+ * Laporan Summary Kartu (Pemasukan, Pengeluaran, Profit)
+ */
+const getSummaryKartu = async ({ start_date, end_date, store_id }) => {
+    try {
+        const whereClauseArus = {};
+        if (store_id) {
+            whereClauseArus.store_id = store_id;
+        }
+
+        whereClauseArus.date = {
+            [Op.between]: [
+                new Date(`${start_date}T00:00:00+07:00`),
+                new Date(`${end_date}T23:59:59+07:00`)
+            ]
+        };
+
+        // Query sum of amount grouped by type
+        const arusUangSummary = await ArusUang.findAll({
+            where: whereClauseArus,
+            attributes: [
+                'type',
+                [fn('COALESCE', fn('SUM', col('amount')), 0), 'total_amount']
+            ],
+            group: ['type'],
+            raw: true
+        });
+
+        let totalIncome = 0;
+        let totalOutcome = 0;
+
+        arusUangSummary.forEach(item => {
+            if (item.type === 'IN') {
+                totalIncome = parseFloat(item.total_amount) || 0;
+            } else if (item.type === 'OUT') {
+                totalOutcome = parseFloat(item.total_amount) || 0;
+            }
+        });
+
+        // Calculate total cost of goods sold (COGS) in range
+        const costResult = await sequelize.query(`
+            SELECT 
+              COALESCE(SUM(td.quantity * COALESCE(p.cost_price, l.cost_price, 0)), 0) AS "totalCost"
+            FROM transaksi_detail td
+            JOIN transaksi t ON td.transaksi_id = t.id AND t.deleted_at IS NULL
+            LEFT JOIN products p ON td.item_type = 'product' AND td.item_id = p.id
+            LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
+            WHERE t.deleted_at IS NULL
+              AND td.deleted_at IS NULL
+              ${store_id ? 'AND t.store_id = :store_id' : ''}
+              AND COALESCE(t.transaction_date, t.created_at) >= :startDate
+              AND COALESCE(t.transaction_date, t.created_at) <= :endDate
+        `, {
+            replacements: {
+                store_id,
+                startDate: `${start_date}T00:00:00+07:00`,
+                endDate: `${end_date}T23:59:59+07:00`
+            },
+            type: QueryTypes.SELECT
+        });
+
+        const totalCost = parseFloat(costResult[0].totalCost) || 0;
+        const estimatedProfit = totalIncome - totalOutcome - totalCost;
+
+        return {
+            total_income: totalIncome,
+            total_outcome: totalOutcome,
+            estimated_profit: estimatedProfit
+        };
+    } catch (error) {
+        logger.error({ type: 'get_summary_kartu_failed', message: error.message });
+        throw new AppError('Failed to get summary cards data', 500);
+    }
+};
+
+/**
+ * Laporan Arus Uang (Tabel Arus Uang)
+ * Group by created_by (User)
+ */
+const getArusUangTable = async ({ start_date, end_date, store_id }) => {
+    try {
+        const whereClauseArus = {};
+        if (store_id) {
+            whereClauseArus.store_id = store_id;
+        }
+
+        whereClauseArus.date = {
+            [Op.between]: [
+                new Date(`${start_date}T00:00:00+07:00`),
+                new Date(`${end_date}T23:59:59+07:00`)
+            ]
+        };
+
+        const arusUangData = await ArusUang.findAll({
+            where: whereClauseArus,
+            attributes: [
+                'created_by',
+                [fn('COALESCE', fn('SUM', literal("CASE WHEN type = 'IN' THEN amount ELSE 0 END")), 0), 'total_in'],
+                [fn('COALESCE', fn('SUM', literal("CASE WHEN type = 'OUT' THEN amount ELSE 0 END")), 0), 'total_out']
+            ],
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['username']
+            }],
+            group: ['created_by', 'creator.id', 'creator.username'],
+            raw: true,
+            nest: true
+        });
+
+        const items = arusUangData.map((row, index) => {
+            const totalIn = parseFloat(row.total_in) || 0;
+            const totalOut = parseFloat(row.total_out) || 0;
+            const selisih = totalIn - totalOut;
+            const username = row.creator?.username || 'Unknown';
+            
+            const selisihFormatted = new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(selisih);
+
+            const description = `${username}\nSelisih: ${selisihFormatted}`;
+            
+            return {
+                no: index + 1,
+                username,
+                selisih,
+                description,
+                income: totalIn,
+                outcome: totalOut
+            };
+        });
+
+        return items;
+    } catch (error) {
+        logger.error({ type: 'get_arus_uang_table_failed', message: error.message });
+        throw new AppError('Failed to get arus uang table data', 500);
+    }
+};
+
+/**
+ * Laporan Tabel Penjualan
+ * - Mengembalikan data omset, HPP (cost), dan laba per periode (harian, bulanan, tahunan)
+ */
+const getTabelPenjualan = async ({ start_date, end_date, store_id, period = 'daily' }) => {
+    try {
+        let formatStr = 'YYYY-MM-DD';
+        if (period === 'monthly') {
+            formatStr = 'YYYY-MM';
+        } else if (period === 'yearly') {
+            formatStr = 'YYYY';
+        }
+
+        const query = `
+            SELECT 
+              period_label,
+              SUM(total_amount) AS total_omset,
+              SUM(total_cost) AS total_cost
+            FROM (
+              SELECT 
+                t.id,
+                to_char(COALESCE(t.transaction_date, t.created_at) AT TIME ZONE 'Asia/Jakarta', :formatStr) AS period_label,
+                t.total_amount,
+                COALESCE(SUM(td.quantity * COALESCE(p.cost_price, l.cost_price, 0)), 0) AS total_cost
+              FROM transaksi t
+              LEFT JOIN transaksi_detail td ON td.transaksi_id = t.id AND td.deleted_at IS NULL
+              LEFT JOIN products p ON td.item_type = 'product' AND td.item_id = p.id
+              LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
+              WHERE t.deleted_at IS NULL
+                ${store_id ? 'AND t.store_id = :store_id' : ''}
+                AND COALESCE(t.transaction_date, t.created_at) >= :startDate
+                AND COALESCE(t.transaction_date, t.created_at) <= :endDate
+              GROUP BY t.id, period_label, t.total_amount
+            ) AS t_summary
+            GROUP BY period_label
+            ORDER BY period_label ASC
+        `;
+
+        const results = await sequelize.query(query, {
+            replacements: {
+                formatStr,
+                store_id,
+                startDate: `${start_date}T00:00:00+07:00`,
+                endDate: `${end_date}T23:59:59+07:00`
+            },
+            type: QueryTypes.SELECT
+        });
+
+        // Map results
+        const resultMap = {};
+        results.forEach(row => {
+            const omset = parseFloat(row.total_omset) || 0;
+            const cost = parseFloat(row.total_cost) || 0;
+            resultMap[row.period_label] = {
+                revenue: omset,
+                profit: omset - cost
+            };
+        });
+
+        // Generate full period range
+        const periods = getPeriodsInRange(start_date, end_date, period);
+
+        // Fill in missing periods
+        const data = periods.map(p => {
+            const dateStr = formatDateLabel(p, period);
+            const stats = resultMap[p] || { revenue: 0, profit: 0 };
+            return {
+                date: dateStr,
+                revenue: stats.revenue,
+                profit: stats.profit
+            };
+        });
+
+        return data;
+    } catch (error) {
+        logger.error({ type: 'get_tabel_penjualan_failed', message: error.message });
+        throw new AppError('Failed to get sales table data', 500);
+    }
+};
+
+module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking, getGrafikPenjualan, getSummaryKartu, getArusUangTable, getTabelPenjualan };

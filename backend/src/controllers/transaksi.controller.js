@@ -126,11 +126,105 @@ const getCustomerRanking = async (req, res, next) => {
     }
 };
 
+/**
+ * Laporan Grafik Penjualan (Harian, Bulanan, Tahunan) — GET /api/laporan/grafik-penjualan
+ */
+const getGrafikPenjualan = async (req, res, next) => {
+    try {
+        const { start_date, end_date, store_id, period } = req.query;
+
+        const result = await transaksiService.getGrafikPenjualan({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id,
+            period: period || 'daily'
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Laporan Summary Kartu (Pemasukan, Pengeluaran, Profit) — GET /api/laporan/summary-kartu
+ */
+const getSummaryKartu = async (req, res, next) => {
+    try {
+        const { start_date, end_date, store_id } = req.query;
+
+        const result = await transaksiService.getSummaryKartu({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Laporan Tabel Arus Uang — GET /api/laporan/arus-uang
+ */
+const getArusUangTable = async (req, res, next) => {
+    try {
+        const { start_date, end_date, store_id } = req.query;
+
+        const result = await transaksiService.getArusUangTable({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Laporan Tabel Penjualan — GET /api/laporan/tabel-penjualan
+ */
+const getTabelPenjualan = async (req, res, next) => {
+    try {
+        const { start_date, end_date, store_id, period } = req.query;
+
+        const result = await transaksiService.getTabelPenjualan({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id,
+            period: period || 'daily'
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createTransaksi,
     getTransaksiDetail,
     getLaporanPenjualan,
     deleteTransaksi,
     getProductRanking,
-    getCustomerRanking
+    getCustomerRanking,
+    getGrafikPenjualan,
+    getSummaryKartu,
+    getArusUangTable,
+    getTabelPenjualan
 };

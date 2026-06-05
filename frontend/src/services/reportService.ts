@@ -21,9 +21,7 @@ const getCurrentStoreId = (): string | undefined => {
 // Types — General Reports (tetap mock)
 // =============================================
 export interface SalesReportItem {
-    time?: string;
-    date?: string;
-    month?: string;
+    label: string;
     sales: number;
 }
 
@@ -159,25 +157,66 @@ export interface RankingResponse<T> {
 // =============================================
 const USE_MOCK_DATA = true;
 
-export const getSalesReport = async (period: 'daily' | 'monthly' | 'yearly'): Promise<{ success: boolean; data: SalesReportItem[] }> => {
-    if (USE_MOCK_DATA) {
-        return { success: true, data: (reportsMock.salesReport as any)[period] };
+export const getSalesReport = async (params: {
+    start_date: string;
+    end_date: string;
+    period: 'daily' | 'monthly' | 'yearly';
+    store_id?: string;
+}): Promise<{ success: boolean; data: SalesReportItem[] }> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/grafik-penjualan', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: []
+        };
     }
-    return { success: false, data: [] };
 };
 
-export const getCashFlow = async (period: 'daily' | 'monthly' | 'yearly'): Promise<{ success: boolean; data: CashFlowItem[] }> => {
-    if (USE_MOCK_DATA) {
-        return { success: true, data: (reportsMock.cashFlow as any)[period] };
+export const getCashFlow = async (params: {
+    start_date: string;
+    end_date: string;
+    store_id?: string;
+}): Promise<{ success: boolean; data: CashFlowItem[] }> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/arus-uang', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: []
+        };
     }
-    return { success: false, data: [] };
 };
 
-export const getSalesTable = async (period: 'daily' | 'monthly' | 'yearly'): Promise<{ success: boolean; data: SalesTableItem[] }> => {
-    if (USE_MOCK_DATA) {
-        return { success: true, data: (reportsMock.salesTable as any)[period] };
+export const getSalesTable = async (params: {
+    start_date: string;
+    end_date: string;
+    period: 'daily' | 'monthly' | 'yearly';
+    store_id?: string;
+}): Promise<{ success: boolean; data: SalesTableItem[] }> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/tabel-penjualan', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: []
+        };
     }
-    return { success: false, data: [] };
 };
 
 // =============================================
@@ -285,6 +324,41 @@ export const deleteTransaction = async (id: string): Promise<{ success: boolean;
         return {
             success: false,
             message: error.response?.data?.message || 'Gagal menghapus transaksi',
+        };
+    }
+};
+
+export interface SummaryCardsResponse {
+    success: boolean;
+    data: {
+        total_income: number;
+        total_outcome: number;
+        estimated_profit: number;
+    };
+    message?: string;
+}
+
+export const getSummaryCards = async (params: {
+    start_date: string;
+    end_date: string;
+    store_id?: string;
+}): Promise<SummaryCardsResponse> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/summary-kartu', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: {
+                total_income: 0,
+                total_outcome: 0,
+                estimated_profit: 0
+            },
+            message: error.response?.data?.message || 'Gagal memuat ringkasan kartu'
         };
     }
 };

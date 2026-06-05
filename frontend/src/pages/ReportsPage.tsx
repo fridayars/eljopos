@@ -12,8 +12,8 @@ import {
     ChevronRight,
 } from 'lucide-react';
 import {
-    AreaChart,
-    Area,
+    BarChart,
+    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -27,6 +27,10 @@ import * as XLSX from 'xlsx';
 import {
     getProductRanking,
     getCustomerRanking,
+    getSalesReport,
+    getSummaryCards,
+    getCashFlow,
+    getSalesTable,
 } from '../services/reportService';
 import type {
     SalesReportItem,
@@ -101,11 +105,23 @@ export function ReportsPage() {
     const [salesData, setSalesData] = useState<SalesReportItem[]>([]);
     const [cashFlowData, setCashFlowData] = useState<CashFlowItem[]>([]);
     const [salesTableData, setSalesTableData] = useState<SalesTableItem[]>([]);
+    const [summaryCards, setSummaryCards] = useState({
+        total_income: 0,
+        total_outcome: 0,
+        estimated_profit: 0
+    });
     
     // Rankings State
     const [rankingSubTab, setRankingSubTab] = useState<RankingSubTab>('product');
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    });
+    const [endDate, setEndDate] = useState(() => {
+        const now = new Date();
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    });
     const [productRankings, setProductRankings] = useState<ProductRankingItem[]>([]);
     const [customerRankings, setCustomerRankings] = useState<CustomerRankingItem[]>([]);
     const [rankingPage, setRankingPage] = useState(1);
@@ -163,10 +179,54 @@ export function ReportsPage() {
     const fetchReportData = async () => {
         setIsLoading(true);
         try {
-            // Temporary: API and data resource are not complete, set to empty for now
-            setSalesData([]);
-            setCashFlowData([]);
-            setSalesTableData([]);
+            const [salesRes, cardsRes, cashFlowRes, salesTableRes] = await Promise.all([
+                getSalesReport({
+                    start_date: startDate,
+                    end_date: endDate,
+                    period: selectedPeriod,
+                    store_id: currentStoreId
+                }),
+                getSummaryCards({
+                    start_date: startDate,
+                    end_date: endDate,
+                    store_id: currentStoreId
+                }),
+                getCashFlow({
+                    start_date: startDate,
+                    end_date: endDate,
+                    store_id: currentStoreId
+                }),
+                getSalesTable({
+                    start_date: startDate,
+                    end_date: endDate,
+                    period: selectedPeriod,
+                    store_id: currentStoreId
+                })
+            ]);
+
+            if (salesRes.success) {
+                setSalesData(salesRes.data);
+            } else {
+                setSalesData([]);
+            }
+
+            if (cardsRes.success) {
+                setSummaryCards(cardsRes.data);
+            } else {
+                setSummaryCards({ total_income: 0, total_outcome: 0, estimated_profit: 0 });
+            }
+
+            if (cashFlowRes.success) {
+                setCashFlowData(cashFlowRes.data);
+            } else {
+                setCashFlowData([]);
+            }
+
+            if (salesTableRes.success) {
+                setSalesTableData(salesTableRes.data);
+            } else {
+                setSalesTableData([]);
+            }
         } catch (error) {
             toast.error('Gagal memuat data laporan');
         } finally {
@@ -175,22 +235,13 @@ export function ReportsPage() {
     };
 
     const getXAxisKey = () => {
-        switch (selectedPeriod) {
-            case 'daily':
-                return 'time';
-            case 'monthly':
-                return 'date';
-            case 'yearly':
-                return 'month';
-            default:
-                return 'time';
-        }
+        return 'label';
     };
 
-    // Calculate totals
-    const totalIncome = cashFlowData.reduce((sum, item) => sum + item.income, 0);
-    const totalOutcome = cashFlowData.reduce((sum, item) => sum + item.outcome, 0);
-    const estimatedProfit = totalIncome - totalOutcome;
+    // Calculate totals from summaryCards
+    const totalIncome = summaryCards.total_income;
+    const totalOutcome = summaryCards.total_outcome;
+    const estimatedProfit = summaryCards.estimated_profit;
 
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
@@ -283,38 +334,54 @@ export function ReportsPage() {
                             exit={{ opacity: 0, y: -10 }}
                             className="p-4 md:p-6 space-y-6"
                         >
-                            {/* Period Filter */}
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setSelectedPeriod('daily')}
-                                    className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${selectedPeriod === 'daily'
-                                        ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] font-medium'
-                                        : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/50'
-                                        }`}
-                                >
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Harian
-                                </button>
-                                <button
-                                    onClick={() => setSelectedPeriod('monthly')}
-                                    className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${selectedPeriod === 'monthly'
-                                        ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] font-medium'
-                                        : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/50'
-                                        }`}
-                                >
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Bulanan
-                                </button>
-                                <button
-                                    onClick={() => setSelectedPeriod('yearly')}
-                                    className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${selectedPeriod === 'yearly'
-                                        ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] font-medium'
-                                        : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/50'
-                                        }`}
-                                >
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Tahunan
-                                </button>
+                            {/* Filters Bar */}
+                            <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
+                                {/* Period Filter */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setSelectedPeriod('daily')}
+                                        className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${selectedPeriod === 'daily'
+                                            ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] font-medium'
+                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/50'
+                                            }`}
+                                    >
+                                        <Calendar className="w-4 h-4 mr-2" />
+                                        Harian
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedPeriod('monthly')}
+                                        className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${selectedPeriod === 'monthly'
+                                            ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] font-medium'
+                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/50'
+                                            }`}
+                                    >
+                                        <Calendar className="w-4 h-4 mr-2" />
+                                        Bulanan
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedPeriod('yearly')}
+                                        className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${selectedPeriod === 'yearly'
+                                            ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] font-medium'
+                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-purple-500/50'
+                                            }`}
+                                    >
+                                        <Calendar className="w-4 h-4 mr-2" />
+                                        Tahunan
+                                    </button>
+                                </div>
+
+                                {/* Date Range Picker */}
+                                <div className="flex items-center gap-2">
+                                    <DateRangePicker 
+                                        startDate={startDate}
+                                        endDate={endDate}
+                                        onDateChange={(start, end) => {
+                                            setStartDate(start);
+                                            setEndDate(end);
+                                        }}
+                                        align="right"
+                                    />
+                                </div>
                             </div>
 
                             {/* Sales Chart */}
@@ -323,9 +390,9 @@ export function ReportsPage() {
                                     <div>
                                         <h3 className="text-lg text-gray-200 font-bold">Grafik Penjualan</h3>
                                         <p className="text-sm text-gray-500">
-                                            {selectedPeriod === 'daily' && 'Rincian penjualan untuk hari ini'}
-                                            {selectedPeriod === 'monthly' && 'Rincian penjualan untuk bulan ini'}
-                                            {selectedPeriod === 'yearly' && 'Rincian penjualan untuk tahun ini'}
+                                            {selectedPeriod === 'daily' && 'Rincian penjualan harian untuk periode ini'}
+                                            {selectedPeriod === 'monthly' && 'Rincian penjualan bulanan untuk periode ini'}
+                                            {selectedPeriod === 'yearly' && 'Rincian penjualan tahunan untuk periode ini'}
                                         </p>
                                     </div>
                                     <TrendingUp className="w-6 h-6 text-cyan-400 opacity-50" />
@@ -336,11 +403,11 @@ export function ReportsPage() {
                                         <div className="h-full w-full flex items-center justify-center text-gray-500 italic">Memproses data...</div>
                                     ) : (
                                         <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={100}>
-                                            <AreaChart data={salesData}>
+                                            <BarChart data={salesData}>
                                                 <defs>
                                                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                                                        <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.8} />
+                                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.3} />
                                                     </linearGradient>
                                                 </defs>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#8b5cf6" opacity={0.05} vertical={false} />
@@ -360,17 +427,14 @@ export function ReportsPage() {
                                                     tickLine={false}
                                                     dx={-10}
                                                 />
-                                                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#06b6d4', strokeWidth: 1 }} />
-                                                <Area
-                                                    type="monotone"
+                                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
+                                                <Bar
                                                     dataKey="sales"
-                                                    stroke="#06b6d4"
-                                                    strokeWidth={3}
-                                                    fillOpacity={1}
                                                     fill="url(#colorSales)"
+                                                    radius={[6, 6, 0, 0]}
                                                     animationDuration={1500}
                                                 />
-                                            </AreaChart>
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     )}
                                 </div>
@@ -427,7 +491,7 @@ export function ReportsPage() {
                                         <tbody className="divide-y divide-purple-500/5">
                                             {cashFlowData.map((item) => (
                                                 <tr key={item.no} className="hover:bg-white/5 transition-colors group">
-                                                    <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors capitalize font-medium">{item.description}</td>
+                                                    <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors capitalize font-medium whitespace-pre-line leading-relaxed">{item.description}</td>
                                                     <td className="py-4 text-right text-sm text-green-400 font-medium">
                                                         {item.income > 0 ? formatCurrency(item.income) : '-'}
                                                     </td>
