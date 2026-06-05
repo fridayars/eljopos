@@ -21,11 +21,11 @@ const navItems: NavItem[] = [
     { id: 'products', icon: Package, label: 'Produk', permission: 'product.view' },
     { id: 'services', icon: Briefcase, label: 'Layanan', permission: 'service.view' },
     { id: 'customers', icon: Users, label: 'Pelanggan' },
-    { id: 'arus-uang', icon: Wallet, label: 'Arus Uang', permission: 'arusuang.view' },
+    { id: 'arus-uang', icon: Wallet, label: 'Transaksi Keuangan', permission: 'arusuang.view' },
     { id: 'reports', icon: BarChart3, label: 'Laporan', permission: ['report.general', 'report.finance', 'report.transaction'] },
-    { 
-        id: 'settings', 
-        icon: Settings, 
+    {
+        id: 'settings',
+        icon: Settings,
         label: 'Pengaturan',
         subItems: [
             { id: 'settings/users', label: 'User', permission: 'user.view' },
@@ -68,7 +68,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 : userPermissions.includes(item.permission)
             if (!hasPermission) return null
         }
-        
+
         if (item.subItems) {
             const filteredSubItems = item.subItems.filter(sub => {
                 if (!sub.permission) return true
@@ -76,12 +76,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                     ? sub.permission.some(p => userPermissions.includes(p))
                     : userPermissions.includes(sub.permission)
             })
-            
+
             if (filteredSubItems.length === 0) return null
-            
+
             return { ...item, subItems: filteredSubItems }
         }
-        
+
         return item
     }).filter(Boolean) as NavItem[]
 
@@ -126,8 +126,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 <nav className="flex-1 flex flex-col gap-2 w-full px-2">
                     {filteredNavItems.map((item) => {
                         const Icon = item.icon
-                        const isActive = item.subItems 
-                            ? activeTab.startsWith(item.id) 
+                        const isActive = item.subItems
+                            ? activeTab.startsWith(item.id)
                             : activeTab === item.id
                         const isOpen = openMenus[item.id]
 
@@ -137,15 +137,15 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                     onClick={() => handleMenuClick(item)}
                                     className="relative w-full rounded-xl flex items-center justify-between gap-3 transition-all duration-200 cursor-pointer overflow-hidden"
                                     style={{
-                                        height: '48px',
-                                        padding: isExpanded ? '0 16px' : '0',
+                                        minHeight: '48px',
+                                        padding: isExpanded ? '8px 16px' : '0',
                                         justifyContent: 'center',
                                         color: isActive ? '#3B82F6' : '#71717A',
                                         background: isActive && !item.subItems
                                             ? 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))'
                                             : isActive && item.subItems
-                                            ? 'rgba(59,130,246,0.05)'
-                                            : 'transparent',
+                                                ? 'rgba(59,130,246,0.05)'
+                                                : 'transparent',
                                         border: isActive && !item.subItems ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
                                     }}
                                     onMouseEnter={(e) => {
@@ -167,10 +167,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                             }}
                                         />
                                     )}
-                                    <div className="flex items-center gap-3 w-full" style={{ justifyContent: isExpanded ? 'flex-start' : 'center' }}>
+                                    <div className="flex items-center gap-3 flex-1 min-w-0" style={{ justifyContent: isExpanded ? 'flex-start' : 'center' }}>
                                         <Icon className="w-5 h-5 relative z-10 shrink-0" />
                                         <span
-                                            className="text-sm relative z-10 font-medium whitespace-nowrap transition-all duration-300"
+                                            className={`text-sm relative z-10 font-medium text-left leading-tight transition-all duration-300 ${isExpanded ? 'whitespace-normal' : 'whitespace-nowrap'}`}
                                             style={{
                                                 opacity: isExpanded ? 1 : 0,
                                                 width: isExpanded ? 'auto' : 0,
@@ -181,21 +181,21 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                             {item.label}
                                         </span>
                                     </div>
-                                    
+
                                     {isExpanded && item.subItems && (
-                                        <ChevronDown 
+                                        <ChevronDown
                                             className="w-4 h-4 shrink-0 transition-transform duration-300"
-                                            style={{ 
+                                            style={{
                                                 transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                                                 color: isActive ? '#3B82F6' : '#71717A'
-                                            }} 
+                                            }}
                                         />
                                     )}
                                 </button>
 
                                 {/* Sub Items Dropdown */}
                                 {isExpanded && item.subItems && (
-                                    <div 
+                                    <div
                                         className="flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
                                         style={{
                                             maxHeight: isOpen ? `${item.subItems.length * 40}px` : '0px',
@@ -247,8 +247,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 <div className="flex items-center justify-start h-full px-2 min-w-max">
                     {filteredNavItems.map((item) => {
                         const Icon = item.icon
-                        const isActive = item.subItems 
-                            ? activeTab.startsWith(item.id) 
+                        const isActive = item.subItems
+                            ? activeTab.startsWith(item.id)
                             : activeTab === item.id
 
                         return (
@@ -271,7 +271,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                 }}
                             >
                                 <Icon className="w-5 h-5 relative z-10" />
-                                <span className="text-[9px] relative z-10 whitespace-nowrap font-medium">{item.label}</span>
+                                <span className="text-[9px] relative z-10 whitespace-normal text-center leading-tight font-medium">{item.label}</span>
                             </button>
                         )
                     })}

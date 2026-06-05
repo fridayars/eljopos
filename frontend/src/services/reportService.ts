@@ -1,5 +1,5 @@
 import api from './api';
-import reportsMock from '../mocks/reports.json';
+// import reportsMock from '../mocks/reports.json';
 
 /**
  * Get the current store_id from localStorage (reflects admin store switching)
@@ -155,7 +155,7 @@ export interface RankingResponse<T> {
 // =============================================
 // General Report Services (mock)
 // =============================================
-const USE_MOCK_DATA = true;
+// const USE_MOCK_DATA = true;
 
 export const getSalesReport = async (params: {
     start_date: string;
