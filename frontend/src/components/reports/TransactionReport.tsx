@@ -50,7 +50,7 @@ export function TransactionReport() {
 
     // Data
     const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
-    const [summary, setSummary] = useState<TransactionHistorySummary>({ total_revenue: 0, total_transactions: 0, payment_summary: [] });
+    const [summary, setSummary] = useState<TransactionHistorySummary>({ total_revenue: 0, total_expense: 0, total_transactions: 0, payment_summary: [] });
 
 
     // Detail modal
@@ -204,10 +204,14 @@ export function TransactionReport() {
     return (
         <div className="p-4 md:p-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-[#121E19]/40 backdrop-blur-xl border border-green-500/20 rounded-2xl p-5 relative overflow-hidden group">
                     <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Pendapatan</p>
                     <p className="text-xl md:text-2xl text-green-400 font-bold">{formatCurrency(summary.total_revenue)}</p>
+                </div>
+                <div className="bg-[#1E1212]/40 backdrop-blur-xl border border-red-500/20 rounded-2xl p-5 relative overflow-hidden group">
+                    <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Pengeluaran</p>
+                    <p className="text-xl md:text-2xl text-red-400 font-bold">{formatCurrency(summary.total_expense || 0)}</p>
                 </div>
                 <div className="bg-[#12181E]/40 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-5 relative overflow-hidden group">
                     <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Transaksi</p>

@@ -54,6 +54,7 @@ export interface TransactionHistoryItem {
 
 export interface TransactionHistorySummary {
     total_revenue: number;
+    total_expense?: number;
     total_transactions: number;
     payment_summary: { method: string; total: number }[];
 }

@@ -428,6 +428,26 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
 
         const totalRevenue = parseFloat(summary.total_revenue) || 0;
 
+        // 1.c Total Expense (Pengeluaran dari Arus Uang)
+        const arusUangWhere = { type: 'OUT' };
+        if (store_id) arusUangWhere.store_id = store_id;
+        if (start_date && end_date) {
+            arusUangWhere[Op.and] = [
+                literal(`"ArusUang"."date" >= '${start_date}T00:00:00+07:00'`),
+                literal(`"ArusUang"."date" <= '${end_date}T23:59:59+07:00'`)
+            ];
+        }
+
+        const expenseSummary = await ArusUang.findOne({
+            where: arusUangWhere,
+            attributes: [
+                [fn('COALESCE', fn('SUM', col('amount')), 0), 'total_expense']
+            ],
+            raw: true
+        });
+
+        const totalExpense = parseFloat(expenseSummary?.total_expense || 0);
+
         // 1b. Payment Summary — breakdown per method
         const paymentSummaryData = await TransaksiPayment.findAll({
             attributes: [
@@ -522,6 +542,7 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         return {
             summary: {
                 total_revenue: totalRevenue,
+                total_expense: totalExpense,
                 total_transactions: parseInt(summary.total_transactions, 10) || 0,
                 payment_summary: processedPaymentSummary.map(p => ({
                     method: p.method.replace('_', ' '),
