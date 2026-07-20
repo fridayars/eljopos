@@ -13,6 +13,11 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'created_by',
                 as: 'creator'
             });
+
+            ArusUang.belongsTo(models.KategoriArusUang, {
+                foreignKey: 'category_id',
+                as: 'kategori'
+            });
             // You can optionally associate this with Transaksi if reference_id points to Transaksi
             // ArusUang.belongsTo(models.Transaksi, {
             //     foreignKey: 'reference_id',
@@ -47,6 +52,10 @@ module.exports = (sequelize, DataTypes) => {
             // For split bills, each payment method will have its own record
             type: DataTypes.ENUM('CASH', 'TRANSFER_BCA'),
             allowNull: false
+        },
+        category_id: {
+            type: DataTypes.UUID,
+            allowNull: true
         },
         amount: {
             type: DataTypes.DECIMAL(15, 2),

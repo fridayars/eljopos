@@ -27,6 +27,7 @@ router.use('/users', require('./user.route'))
 router.use('/stock-opname', require('./stockOpname.route'))
 router.use('/wilayah', require('./wilayah.route'))
 router.use('/arus-uang', require('./arusUang.route'))
+router.use('/kategori-arus-uang', require('./kategoriArusUang.route'))
 router.use('/logs', require('./log.route'))
 
 module.exports = router

@@ -83,6 +83,7 @@ const createArusUangManual = async (data) => {
             source: 'MANUAL',
             reference_id: null,
             payment_method: data.payment_method,
+            category_id: data.category_id || null,
             amount: data.amount,
             description: data.description,
             date: data.date,

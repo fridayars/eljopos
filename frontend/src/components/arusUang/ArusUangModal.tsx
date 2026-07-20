@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Save, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { arusUangService } from '../../services/arusUangService'
+import { kategoriArusUangService, type KategoriArusUang } from '../../services/kategoriArusUangService'
 
 interface ArusUangModalProps {
     isOpen: boolean
@@ -16,6 +17,35 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
     const [description, setDescription] = useState('')
     const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
     const [isSaving, setIsSaving] = useState(false)
+
+    const [categories, setCategories] = useState<KategoriArusUang[]>([])
+    const [categoryId, setCategoryId] = useState('')
+
+    React.useEffect(() => {
+        kategoriArusUangService.getAll(type).then(setCategories).catch(console.error)
+        setCategoryId('') // reset selection on type change
+    }, [type])
+
+    const handleCategoryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value
+        if (val === 'ADD_NEW') {
+            const newName = window.prompt('Masukkan nama kategori baru:')
+            if (newName && newName.trim()) {
+                try {
+                    const newCat = await kategoriArusUangService.create({ type, name: newName.trim() })
+                    setCategories(prev => [...prev, newCat])
+                    setCategoryId(newCat.id)
+                } catch (error: any) {
+                    alert(error?.response?.data?.message || 'Gagal menambahkan kategori')
+                    setCategoryId('')
+                }
+            } else {
+                setCategoryId('')
+            }
+        } else {
+            setCategoryId(val)
+        }
+    }
 
     const [userPermissions] = useState<string[]>(() => {
         try {
@@ -41,6 +71,7 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
             await arusUangService.createManual({
                 type,
                 payment_method: paymentMethod,
+                category_id: categoryId || undefined,
                 amount: parseFloat(amount),
                 description,
                 date
@@ -123,6 +154,24 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
                                     <option value="CASH">Tunai (Cash)</option>
                                     <option value="TRANSFER_BCA">Transfer BCA</option>
                                     {/* You can add more mappings here later */}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>
+                                    Kategori Arus Uang
+                                </label>
+                                <select
+                                    value={categoryId}
+                                    onChange={handleCategoryChange}
+                                    className="w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
+                                >
+                                    <option value="">-- Tanpa Kategori --</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                    <option value="ADD_NEW" className="font-bold text-blue-500">+ Tambah Kategori Baru</option>
                                 </select>
                             </div>
 

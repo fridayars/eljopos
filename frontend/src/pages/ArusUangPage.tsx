@@ -137,9 +137,12 @@ export function ArusUangPage() {
                         </button>
 
                         {hasPermission('arusuang.create_in') && (
+                            // DISABLED DULU SAAT INI
                             <button
+                                disabled
                                 onClick={() => openModal('IN')}
-                                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+                                // className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+                                className="px-4 py-2 bg-gradient-to-r gray-500 text-gray-700 rounded-xl text-sm font-medium transition-all shadow-lg flex items-center gap-2 cursor-pointer"
                             >
                                 <ArrowDownCircle className="w-4 h-4" />
                                 Uang Masuk

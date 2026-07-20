@@ -164,6 +164,7 @@ export function TransactionReport() {
             'Cabang': t.store || '-',
             'Tipe': t.type || '-',
             'Total': t.total_amount,
+            'Profit': t.profit,
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -204,14 +205,20 @@ export function TransactionReport() {
     return (
         <div className="p-4 md:p-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-[#121E19]/40 backdrop-blur-xl border border-green-500/20 rounded-2xl p-5 relative overflow-hidden group">
-                    <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Pendapatan</p>
+                    <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Pemasukan</p>
                     <p className="text-xl md:text-2xl text-green-400 font-bold">{formatCurrency(summary.total_revenue)}</p>
                 </div>
                 <div className="bg-[#1E1212]/40 backdrop-blur-xl border border-red-500/20 rounded-2xl p-5 relative overflow-hidden group">
                     <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Pengeluaran</p>
                     <p className="text-xl md:text-2xl text-red-400 font-bold">{formatCurrency(summary.total_expense || 0)}</p>
+                </div>
+                <div className="bg-[#1A1A12]/40 backdrop-blur-xl border border-yellow-500/20 rounded-2xl p-5 relative overflow-hidden group">
+                    <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Pendapatan</p>
+                    <p className={`text-xl md:text-2xl font-bold ${(summary.total_revenue - (summary.total_expense || 0)) >= 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {formatCurrency(summary.total_revenue - (summary.total_expense || 0))}
+                    </p>
                 </div>
                 <div className="bg-[#12181E]/40 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-5 relative overflow-hidden group">
                     <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Total Transaksi</p>
@@ -221,18 +228,34 @@ export function TransactionReport() {
 
             {/* Cash Box Summary (Breakdown per Payment Method) */}
             {summary.payment_summary && summary.payment_summary.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
                     {summary.payment_summary.map((payment, idx) => (
                         <div
                             key={idx}
                             className="bg-white/5 backdrop-blur-xl border border-purple-500/10 rounded-2xl p-4 flex flex-col justify-between"
                         >
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1 italic">
+                            <p className="text-[11px] text-gray-400 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
                                 {payment.method}
                             </p>
-                            <p className="text-lg text-gray-200 font-bold">
-                                {formatCurrency(payment.total)}
-                            </p>
+
+                            <div className="space-y-1.5 mb-3">
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-500">Pemasukan</span>
+                                    <span className="text-green-400 font-medium">{formatCurrency(payment.pemasukan || 0)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-500">Pengeluaran</span>
+                                    <span className="text-red-400 font-medium">{formatCurrency(payment.pengeluaran || 0)}</span>
+                                </div>
+                            </div>
+
+                            <div className="border-t border-purple-500/10 pt-3 flex justify-between items-center mt-auto">
+                                <span className="text-xs text-gray-400 font-medium">Saldo Akhir</span>
+                                <span className="text-lg text-gray-200 font-bold">
+                                    {formatCurrency(payment.total)}
+                                </span>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -288,13 +311,14 @@ export function TransactionReport() {
                                 <th className="text-left text-sm text-gray-400 py-4 px-4 font-medium">Cabang</th>
                                 <th className="text-left text-sm text-gray-400 py-4 px-4 font-medium">Tipe</th>
                                 <th className="text-right text-sm text-gray-400 py-4 px-4 font-medium">Total</th>
+                                <th className="text-right text-sm text-gray-400 py-4 px-4 font-medium">Profit</th>
                                 <th className="text-center text-sm text-gray-400 py-4 px-4 font-medium">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-500/10">
                             {isLoading && transactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="py-12 text-center">
+                                    <td colSpan={9} className="py-12 text-center">
                                         <div className="flex items-center justify-center gap-2 text-gray-500">
                                             <Loader2 className="w-5 h-5 animate-spin" />
                                             Memuat data...
@@ -303,7 +327,7 @@ export function TransactionReport() {
                                 </tr>
                             ) : filteredTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="py-12 text-center text-gray-500">Tidak ada transaksi ditemukan</td>
+                                    <td colSpan={9} className="py-12 text-center text-gray-500">Tidak ada transaksi ditemukan</td>
                                 </tr>
                             ) : (
                                 filteredTransactions.map((transaction) => (
@@ -335,6 +359,9 @@ export function TransactionReport() {
                                         </td>
                                         <td className="py-4 px-4 text-right text-cyan-400 font-medium">
                                             {formatCurrency(transaction.total_amount)}
+                                        </td>
+                                        <td className={`py-4 px-4 text-right font-medium ${transaction.profit < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                            {formatCurrency(transaction.profit)}
                                         </td>
                                         <td className="py-4 px-4 text-center">
                                             <div className="flex items-center justify-center gap-2">

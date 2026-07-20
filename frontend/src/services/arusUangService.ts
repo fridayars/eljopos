@@ -43,7 +43,7 @@ export const arusUangService = {
         return response.data.data
     },
 
-    createManual: async (data: { type: 'IN' | 'OUT'; payment_method: string; amount: number; description: string; date: string }) => {
+    createManual: async (data: { type: 'IN' | 'OUT'; payment_method: string; category_id?: string; amount: number; description: string; date: string }) => {
         const response = await api.post('/arus-uang', data)
         return response.data
     },

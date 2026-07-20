@@ -24,6 +24,10 @@ const createArusUangValidation = [
         .optional()
         .isString().withMessage('Description must be a string'),
 
+    body('category_id')
+        .optional({ nullable: true })
+        .isUUID().withMessage('Category ID must be a valid UUID'),
+
     body('date')
         .notEmpty().withMessage('Date cannot be empty')
         .isISO8601().toDate().withMessage('Invalid date format')

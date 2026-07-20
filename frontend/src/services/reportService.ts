@@ -47,6 +47,7 @@ export interface TransactionHistoryItem {
     created_at: string;
     customer_name: string | null;
     total_amount: number;
+    profit: number;
     type: string | null;
     kasir: string | null;
     store: string | null;
@@ -56,7 +57,7 @@ export interface TransactionHistorySummary {
     total_revenue: number;
     total_expense?: number;
     total_transactions: number;
-    payment_summary: { method: string; total: number }[];
+    payment_summary: { method: string; total: number; pemasukan?: number; pengeluaran?: number }[];
 }
 
 export interface TransactionHistoryMeta {

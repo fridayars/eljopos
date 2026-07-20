@@ -448,53 +448,51 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
 
         const totalExpense = parseFloat(expenseSummary?.total_expense || 0);
 
-        // 1b. Payment Summary — breakdown per method
-        const paymentSummaryData = await TransaksiPayment.findAll({
+        // 1b. Payment Summary — breakdown per method from ArusUang
+        const baseArusUangWhere = {};
+        if (store_id) baseArusUangWhere.store_id = store_id;
+        if (start_date && end_date) {
+            baseArusUangWhere[Op.and] = [
+                literal(`"ArusUang"."date" >= '${start_date}T00:00:00+07:00'`),
+                literal(`"ArusUang"."date" <= '${end_date}T23:59:59+07:00'`)
+            ];
+        }
+
+        const paymentSummaryData = await ArusUang.findAll({
+            where: baseArusUangWhere,
             attributes: [
                 ['payment_method', 'method'],
-                [fn('SUM', col('nominal')), 'total']
+                [fn('SUM', literal("CASE WHEN type = 'IN' THEN amount ELSE 0 END")), 'pemasukan'],
+                [fn('SUM', literal("CASE WHEN type = 'OUT' THEN amount ELSE 0 END")), 'pengeluaran']
             ],
-            include: [{
-                model: Transaksi,
-                as: 'transaksi',
-                attributes: [],
-                where: whereClausePayment,
-                required: true
-            }],
             group: ['payment_method'],
             raw: true
         });
 
-        let totalGrossPayment = 0;
         const processedPaymentSummary = paymentSummaryData.map(p => {
-            const total = parseFloat(p.total) || 0;
-            totalGrossPayment += total;
+            const pemasukan = parseFloat(p.pemasukan) || 0;
+            const pengeluaran = parseFloat(p.pengeluaran) || 0;
             return {
                 method: p.method,
-                total
+                pemasukan,
+                pengeluaran,
+                total: pemasukan - pengeluaran
             };
         });
-
-        const totalChange = totalGrossPayment - totalRevenue;
-
-        if (totalChange > 0 && processedPaymentSummary.length > 0) {
-            let cashMethod = processedPaymentSummary.find(p =>
-                p.method.toLowerCase() === 'cash' || p.method.toLowerCase() === 'tunai'
-            );
-            if (cashMethod) {
-                cashMethod.total -= totalChange;
-            } else {
-                processedPaymentSummary.sort((a, b) => b.total - a.total);
-                processedPaymentSummary[0].total -= totalChange;
-            }
-        }
 
         // 2. Paginated items
         const { count: total, rows: transaksiList } = await Transaksi.findAndCountAll({
             where: whereClause,
             attributes: [
                 'id', 'receipt_number', 'total_amount',
-                [literal('COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at")'), 'created_at']
+                [literal('COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at")'), 'created_at'],
+                [literal(`(
+                    SELECT COALESCE(SUM(td.quantity * COALESCE(p.cost_price, l.cost_price, 0)), 0)
+                    FROM transaksi_detail td
+                    LEFT JOIN products p ON td.item_type = 'product' AND td.item_id = p.id
+                    LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
+                    WHERE td.transaksi_id = "Transaksi"."id" AND td.deleted_at IS NULL
+                )`), 'total_cost']
             ],
             include: [
                 {
@@ -526,16 +524,23 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
         });
 
         // 3. Format items sesuai API contract
-        const items = transaksiList.map(trx => ({
-            id: trx.id,
-            invoice_number: trx.receipt_number,
-            created_at: trx.get('created_at'),
-            customer_name: trx.customer ? trx.customer.name : null,
-            total_amount: trx.total_amount,
-            type: trx.details && trx.details.length > 0 ? trx.details[0].item_type : null,
-            kasir: trx.user ? trx.user.username : null,
-            store: trx.store ? trx.store.name : null
-        }));
+        const items = transaksiList.map(trx => {
+            const totalAmount = parseFloat(trx.total_amount) || 0;
+            const totalCost = parseFloat(trx.get('total_cost')) || 0;
+            const profit = totalAmount - totalCost;
+            
+            return {
+                id: trx.id,
+                invoice_number: trx.receipt_number,
+                created_at: trx.get('created_at'),
+                customer_name: trx.customer ? trx.customer.name : null,
+                total_amount: totalAmount,
+                profit: profit,
+                type: trx.details && trx.details.length > 0 ? trx.details[0].item_type : null,
+                kasir: trx.user ? trx.user.username : null,
+                store: trx.store ? trx.store.name : null
+            };
+        });
 
         const totalPages = Math.ceil(total / limit);
 
@@ -546,6 +551,8 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
                 total_transactions: parseInt(summary.total_transactions, 10) || 0,
                 payment_summary: processedPaymentSummary.map(p => ({
                     method: p.method.replace('_', ' '),
+                    pemasukan: p.pemasukan,
+                    pengeluaran: p.pengeluaran,
                     total: p.total
                 }))
             },
