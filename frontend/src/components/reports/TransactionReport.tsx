@@ -156,16 +156,21 @@ export function TransactionReport() {
 
     // Export
     const handleExport = () => {
-        const exportData = filteredTransactions.map((t) => ({
-            'Nomor Invoice': t.invoice_number,
-            'Tanggal': formatDate(t.created_at),
-            'Pelanggan': t.customer_name || 'Walk-in',
-            'Kasir': t.kasir || '-',
-            'Cabang': t.store || '-',
-            'Tipe': t.type || '-',
-            'Total': t.total_amount,
-            'Profit': t.profit,
-        }));
+        const exportData = filteredTransactions.map((t) => {
+            const data: Record<string, any> = {
+                'Nomor Invoice': t.invoice_number,
+                'Tanggal': formatDate(t.created_at),
+                'Pelanggan': t.customer_name || 'Walk-in',
+                'Kasir': t.kasir || '-',
+                'Cabang': t.store || '-',
+                'Tipe': t.type || '-',
+                'Total': t.total_amount,
+            };
+            if (userPermissions.includes('report.profittransaction')) {
+                data['Profit'] = t.profit;
+            }
+            return data;
+        });
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();
@@ -311,14 +316,16 @@ export function TransactionReport() {
                                 <th className="text-left text-sm text-gray-400 py-4 px-4 font-medium">Cabang</th>
                                 <th className="text-left text-sm text-gray-400 py-4 px-4 font-medium">Tipe</th>
                                 <th className="text-right text-sm text-gray-400 py-4 px-4 font-medium">Total</th>
-                                <th className="text-right text-sm text-gray-400 py-4 px-4 font-medium">Profit</th>
+                                {userPermissions.includes('report.profittransaction') && (
+                                    <th className="text-right text-sm text-gray-400 py-4 px-4 font-medium">Profit</th>
+                                )}
                                 <th className="text-center text-sm text-gray-400 py-4 px-4 font-medium">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-500/10">
                             {isLoading && transactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="py-12 text-center">
+                                    <td colSpan={userPermissions.includes('report.profittransaction') ? 9 : 8} className="py-12 text-center">
                                         <div className="flex items-center justify-center gap-2 text-gray-500">
                                             <Loader2 className="w-5 h-5 animate-spin" />
                                             Memuat data...
@@ -327,7 +334,7 @@ export function TransactionReport() {
                                 </tr>
                             ) : filteredTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="py-12 text-center text-gray-500">Tidak ada transaksi ditemukan</td>
+                                    <td colSpan={userPermissions.includes('report.profittransaction') ? 9 : 8} className="py-12 text-center text-gray-500">Tidak ada transaksi ditemukan</td>
                                 </tr>
                             ) : (
                                 filteredTransactions.map((transaction) => (
@@ -360,9 +367,11 @@ export function TransactionReport() {
                                         <td className="py-4 px-4 text-right text-cyan-400 font-medium">
                                             {formatCurrency(transaction.total_amount)}
                                         </td>
-                                        <td className={`py-4 px-4 text-right font-medium ${transaction.profit < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                            {formatCurrency(transaction.profit)}
-                                        </td>
+                                        {userPermissions.includes('report.profittransaction') && (
+                                            <td className={`py-4 px-4 text-right font-medium ${transaction.profit < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                                {formatCurrency(transaction.profit)}
+                                            </td>
+                                        )}
                                         <td className="py-4 px-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button

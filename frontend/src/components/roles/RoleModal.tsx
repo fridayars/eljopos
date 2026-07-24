@@ -80,6 +80,7 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                 { value: 'report.finance', label: 'Keuangan' },
                 { value: 'report.transaction', label: 'Riwayat Transaksi' },
                 { value: 'report.deletetransaction', label: 'Hapus Transaksi' },
+                { value: 'report.profittransaction', label: 'Profit Transaksi' },
             ]
         }
     ]
