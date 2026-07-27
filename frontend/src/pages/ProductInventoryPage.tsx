@@ -46,17 +46,19 @@ export function ProductInventoryPage() {
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all')
     const [viewingStockProduct, setViewingStockProduct] = useState<ProductItem | null>(null)
 
-    // Product Pagination & Sorting States
+    // Product Infinite Scroll & Sorting States
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
     const pageSize = 10
+    const [isFetchingProducts, setIsFetchingProducts] = useState(false)
 
-    const fetchProducts = useCallback(async () => {
+    const fetchProducts = useCallback(async (page: number, reset: boolean = false) => {
+        setIsFetchingProducts(true);
         try {
             const params = {
-                page: currentPage,
+                page: page,
                 limit: pageSize,
                 search: searchQuery || undefined,
                 kategori_id: selectedCategoryFilter === 'all' ? undefined : selectedCategoryFilter,
@@ -66,13 +68,16 @@ export function ProductInventoryPage() {
             const prodRes = await getProducts(params)
 
             if (prodRes.success) {
-                setProducts(prodRes.data.items)
+                setProducts(prev => reset ? prodRes.data.items : [...prev, ...prodRes.data.items])
                 setTotalPages(prodRes.data.pagination?.total_pages || 1)
+                setCurrentPage(page)
             }
         } catch (error) {
             toast.error('Gagal memuat data produk')
+        } finally {
+            setIsFetchingProducts(false)
         }
-    }, [currentPage, searchQuery, sortConfig, selectedCategoryFilter])
+    }, [searchQuery, sortConfig, selectedCategoryFilter])
 
     const loadInitialData = useCallback(async () => {
         setIsLoading(true)
@@ -90,7 +95,7 @@ export function ProductInventoryPage() {
             if (branchRes.success) setBranches(branchRes.data)
 
             // Also fetch products for the first load
-            await fetchProducts()
+            await fetchProducts(1, true)
         } catch (error) {
             toast.error('Gagal memuat data inventaris')
         } finally {
@@ -105,9 +110,9 @@ export function ProductInventoryPage() {
     useEffect(() => {
         // Only run fetchProducts if it's not the initial loading (already handled by loadInitialData)
         if (!isLoading) {
-            fetchProducts()
+            fetchProducts(1, true)
         }
-    }, [currentPage, searchQuery, sortConfig, selectedCategoryFilter, isLoading, fetchProducts])
+    }, [searchQuery, sortConfig, selectedCategoryFilter])
 
     const handleSortChange = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc'
@@ -177,7 +182,7 @@ export function ProductInventoryPage() {
             if (res.success && res.data) {
                 toast.success('Produk berhasil ditambahkan')
                 setIsEditProdOpen(false)
-                fetchProducts()
+                fetchProducts(1, true)
             } else {
                 toast.error('Gagal menambahkan produk')
             }
@@ -187,7 +192,7 @@ export function ProductInventoryPage() {
             if (res.success && res.data) {
                 toast.success('Produk berhasil diperbarui')
                 setIsEditProdOpen(false)
-                fetchProducts()
+                fetchProducts(1, true)
             } else {
                 toast.error('Gagal memperbarui produk')
             }
@@ -214,7 +219,7 @@ export function ProductInventoryPage() {
         const res = await deleteProduct(productToDelete.id)
         if (res.success) {
             toast.success('Produk berhasil dihapus')
-            fetchProducts()
+            fetchProducts(1, true)
         } else {
             toast.error('Gagal menghapus produk')
         }
@@ -237,7 +242,7 @@ export function ProductInventoryPage() {
         const response = await importProductsFile(file)
         if (response.success) {
             toast.success(response.message || 'Produk berhasil diimport')
-            fetchProducts()
+            fetchProducts(1, true)
         } else {
             toast.error(response.message || 'Gagal mengimport produk')
         }
@@ -261,7 +266,7 @@ export function ProductInventoryPage() {
         toast.success(`Berhasil transfer dari ${sourceName} ke ${destName}: ${itemsList}`)
 
         // Refresh products list from DB to reflect correct stock changes
-        fetchProducts()
+        fetchProducts(1, true)
     }
 
     const handleEditStock = async (productId: string, payload: Record<string, any>) => {
@@ -276,7 +281,7 @@ export function ProductInventoryPage() {
 
             if (res.success) {
                 toast.success('Stok produk berhasil diperbarui')
-                fetchProducts()
+                fetchProducts(1, true)
             } else {
                 throw new Error('Gagal memperbarui stok')
             }
@@ -464,7 +469,6 @@ export function ProductInventoryPage() {
                                 selectedCategoryId={selectedCategoryFilter}
                                 onCategoryChange={(val) => {
                                     setSelectedCategoryFilter(val)
-                                    setCurrentPage(1)
                                 }}
                                 onEditProduct={startEditProduct}
                                 onDeleteProduct={handleRequestDeleteProduct}
@@ -473,15 +477,14 @@ export function ProductInventoryPage() {
                                 onExportProducts={handleExportProducts}
                                 onOpenTransfer={() => setIsTransferOpen(true)}
                                 onOpenAdd={startAddProduct}
-                                currentPage={currentPage}
-                                totalPages={totalPages}
-                                onPageChange={setCurrentPage}
+                                hasMore={currentPage < totalPages}
+                                isLoadingMore={isFetchingProducts}
+                                onLoadMore={() => fetchProducts(currentPage + 1, false)}
                                 sortConfig={sortConfig}
                                 onSortChange={handleSortChange}
                                 searchQuery={searchQuery}
                                 onSearchChange={(val) => {
                                     setSearchQuery(val)
-                                    setCurrentPage(1)
                                 }}
                                 onEditStock={handleEditStock}
                                 onViewStockHistory={setViewingStockProduct}

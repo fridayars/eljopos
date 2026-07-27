@@ -1,10 +1,10 @@
 const db = require('../models');
-const { ArusUang, Transaksi, TransaksiPayment, User, sequelize } = db;
+const { ArusUang, Transaksi, TransaksiPayment, User, KategoriArusUang, sequelize } = db;
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 const { Op, fn, col } = require('sequelize');
 
-const getListArusUang = async ({ store_id, start_date, end_date, type, page = 1, limit = 20 }) => {
+const getListArusUang = async ({ store_id, start_date, end_date, type, search, page = 1, limit = 20 }) => {
     try {
         const offset = (page - 1) * limit;
         const whereClause = { store_id };
@@ -22,14 +22,28 @@ const getListArusUang = async ({ store_id, start_date, end_date, type, page = 1,
             whereClause.type = type.toUpperCase();
         }
 
+        if (search) {
+            whereClause[Op.or] = [
+                { description: { [Op.iLike]: `%${search}%` } },
+                sequelize.where(sequelize.cast(sequelize.col('ArusUang.source'), 'TEXT'), { [Op.iLike]: `%${search}%` }),
+                sequelize.where(sequelize.cast(sequelize.col('ArusUang.payment_method'), 'TEXT'), { [Op.iLike]: `%${search}%` }),
+                { '$creator.username$': { [Op.iLike]: `%${search}%` } },
+                { '$kategori.name$': { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
         // Summary Calculations
         const summaryArr = await ArusUang.findAll({
             where: whereClause,
+            include: search ? [
+                { model: User, as: 'creator', attributes: [] },
+                { model: KategoriArusUang, as: 'kategori', attributes: [] }
+            ] : [],
             attributes: [
-                'type',
-                [fn('SUM', col('amount')), 'total']
+                [col('ArusUang.type'), 'type'],
+                [fn('SUM', col('ArusUang.amount')), 'total']
             ],
-            group: ['type'],
+            group: [col('ArusUang.type')],
             raw: true
         });
 
@@ -48,6 +62,11 @@ const getListArusUang = async ({ store_id, start_date, end_date, type, page = 1,
                     model: User, // Need to add 'user' association to ArusUang model later or just rely on manual query
                     as: 'creator',
                     attributes: ['username']
+                },
+                {
+                    model: KategoriArusUang,
+                    as: 'kategori',
+                    attributes: ['name']
                 }
             ],
             order: [['date', 'DESC'], ['created_at', 'DESC']],

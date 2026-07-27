@@ -59,10 +59,11 @@ export function ServiceInventoryPage() {
     const [searchService, setSearchService] = useState('');
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
 
-    // Pagination
+    // Pagination & Infinite Scroll
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [pageSize] = useState(10);
+    const [isFetchingServices, setIsFetchingServices] = useState(false);
 
     // Modals visibility
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -95,8 +96,8 @@ export function ServiceInventoryPage() {
     }, []);
 
     useEffect(() => {
-        fetchServices();
-    }, [currentPage, searchService, selectedCategoryFilter]);
+        fetchServices(1, true);
+    }, [searchService, selectedCategoryFilter]);
 
     const fetchInitialData = async () => {
         try {
@@ -112,21 +113,25 @@ export function ServiceInventoryPage() {
         }
     };
 
-    const fetchServices = async () => {
+    const fetchServices = async (page: number = 1, reset: boolean = false) => {
+        setIsFetchingServices(true);
         try {
             const servRes = await getServiceProducts({
-                page: currentPage,
+                page: page,
                 limit: pageSize,
                 search: searchService,
                 kategori_layanan_id: selectedCategoryFilter === 'all' ? undefined : selectedCategoryFilter,
             });
 
             if (servRes.success) {
-                setServices(servRes.data.items);
+                setServices(prev => reset || page === 1 ? servRes.data.items : [...prev, ...servRes.data.items]);
                 setTotalPages(servRes.data.pagination.total_pages);
+                setCurrentPage(page);
             }
         } catch {
             toast.error('Gagal memuat data layanan');
+        } finally {
+            setIsFetchingServices(false);
         }
     };
 
@@ -233,7 +238,7 @@ export function ServiceInventoryPage() {
                 const res = await updateServiceProduct(selectedService.id, selectedService);
                 if (res.success) {
                     toast.success('Layanan berhasil diperbarui');
-                    fetchServices();
+                    fetchServices(1, true);
                 } else {
                     toast.error('Gagal memperbarui layanan');
                 }
@@ -241,7 +246,7 @@ export function ServiceInventoryPage() {
                 const res = await addServiceProduct(selectedService);
                 if (res.success) {
                     toast.success('Layanan berhasil ditambahkan');
-                    fetchServices();
+                    fetchServices(1, true);
                 } else {
                     toast.error('Gagal menambahkan layanan');
                 }
@@ -325,7 +330,7 @@ export function ServiceInventoryPage() {
             const res = await importServiceProducts(file);
             if (res.success) {
                 toast.success(res.message || 'Layanan berhasil diimpor');
-                fetchServices(); // Refresh list
+                fetchServices(1, true); // Refresh list
             } else {
                 toast.error(res.message || 'Gagal mengimpor layanan');
             }
@@ -427,9 +432,9 @@ export function ServiceInventoryPage() {
                                 onToggleStatus={handleToggleStatus}
                                 onExport={handleExportServices}
                                 onImport={handleImportServices}
-                                currentPage={currentPage}
-                                totalPages={totalPages}
-                                onPageChange={setCurrentPage}
+                                hasMore={currentPage < totalPages}
+                                isLoadingMore={isFetchingServices}
+                                onLoadMore={() => fetchServices(currentPage + 1, false)}
                                 userPermissions={userPermissions}
                             />
                         </motion.div>

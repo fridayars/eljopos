@@ -3,7 +3,7 @@ const { KategoriArusUang } = db;
 const AppError = require('../utils/app.error');
 
 const getAll = async (store_id, type) => {
-    const where = { store_id, is_active: true };
+    const where = { is_active: true };
     if (type) {
         where.type = type;
     }
@@ -15,7 +15,7 @@ const getAll = async (store_id, type) => {
 
 const create = async (store_id, data) => {
     const exists = await KategoriArusUang.findOne({
-        where: { store_id, type: data.type, name: data.name }
+        where: { type: data.type, name: data.name }
     });
     
     if (exists) {

@@ -1,4 +1,4 @@
-import { Search, Plus, Edit, Trash2, Download, Upload, MoreVertical, Eye, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Download, Upload, MoreVertical, Eye, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { ServiceProduct, ServiceCategory } from '../../services/productService';
 
@@ -219,9 +219,9 @@ interface ServicesTableProps {
     onToggleStatus: (id: string, newStatus: boolean) => void;
     onExport: () => void;
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
+    hasMore: boolean;
+    isLoadingMore: boolean;
+    onLoadMore: () => void;
     userPermissions: string[];
 }
 
@@ -239,12 +239,29 @@ export function ServicesTable({
     onToggleStatus,
     onExport,
     onImport,
-    currentPage,
-    totalPages,
-    onPageChange,
+    hasMore,
+    isLoadingMore,
+    onLoadMore,
     userPermissions,
 }: ServicesTableProps) {
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        const trigger = document.getElementById('services-load-more-trigger');
+        if (trigger) observer.observe(trigger);
+
+        return () => observer.disconnect();
+    }, [hasMore, isLoadingMore, onLoadMore]);
+
     const displayServices = services;
 
     return (
@@ -390,52 +407,21 @@ export function ServicesTable({
                             <p className="text-gray-400">Tidak ada produk layanan ditemukan</p>
                         </div>
                     )}
-                </div>
-                </div>
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="px-4 md:px-6 py-4 border-t border-purple-500/10 flex items-center justify-between bg-black/20 shrink-0">
-                    <p className="text-sm text-gray-500">
-                        Halaman <span className="text-gray-300 font-medium">{currentPage}</span> dari <span className="text-gray-300 font-medium">{totalPages}</span>
-                    </p>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => onPageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${currentPage === 1
-                                ? 'border-purple-500/10 text-gray-600 cursor-not-allowed'
-                                : 'border-purple-500/20 text-gray-400 hover:text-white hover:border-blue-500/50'
-                                }`}
-                        >
-                            Sebelumnya
-                        </button>
-                        {[...Array(totalPages)].map((_, i) => (
-                            <button
-                                key={i + 1}
-                                onClick={() => onPageChange(i + 1)}
-                                className={`w-9 h-9 rounded-lg border text-sm transition-all flex items-center justify-center ${currentPage === i + 1
-                                    ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
-                                    : 'border-purple-500/20 text-gray-400 hover:text-white hover:border-blue-500/50'
-                                    }`}
-                            >
-                                {i + 1}
-                            </button>
-                        ))}
-                        <button
-                            onClick={() => onPageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${currentPage === totalPages
-                                ? 'border-purple-500/10 text-gray-600 cursor-not-allowed'
-                                : 'border-purple-500/20 text-gray-400 hover:text-white hover:border-blue-500/50'
-                                }`}
-                        >
-                            Berikutnya
-                        </button>
+                    </div>
+                    {/* Infinite Scroll Trigger */}
+                    <div id="services-load-more-trigger" className="h-20 flex flex-col items-center justify-center shrink-0 mt-4">
+                        {isLoadingMore && (
+                            <div className="flex items-center gap-2 text-purple-400">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span className="text-sm">Memuat lebih banyak...</span>
+                            </div>
+                        )}
+                        {!hasMore && services.length > 0 && (
+                            <p className="text-xs text-gray-600 italic">Semua layanan telah dimuat</p>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

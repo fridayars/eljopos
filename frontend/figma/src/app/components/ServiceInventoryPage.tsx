@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Plus, Edit, Trash2, Package, Briefcase, X, Save, Download, Upload } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Plus, Edit, Trash2, Package, Briefcase, X, Save, Download, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
@@ -129,6 +129,39 @@ export function ServiceInventoryPage() {
     cat.name.toLowerCase().includes(searchCategory.toLowerCase())
   );
 
+  const ITEMS_PER_PAGE = 20;
+  
+  // Category infinite scroll
+  const [visibleCategoryCount, setVisibleCategoryCount] = useState(ITEMS_PER_PAGE);
+  const [isCategoryLoadingMore, setIsCategoryLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setVisibleCategoryCount(ITEMS_PER_PAGE);
+  }, [searchCategory, serviceCategories]);
+
+  const displayedCategories = filteredCategories.slice(0, visibleCategoryCount);
+  const hasMoreCategories = visibleCategoryCount < filteredCategories.length;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreCategories && !isCategoryLoadingMore) {
+          setIsCategoryLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCategoryCount((prev) => prev + ITEMS_PER_PAGE);
+            setIsCategoryLoadingMore(false);
+          }, 500);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const trigger = document.getElementById('categories-load-more');
+    if (trigger) observer.observe(trigger);
+
+    return () => observer.disconnect();
+  }, [hasMoreCategories, isCategoryLoadingMore]);
+
   // Filter service products by search and category
   const filteredServiceProducts = serviceProducts.filter((service) => {
     const matchesSearch = service.name.toLowerCase().includes(searchService.toLowerCase()) ||
@@ -136,6 +169,37 @@ export function ServiceInventoryPage() {
     const matchesCategory = selectedCategoryFilter === 'all' || service.categoryId === selectedCategoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  // Service infinite scroll
+  const [visibleServiceCount, setVisibleServiceCount] = useState(ITEMS_PER_PAGE);
+  const [isServiceLoadingMore, setIsServiceLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setVisibleServiceCount(ITEMS_PER_PAGE);
+  }, [searchService, selectedCategoryFilter, serviceProducts]);
+
+  const displayedServiceProducts = filteredServiceProducts.slice(0, visibleServiceCount);
+  const hasMoreServices = visibleServiceCount < filteredServiceProducts.length;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreServices && !isServiceLoadingMore) {
+          setIsServiceLoadingMore(true);
+          setTimeout(() => {
+            setVisibleServiceCount((prev) => prev + ITEMS_PER_PAGE);
+            setIsServiceLoadingMore(false);
+          }, 500);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const trigger = document.getElementById('services-load-more');
+    if (trigger) observer.observe(trigger);
+
+    return () => observer.disconnect();
+  }, [hasMoreServices, isServiceLoadingMore]);
 
   // Filter products for search in service modal
   const filteredProductsForService = mockProducts.filter((product) =>
@@ -349,7 +413,7 @@ export function ServiceInventoryPage() {
             {/* Category List */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
               <div className="grid gap-4">
-                {filteredCategories.map((category) => (
+                {displayedCategories.map((category) => (
                   <div
                     key={category.id}
                     className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all"
@@ -381,6 +445,19 @@ export function ServiceInventoryPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+              
+              {/* Infinite Scroll Trigger */}
+              <div id="categories-load-more" className="h-20 flex flex-col items-center justify-center mt-4 shrink-0">
+                {isCategoryLoadingMore && (
+                  <div className="flex items-center gap-2 text-purple-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">Memuat lebih banyak...</span>
+                  </div>
+                )}
+                {!hasMoreCategories && filteredCategories.length > 0 && (
+                  <p className="text-xs text-gray-600 italic">Semua kategori telah dimuat</p>
+                )}
               </div>
             </div>
           </div>
@@ -456,7 +533,7 @@ export function ServiceInventoryPage() {
             {/* Service List */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
               <div className="grid gap-4">
-                {filteredServiceProducts.map((service) => (
+                {displayedServiceProducts.map((service) => (
                   <div
                     key={service.id}
                     className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all"
@@ -523,6 +600,19 @@ export function ServiceInventoryPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+              
+              {/* Infinite Scroll Trigger */}
+              <div id="services-load-more" className="h-20 flex flex-col items-center justify-center mt-4 shrink-0">
+                {isServiceLoadingMore && (
+                  <div className="flex items-center gap-2 text-purple-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">Memuat lebih banyak...</span>
+                  </div>
+                )}
+                {!hasMoreServices && filteredServiceProducts.length > 0 && (
+                  <p className="text-xs text-gray-600 italic">Semua layanan telah dimuat</p>
+                )}
               </div>
             </div>
           </div>

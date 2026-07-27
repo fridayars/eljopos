@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, FileX, Wrench, MoreVertical, History, Settings2 } from 'lucide-react'
+import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, Trash2, FileX, Wrench, MoreVertical, History, Settings2, Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { ProductItem, Category } from '../../services/productService'
 import { EditStockModal } from './EditStockModal'
@@ -211,10 +211,10 @@ interface ProductsPageProps {
     onOpenAdd: () => void
     onEditStock: (productId: string, payload: Record<string, any>) => Promise<void>
     onViewStockHistory: (product: ProductItem) => void
-    // Pagination & Sorting props
-    currentPage: number
-    totalPages: number
-    onPageChange: (page: number) => void
+    // Infinite Scroll props
+    hasMore: boolean
+    isLoadingMore: boolean
+    onLoadMore: () => void
     sortConfig: SortConfig | null
     onSortChange: (key: string) => void
     searchQuery: string
@@ -234,9 +234,9 @@ export function ProductsPage({
     onOpenTransfer,
     onOpenAdd,
     onEditStock,
-    currentPage,
-    totalPages,
-    onPageChange,
+    hasMore,
+    isLoadingMore,
+    onLoadMore,
     sortConfig,
     onSortChange,
     searchQuery,
@@ -266,6 +266,22 @@ export function ProductsPage({
         onImportProducts(file)
         e.target.value = '' // Reset input
     }
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        const trigger = document.getElementById('products-load-more-trigger');
+        if (trigger) observer.observe(trigger);
+
+        return () => observer.disconnect();
+    }, [hasMore, isLoadingMore, onLoadMore]);
 
     // Helper to render sort icon
     const renderSortIcon = (columnKey: string) => {
@@ -497,55 +513,18 @@ export function ProductsPage({
                             </table>
                         </div>
 
-                        {/* Pagination Footer */}
-                        {totalPages > 0 && (
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-purple-500/20" style={{ background: 'var(--surface-overlay)' }}>
-                                <p className="text-sm text-gray-400">
-                                    Halaman <span className="font-medium text-gray-200">{currentPage}</span> dari <span className="font-medium text-gray-200">{totalPages}</span>
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => onPageChange(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                        className="p-2 rounded-lg border border-purple-500/20 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-
-                                    <div className="flex items-center gap-1">
-                                        {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                                            // Simple pagination logic focusing around current page
-                                            let pageNum = i + 1;
-                                            if (totalPages > 5 && currentPage > 3) {
-                                                pageNum = currentPage - 2 + i;
-                                                if (pageNum > totalPages) pageNum = totalPages - (4 - i);
-                                            }
-
-                                            return (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => onPageChange(pageNum)}
-                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all ${currentPage === pageNum
-                                                        ? 'bg-blue-500 text-white font-medium shadow-[0_0_10px_rgba(59,130,246,0.3)]'
-                                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                                        }`}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-
-                                    <button
-                                        onClick={() => onPageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                        className="p-2 rounded-lg border border-purple-500/20 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
+                        {/* Infinite Scroll Trigger */}
+                        <div id="products-load-more-trigger" className="h-20 flex flex-col items-center justify-center border-t border-purple-500/10 shrink-0">
+                            {isLoadingMore && (
+                                <div className="flex items-center gap-2 text-purple-400">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span className="text-sm">Memuat lebih banyak...</span>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                            {!hasMore && products.length > 0 && (
+                                <p className="text-xs text-gray-600 italic">Semua produk telah dimuat</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

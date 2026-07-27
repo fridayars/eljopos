@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { X, Save, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { arusUangService } from '../../services/arusUangService'
 import { kategoriArusUangService, type KategoriArusUang } from '../../services/kategoriArusUangService'
+import { CustomSelect } from '../ui/CustomSelect'
 
 interface ArusUangModalProps {
     isOpen: boolean
@@ -144,35 +145,33 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
                                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>
                                     Metode Pembayaran <span className="text-red-400">*</span>
                                 </label>
-                                <select
-                                    required
+                                <CustomSelect
                                     value={paymentMethod}
-                                    onChange={e => setPaymentMethod(e.target.value)}
-                                    className="w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                    style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
-                                >
-                                    <option value="CASH">Tunai (Cash)</option>
-                                    <option value="TRANSFER_BCA">Transfer BCA</option>
-                                    {/* You can add more mappings here later */}
-                                </select>
+                                    onChange={setPaymentMethod}
+                                    className="w-full h-12"
+                                    options={[
+                                        { value: 'CASH', label: 'Tunai (Cash)' },
+                                        { value: 'TRANSFER_BCA', label: 'Transfer BCA' }
+                                        // You can add more mappings here later
+                                    ]}
+                                />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>
                                     Kategori Arus Uang
                                 </label>
-                                <select
+                                <CustomSelect
                                     value={categoryId}
-                                    onChange={handleCategoryChange}
-                                    className="w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                    style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
-                                >
-                                    <option value="">-- Tanpa Kategori --</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                    <option value="ADD_NEW" className="font-bold text-blue-500">+ Tambah Kategori Baru</option>
-                                </select>
+                                    onChange={(value) => handleCategoryChange({ target: { value } } as React.ChangeEvent<HTMLSelectElement>)}
+                                    className="w-full h-12"
+                                    placeholder="-- Tanpa Kategori --"
+                                    options={[
+                                        { value: '', label: '-- Tanpa Kategori --' },
+                                        ...categories.map(cat => ({ value: cat.id, label: cat.name })),
+                                        { value: 'ADD_NEW', label: '+ Tambah Kategori Baru', className: 'font-bold text-blue-500' }
+                                    ]}
+                                />
                             </div>
 
                             <div>

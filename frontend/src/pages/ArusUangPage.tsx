@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, Wallet, Loader2 } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, Wallet, Loader2, Search } from 'lucide-react'
 import { motion } from 'motion/react'
 import { arusUangService } from '../services/arusUangService'
 import type { ArusUang, ArusUangSummary } from '../services/arusUangService'
 import { ArusUangModal } from '../components/arusUang/ArusUangModal'
+import { DateRangePicker } from '../components/ui/DateRangePicker'
+import { CustomSelect } from '../components/ui/CustomSelect'
 
 export function ArusUangPage() {
     const [data, setData] = useState<ArusUang[]>([])
@@ -14,9 +16,12 @@ export function ArusUangPage() {
     const [isSyncing, setIsSyncing] = useState(false)
 
     // Filters
-    const [startDate, setStartDate] = useState('')
-    const [endDate, setEndDate] = useState('')
+    const today = new Date().toISOString().split('T')[0]
+    const [startDate, setStartDate] = useState(today)
+    const [endDate, setEndDate] = useState(today)
     const [typeFilter, setTypeFilter] = useState('')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [modalType, setModalType] = useState<'IN' | 'OUT'>('IN')
@@ -36,6 +41,14 @@ export function ArusUangPage() {
 
     const hasPermission = (perm: string) => userPermissions.includes(perm)
 
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery)
+        }, 3000)
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
     const fetchData = useCallback(async (currentPage: number, reset: boolean = false) => {
         setIsLoading(true)
         try {
@@ -44,7 +57,8 @@ export function ArusUangPage() {
                 limit: 20,
                 start_date: startDate || undefined,
                 end_date: endDate || undefined,
-                type: typeFilter || undefined
+                type: typeFilter || undefined,
+                search: debouncedSearch || undefined
             })
             setData(prev => reset ? result.items : [...prev, ...result.items])
             setSummary(result.summary)
@@ -55,7 +69,7 @@ export function ArusUangPage() {
         } finally {
             setIsLoading(false)
         }
-    }, [startDate, endDate, typeFilter])
+    }, [startDate, endDate, typeFilter, debouncedSearch])
 
     useEffect(() => {
         fetchData(1, true)
@@ -199,44 +213,42 @@ export function ArusUangPage() {
                     </div>
 
                     {/* Filters */}
-                    <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl border border-white/5" style={{ background: 'var(--surface-color)' }}>
-                        <div className="flex-1">
-                            <label className="block text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>Dari Tanggal</label>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                                className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none"
-                                style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
+                    <div className="flex flex-col xl:flex-row gap-4 mb-4">
+                        <div className="flex items-center gap-3 p-2 bg-white/5 border border-purple-500/10 rounded-2xl">
+                            <DateRangePicker
+                                startDate={startDate}
+                                endDate={endDate}
+                                onDateChange={(start, end) => {
+                                    setStartDate(start);
+                                    setEndDate(end);
+                                }}
                             />
                         </div>
-                        <div className="flex-1">
-                            <label className="block text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>Sampai Tanggal</label>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                                className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none"
-                                style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-xs mb-1" style={{ color: 'var(--muted-foreground)' }}>Jenis Transaksi</label>
-                            <select
+                        <div className="flex flex-1 gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Cari keterangan, sumber, metode..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') setDebouncedSearch(searchQuery) }}
+                                    className="w-full h-full pl-11 pr-4 py-3 bg-white/5 border border-purple-500/20 rounded-2xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/40 transition-all"
+                                />
+                            </div>
+                            <CustomSelect
                                 value={typeFilter}
-                                onChange={e => setTypeFilter(e.target.value)}
-                                className="w-full px-3 py-2 rounded-xl text-sm border focus:outline-none"
-                                style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border-subtle)', color: 'var(--foreground)' }}
-                            >
-                                <option value="">Semua Jenis</option>
-                                <option value="IN">Uang Masuk</option>
-                                <option value="OUT">Uang Keluar</option>
-                            </select>
-                        </div>
-                        <div className="flex items-end">
+                                onChange={setTypeFilter}
+                                className="h-full w-40 flex-shrink-0"
+                                options={[
+                                    { value: '', label: 'Semua Jenis' },
+                                    { value: 'IN', label: 'Uang Masuk' },
+                                    { value: 'OUT', label: 'Uang Keluar' }
+                                ]}
+                            />
                             <button
-                                onClick={() => { setStartDate(''); setEndDate(''); setTypeFilter(''); }}
-                                className="px-4 py-2 rounded-xl text-sm border border-white/10 hover:bg-white/5"
+                                onClick={() => { setStartDate(today); setEndDate(today); setTypeFilter(''); setSearchQuery(''); }}
+                                className="px-5 py-3 rounded-2xl text-sm border border-purple-500/20 hover:bg-white/5 text-gray-300 transition-all cursor-pointer h-full whitespace-nowrap"
                             >
                                 Reset
                             </button>
@@ -251,6 +263,7 @@ export function ArusUangPage() {
                                     <tr style={{ background: 'var(--surface-subtle)', color: 'var(--muted-foreground)' }}>
                                         <th className="p-4 text-xs font-semibold whitespace-nowrap">Tanggal</th>
                                         <th className="p-4 text-xs font-semibold whitespace-nowrap">Keterangan</th>
+                                        <th className="p-4 text-xs font-semibold whitespace-nowrap">Kategori</th>
                                         <th className="p-4 text-xs font-semibold whitespace-nowrap">Sumber</th>
                                         <th className="p-4 text-xs font-semibold whitespace-nowrap">Metode</th>
                                         <th className="p-4 text-xs font-semibold whitespace-nowrap text-right">Nominal</th>
@@ -260,7 +273,7 @@ export function ArusUangPage() {
                                 <tbody>
                                     {isLoading && data.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                                            <td colSpan={7} className="p-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="w-5 h-5 animate-spin" />
                                                     Memuat data...
@@ -269,7 +282,7 @@ export function ArusUangPage() {
                                         </tr>
                                     ) : data.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>Tidak ada data ditemukan</td>
+                                            <td colSpan={7} className="p-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>Tidak ada data ditemukan</td>
                                         </tr>
                                     ) : (
                                         data.map((item) => (
@@ -280,6 +293,15 @@ export function ArusUangPage() {
                                                 <td className="p-4 text-sm">
                                                     <div className="font-medium">{item.description || '-'}</div>
                                                     {item.creator && <div className="text-xs opacity-50 mt-1">Oleh: {item.creator.username}</div>}
+                                                </td>
+                                                <td className="p-4 text-sm">
+                                                    {item.kategori ? (
+                                                        <span className="px-2 py-1 rounded text-xs border border-white/10" style={{ background: 'var(--surface-subtle)' }}>
+                                                            {item.kategori.name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs opacity-50">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-4 text-sm">
                                                     <span className="px-2 py-1 rounded text-xs" style={{ background: 'var(--surface-subtle)' }}>

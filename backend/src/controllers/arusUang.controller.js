@@ -4,13 +4,14 @@ const getListArusUang = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 20;
-        const { start_date, end_date, type, store_id } = req.query;
+        const { start_date, end_date, type, search, store_id } = req.query;
 
         const result = await arusUangService.getListArusUang({
             store_id: store_id || req.user.store_id, // Default to user's store
             start_date,
             end_date,
             type,
+            search,
             page,
             limit
         });

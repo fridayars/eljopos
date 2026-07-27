@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, X, Save, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Edit, Download, Upload, ArrowRightLeft, Search, Plus, X, Save, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from './ProductGrid';
 import { EditProductModal } from './EditProductModal';
@@ -48,6 +48,37 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts, onVi
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const ITEMS_PER_PAGE = 20;
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [searchQuery, products]);
+
+  const displayedProducts = filteredProducts.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredProducts.length;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + ITEMS_PER_PAGE);
+            setIsLoadingMore(false);
+          }, 500); // Simulate network delay for UX
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const trigger = document.getElementById('products-load-more');
+    if (trigger) observer.observe(trigger);
+
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore]);
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -254,14 +285,14 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts, onVi
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-purple-500/10">
-                  {filteredProducts.length === 0 ? (
+                  {displayedProducts.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                         No products found
                       </td>
                     </tr>
                   ) : (
-                    filteredProducts.map((product) => (
+                    displayedProducts.map((product) => (
                       <motion.tr
                         key={product.id}
                         initial={{ opacity: 0 }}
@@ -317,6 +348,19 @@ export function ProductsPage({ products, onUpdateProduct, onImportProducts, onVi
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Infinite Scroll Trigger */}
+            <div id="products-load-more" className="h-20 flex flex-col items-center justify-center border-t border-purple-500/10 shrink-0">
+              {isLoadingMore && (
+                <div className="flex items-center gap-2 text-purple-400">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Memuat lebih banyak...</span>
+                </div>
+              )}
+              {!hasMore && filteredProducts.length > 0 && (
+                <p className="text-xs text-gray-600 italic">Semua produk telah dimuat</p>
+              )}
             </div>
           </div>
 

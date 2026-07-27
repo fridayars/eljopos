@@ -15,6 +15,9 @@ export interface ArusUang {
     creator?: {
         username: string
     }
+    kategori?: {
+        name: string
+    }
 }
 
 export interface ArusUangSummary {
@@ -38,7 +41,7 @@ interface ArusUangResponse {
 }
 
 export const arusUangService = {
-    getList: async (params?: { page?: number; limit?: number; start_date?: string; end_date?: string; type?: string }) => {
+    getList: async (params?: { page?: number; limit?: number; start_date?: string; end_date?: string; type?: string; search?: string }) => {
         const response = await api.get<ArusUangResponse>('/arus-uang', { params })
         return response.data.data
     },
