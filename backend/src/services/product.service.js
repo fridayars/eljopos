@@ -270,8 +270,8 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
         const existingById = {};
         const existingBySku = {};
         allExistingProducts.forEach(p => { existingById[p.id] = p; });
-        // Only active (non-deleted) products should block SKU reuse
-        activeExistingProducts.forEach(p => { existingBySku[`${p.sku}::${p.store_id}`] = p; });
+        // All products (including soft-deleted) should block SKU reuse to avoid DB constraint errors
+        allExistingProducts.forEach(p => { existingBySku[`${p.sku}::${p.store_id}`] = p; });
 
         const toInsert = [];
         const toUpdate = [];
@@ -304,7 +304,11 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 preservedIds.add(ip.id);
                 const existing = existingById[ip.id];
                 if (!existing) {
-                    // id provided but not found -> insert instead
+                    // id provided but not found -> insert instead (check SKU first)
+                    if (existingBySkuObj) {
+                        errors.push({ field: `row_${ip.row}`, message: `ID not found, but SKU '${ip.sku}' is already used by another product.` });
+                        continue;
+                    }
                     toInsert.push({ ...ip, kategori_id });
                 } else {
                     // check sku conflict: if sku used by other id
@@ -415,11 +419,12 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 jasa_pasang: Number(upd.data.jasa_pasang || 0),
                 ongkir_asuransi: Number(upd.data.ongkir_asuransi || 0),
                 biaya_overhead: Number(upd.data.biaya_overhead || 0),
-                is_active: upd.data.is_active
+                is_active: upd.data.is_active,
+                deleted_at: null
             }));
 
             await Product.bulkCreate(updateData, {
-                updateOnDuplicate: ['kategori_produk_id', 'name', 'sku', 'stock', 'price', 'cost_price', 'jasa_pasang', 'ongkir_asuransi', 'biaya_overhead', 'is_active', 'updated_at'],
+                updateOnDuplicate: ['kategori_produk_id', 'name', 'sku', 'stock', 'price', 'cost_price', 'jasa_pasang', 'ongkir_asuransi', 'biaya_overhead', 'is_active', 'updated_at', 'deleted_at'],
                 transaction
             });
             updated = toUpdate.length;
@@ -488,9 +493,9 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
         const serviceKategoriMap = {};
         serviceKategoriList.forEach(k => { serviceKategoriMap[k.name] = k.id; });
 
-        // Build name-based lookup for active services (for matching when no ID)
+        // Build name-based lookup for all services (including soft-deleted)
         const activeServiceByName = {};
-        activeExistingServices.forEach(s => { activeServiceByName[`${s.name}::${s.store_id}`] = s; });
+        allExistingServices.forEach(s => { activeServiceByName[`${s.name}::${s.store_id}`] = s; });
 
         const sToInsert = [], sToUpdate = [], sPreservedIds = new Set();
         const serviceErrors = [];
@@ -501,6 +506,11 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 sPreservedIds.add(is.id);
                 const existing = existingServiceById[is.id];
                 if (!existing) {
+                    const nameKey = `${is.name}::${storeId}`;
+                    if (activeServiceByName[nameKey]) {
+                        serviceErrors.push({ field: `row_${is.row}`, message: `ID not found, but Name '${is.name}' is already used by another service.` });
+                        continue;
+                    }
                     sToInsert.push({ ...is, kategori_id });
                 } else {
                     sToUpdate.push({ existing, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, insentif_teknisi: is.insentif_teknisi, description: is.description, is_active: is.is_active, products: is.products } });
@@ -617,11 +627,12 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 biaya_overhead: Number(upd.data.biaya_overhead || 0),
                 insentif_teknisi: Number(upd.data.insentif_teknisi || 0),
                 description: upd.data.description,
-                is_active: upd.data.is_active
+                is_active: upd.data.is_active,
+                deleted_at: null
             }));
 
             await Layanan.bulkCreate(serviceUpdateData, {
-                updateOnDuplicate: ['kategori_layanan_id', 'name', 'price', 'cost_price', 'biaya_overhead', 'insentif_teknisi', 'description', 'is_active', 'updated_at'],
+                updateOnDuplicate: ['kategori_layanan_id', 'name', 'price', 'cost_price', 'biaya_overhead', 'insentif_teknisi', 'description', 'is_active', 'updated_at', 'deleted_at'],
                 transaction
             });
             sUpdated = sToUpdate.length;
@@ -679,9 +690,13 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
         return result;
     } catch (error) {
         await transaction.rollback();
-        logger.error({ type: 'product_import_failed', message: error.message, stack: error.stack });
+        let errorMessage = error.message;
+        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            errorMessage = error.errors.map(e => e.message).join(', ');
+        }
+        logger.error({ type: 'product_import_failed', message: errorMessage, stack: error.stack });
         if (error instanceof AppError) throw error;
-        throw new AppError('Failed to import excel file: ' + error.message, 500);
+        throw new AppError('Failed to import excel file: ' + errorMessage, 500);
     }
 };
 
