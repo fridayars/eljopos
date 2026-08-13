@@ -1,5 +1,5 @@
 const db = require('../models');
-const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, ProdukLayanan, ArusUang, sequelize } = db;
+const { Transaksi, TransaksiDetail, TransaksiPayment, Product, Customer, User, Store, Layanan, ProdukLayanan, ArusUang, Staff, sequelize } = db;
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 const { Op, fn, col, literal, QueryTypes } = require('sequelize');
@@ -117,6 +117,8 @@ const createTransaksi = async (data, userId) => {
                     400
                 );
             }
+            
+            item.snapshot_cost_price = product.cost_price;
         }
 
         // 2b. Validasi stok produk yang digunakan oleh layanan (via ProdukLayanan)
@@ -124,6 +126,13 @@ const createTransaksi = async (data, userId) => {
         const layananStockReductions = []; // { product_id, product_name, totalQty }
 
         for (const item of layananItems) {
+            const layanan = await Layanan.findOne({
+                where: { id: item.item_id, store_id },
+                transaction: t
+            });
+            item.snapshot_cost_price = layanan ? layanan.cost_price : null;
+            item.snapshot_insentif_teknisi = layanan ? layanan.insentif_teknisi : null;
+
             const produkLayananList = await ProdukLayanan.findAll({
                 where: { layanan_id: item.item_id },
                 transaction: t
@@ -188,7 +197,12 @@ const createTransaksi = async (data, userId) => {
             kategori_name: item.kategori_name || null,
             price: item.price,
             quantity: item.quantity,
-            subtotal: item.subtotal
+            staff_id: item.staff_id || null,
+            subtotal: item.subtotal,
+            discount_type: item.discount_type || null,
+            discount_value: item.discount_value || 0,
+            snapshot_cost_price: item.snapshot_cost_price || null,
+            snapshot_insentif_teknisi: item.snapshot_insentif_teknisi || null
         }));
 
         await TransaksiDetail.bulkCreate(detailRecords, { transaction: t });
@@ -339,7 +353,14 @@ const getTransaksiDetail = async (transaksiId) => {
                 {
                     model: TransaksiDetail,
                     as: 'details',
-                    attributes: ['id', 'item_type', 'item_id', 'item_name', 'kategori_name', 'price', 'quantity', 'subtotal']
+                    attributes: ['id', 'item_type', 'item_id', 'item_name', 'kategori_name', 'price', 'quantity', 'subtotal', 'discount_type', 'discount_value', 'staff_id'],
+                    include: [
+                        {
+                            model: Staff,
+                            as: 'staff',
+                            attributes: ['name']
+                        }
+                    ]
                 },
                 {
                     model: TransaksiPayment,
@@ -359,7 +380,7 @@ const getTransaksiDetail = async (transaksiId) => {
                 {
                     model: Store,
                     as: 'store',
-                    attributes: ['id', 'name']
+                    attributes: ['id', 'name', 'address', 'phone']
                 }
             ]
         });
@@ -487,7 +508,7 @@ const getLaporanPenjualan = async ({ start_date, end_date, store_id, page = 1, l
                 'id', 'receipt_number', 'total_amount',
                 [literal('COALESCE("Transaksi"."transaction_date", "Transaksi"."created_at")'), 'created_at'],
                 [literal(`(
-                    SELECT COALESCE(SUM(td.quantity * COALESCE(p.cost_price, l.cost_price, 0)), 0)
+                    SELECT COALESCE(SUM(td.quantity * COALESCE(td.snapshot_cost_price, p.cost_price, l.cost_price, 0)), 0)
                     FROM transaksi_detail td
                     LEFT JOIN products p ON td.item_type = 'product' AND td.item_id = p.id
                     LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
@@ -1009,7 +1030,7 @@ const getSummaryKartu = async ({ start_date, end_date, store_id }) => {
         // Calculate total cost of goods sold (COGS) in range
         const costResult = await sequelize.query(`
             SELECT 
-              COALESCE(SUM(td.quantity * COALESCE(p.cost_price, l.cost_price, 0)), 0) AS "totalCost"
+              COALESCE(SUM(td.quantity * COALESCE(td.snapshot_cost_price, p.cost_price, l.cost_price, 0)), 0) AS "totalCost"
             FROM transaksi_detail td
             JOIN transaksi t ON td.transaksi_id = t.id AND t.deleted_at IS NULL
             LEFT JOIN products p ON td.item_type = 'product' AND td.item_id = p.id
@@ -1132,7 +1153,7 @@ const getTabelPenjualan = async ({ start_date, end_date, store_id, period = 'dai
                 t.id,
                 to_char(COALESCE(t.transaction_date, t.created_at) AT TIME ZONE 'Asia/Jakarta', :formatStr) AS period_label,
                 t.total_amount,
-                COALESCE(SUM(td.quantity * COALESCE(p.cost_price, l.cost_price, 0)), 0) AS total_cost
+                COALESCE(SUM(td.quantity * COALESCE(td.snapshot_cost_price, p.cost_price, l.cost_price, 0)), 0) AS total_cost
               FROM transaksi t
               LEFT JOIN transaksi_detail td ON td.transaksi_id = t.id AND td.deleted_at IS NULL
               LEFT JOIN products p ON td.item_type = 'product' AND td.item_id = p.id
@@ -1189,4 +1210,155 @@ const getTabelPenjualan = async ({ start_date, end_date, store_id, period = 'dai
     }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking, getGrafikPenjualan, getSummaryKartu, getArusUangTable, getTabelPenjualan };
+/**
+ * Laporan Grafik Pengeluaran
+ * - Mengambil persentase dan nominal pengeluaran per kategori
+ */
+const getGrafikPengeluaran = async ({ start_date, end_date, store_id }) => {
+    try {
+        const whereClause = {
+            type: 'OUT'
+        };
+
+        if (store_id) {
+            whereClause.store_id = store_id;
+        }
+
+        if (start_date && end_date) {
+            whereClause[Op.and] = [
+                literal(`"ArusUang"."date" >= '${start_date}T00:00:00+07:00'`),
+                literal(`"ArusUang"."date" <= '${end_date}T23:59:59+07:00'`)
+            ];
+        }
+
+        const dataQuery = await ArusUang.findAll({
+            where: whereClause,
+            attributes: [
+                [literal("COALESCE(\"kategori\".\"name\", 'Lainnya')"), 'category'],
+                [fn('SUM', col('amount')), 'total'],
+                [fn('COUNT', col('ArusUang.id')), 'count']
+            ],
+            include: [{
+                model: db.KategoriArusUang,
+                as: 'kategori',
+                attributes: []
+            }],
+            group: [literal("COALESCE(\"kategori\".\"name\", 'Lainnya')")],
+            order: [[literal('total'), 'DESC']],
+            raw: true
+        });
+
+        const totalExpenseQuery = dataQuery.reduce((sum, item) => sum + parseFloat(item.total), 0);
+
+        const result = dataQuery.map(item => ({
+            category: item.category,
+            total: parseFloat(item.total),
+            count: parseInt(item.count, 10),
+            percentage: totalExpenseQuery > 0 ? parseFloat(((parseFloat(item.total) / totalExpenseQuery) * 100).toFixed(2)) : 0
+        }));
+
+        return result;
+    } catch (error) {
+        logger.error({ type: 'get_grafik_pengeluaran_failed', message: error.message });
+        throw new AppError('Failed to get expense chart data', 500);
+    }
+};
+
+// Added incentive report for technicians
+/**
+ * Laporan Insentif Teknisi — GET /api/laporan/incentive
+ * Aggregates total incentive per technician.
+ */
+const getTechnicianIncentiveReport = async ({ start_date, end_date, store_id, page = 1, limit = 20 }) => {
+  try {
+    const offset = (page - 1) * limit;
+    const dateCondition = (start_date && end_date)
+      ? `AND (COALESCE(t.transaction_date, t.created_at) BETWEEN '${start_date} 00:00:00' AND '${end_date} 23:59:59')`
+      : '';
+    const storeCondition = store_id ? `AND t.store_id = '${store_id}'` : '';
+    const itemsQuery = `
+      SELECT
+        td.staff_id AS staff_id,
+        s.name AS staff_name,
+        SUM(COALESCE(td.snapshot_insentif_teknisi, l.insentif_teknisi, 0) * td.quantity) AS total_incentive
+      FROM transaksi_detail td
+      JOIN transaksi t ON td.transaksi_id = t.id
+      LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
+      LEFT JOIN staff s ON td.staff_id = s.id
+      WHERE td.deleted_at IS NULL
+      AND td.staff_id IS NOT NULL
+      ${storeCondition}
+      ${dateCondition}
+      GROUP BY td.staff_id, s.name
+      ORDER BY total_incentive DESC
+      LIMIT ${limit} OFFSET ${offset};
+    `;
+    const totalQuery = `
+      SELECT COUNT(DISTINCT td.staff_id) AS total
+      FROM transaksi_detail td
+      JOIN transaksi t ON td.transaksi_id = t.id
+      WHERE td.deleted_at IS NULL
+      AND td.staff_id IS NOT NULL
+      ${storeCondition}
+      ${dateCondition};
+    `;
+    const items = await sequelize.query(itemsQuery, { type: QueryTypes.SELECT });
+    const totalRes = await sequelize.query(totalQuery, { type: QueryTypes.SELECT });
+    const total = parseInt(totalRes[0].total, 10) || 0;
+    const totalPages = Math.ceil(total / limit);
+    return {
+      items: items.map(i => ({
+        staff_id: i.staff_id,
+        staff_name: i.staff_name,
+        total_incentive: parseFloat(i.total_incentive) || 0
+      })),
+      meta: {
+        page,
+        limit,
+        total,
+        total_pages: totalPages
+      }
+    };
+  } catch (error) {
+    logger.error({ type: 'get_technician_incentive_report_failed', message: error.message });
+    throw new AppError('Failed to get technician incentive report', 500);
+  }
+};
+
+const getTechnicianIncentiveDetail = async ({ staff_id, start_date, end_date, store_id }) => {
+  try {
+    const dateCondition = (start_date && end_date)
+      ? `AND (COALESCE(t.transaction_date, t.created_at) BETWEEN '${start_date} 00:00:00' AND '${end_date} 23:59:59')`
+      : '';
+    const storeCondition = store_id ? `AND t.store_id = '${store_id}'` : '';
+    const query = `
+      SELECT
+        t.receipt_number,
+        COALESCE(t.transaction_date, t.created_at) AS transaction_date,
+        td.item_name,
+        td.quantity,
+        COALESCE(td.snapshot_insentif_teknisi, l.insentif_teknisi, 0) AS insentif_per_item
+      FROM transaksi_detail td
+      JOIN transaksi t ON td.transaksi_id = t.id
+      LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
+      WHERE td.staff_id = '${staff_id}'
+      AND td.deleted_at IS NULL
+      ${storeCondition}
+      ${dateCondition}
+      ORDER BY COALESCE(t.transaction_date, t.created_at) DESC;
+    `;
+    const items = await sequelize.query(query, { type: QueryTypes.SELECT });
+    return items.map(i => ({
+      receipt_number: i.receipt_number,
+      transaction_date: i.transaction_date,
+      item_name: i.item_name,
+      quantity: parseInt(i.quantity, 10) || 0,
+      insentif_per_item: parseFloat(i.insentif_per_item) || 0
+    }));
+  } catch (error) {
+    logger.error({ type: 'get_technician_incentive_detail_failed', message: error.message });
+    throw new AppError('Failed to get technician incentive detail', 500);
+  }
+};
+
+module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking, getGrafikPenjualan, getGrafikPengeluaran, getSummaryKartu, getArusUangTable, getTabelPenjualan, getTechnicianIncentiveReport, getTechnicianIncentiveDetail };

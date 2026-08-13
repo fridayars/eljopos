@@ -490,7 +490,14 @@ export function TransactionReport() {
                                                         >
                                                             <div className="flex-1">
                                                                 <div className="flex items-center gap-2 mb-1">
-                                                                    <p className="text-sm text-gray-200 font-medium group-hover:text-cyan-400 transition-colors">{item.item_name}</p>
+                                                                    <p className="text-sm text-gray-200 font-medium group-hover:text-cyan-400 transition-colors">
+                                                                        {item.item_name}
+                                                                        {item.item_type === 'layanan' && item.staff?.name && (
+                                                                            <span className="ml-2 text-xs text-gray-400 font-normal">
+                                                                                (Teknisi: {item.staff.name})
+                                                                            </span>
+                                                                        )}
+                                                                    </p>
                                                                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${item.item_type === 'layanan'
                                                                         ? 'bg-blue-500/20 text-blue-400'
                                                                         : 'bg-purple-500/20 text-purple-400'
@@ -501,9 +508,26 @@ export function TransactionReport() {
                                                                 <p className="text-xs text-gray-500">
                                                                     {formatCurrency(item.price)} x {item.quantity}
                                                                 </p>
+                                                                {item.discount_value && item.discount_value > 0 && (
+                                                                    <p className="text-xs text-orange-400 mt-0.5">
+                                                                        Disc{' '}
+                                                                        {item.discount_type === 'percentage' || item.discount_type === '%'
+                                                                            ? `(${item.discount_value}%) - ${formatCurrency((item.price * item.quantity * item.discount_value) / 100)}`
+                                                                            : `- ${formatCurrency(item.discount_value)}`}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                             <div className="text-right">
                                                                 <p className="text-sm text-cyan-400 font-medium italic">{formatCurrency(item.subtotal)}</p>
+                                                                {item.discount_value && item.discount_value > 0 && (
+                                                                    <p className="text-[10px] text-gray-500 line-through">
+                                                                        {formatCurrency(
+                                                                            item.discount_type === 'percentage' || item.discount_type === '%'
+                                                                                ? item.price * item.quantity
+                                                                                : item.subtotal + item.discount_value
+                                                                        )}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ))}

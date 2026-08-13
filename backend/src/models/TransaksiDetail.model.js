@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'transaksi_id',
                 as: 'transaksi'
             });
+            TransaksiDetail.belongsTo(models.Staff, {
+                foreignKey: 'staff_id',
+                as: 'staff'
+            });
         }
     }
     TransaksiDetail.init({
@@ -24,6 +28,31 @@ module.exports = (sequelize, DataTypes) => {
         price: DataTypes.DECIMAL(15, 2),
         quantity: DataTypes.INTEGER,
         subtotal: DataTypes.DECIMAL(15, 2),
+        discount_type: {
+            type: DataTypes.STRING(10),
+            allowNull: true,
+            defaultValue: null
+        },
+        staff_id: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            defaultValue: null
+        },
+        discount_value: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: true,
+            defaultValue: 0
+        },
+        snapshot_insentif_teknisi: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: true,
+            defaultValue: null
+        },
+        snapshot_cost_price: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: true,
+            defaultValue: null
+        },
         created_at: DataTypes.DATE,
         updated_at: DataTypes.DATE,
         deleted_at: DataTypes.DATE

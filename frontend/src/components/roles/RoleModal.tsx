@@ -43,12 +43,30 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
             ]
         },
         {
+            label: 'Cabang',
+            items: [
+                { value: 'store.view', label: 'Lihat' },
+                { value: 'store.create', label: 'Tambah' },
+                { value: 'store.edit', label: 'Edit' },
+                { value: 'store.status', label: 'Status' },
+            ]
+        },
+        {
             label: 'Role',
             items: [
                 { value: 'role.view', label: 'Lihat' },
                 { value: 'role.create', label: 'Tambah' },
                 { value: 'role.edit', label: 'Edit' },
                 { value: 'role.delete', label: 'Hapus' },
+            ]
+        },
+        {
+            label: 'Staff',
+            items: [
+                { value: 'staff.view', label: 'Lihat' },
+                { value: 'staff.create', label: 'Tambah' },
+                { value: 'staff.edit', label: 'Edit' },
+                { value: 'staff.delete', label: 'Hapus' },
             ]
         },
         {
@@ -81,6 +99,7 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                 { value: 'report.transaction', label: 'Riwayat Transaksi' },
                 { value: 'report.deletetransaction', label: 'Hapus Transaksi' },
                 { value: 'report.profittransaction', label: 'Profit Transaksi' },
+                { value: 'report.incentive', label: 'Laporan Insentif' },
             ]
         }
     ]
@@ -123,17 +142,17 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
     }
 
     const togglePermission = (value: string) => {
-        setPermissions(prev => 
-            prev.includes(value) 
+        setPermissions(prev =>
+            prev.includes(value)
                 ? prev.filter(p => p !== value)
                 : [...prev, value]
         )
     }
 
-    const toggleGroup = (groupItems: {value: string, label: string}[]) => {
+    const toggleGroup = (groupItems: { value: string, label: string }[]) => {
         const groupValues = groupItems.map(item => item.value)
         const allSelected = groupValues.length > 0 && groupValues.every(val => permissions.includes(val))
-        
+
         if (allSelected) {
             // Remove all
             setPermissions(prev => prev.filter(p => !groupValues.includes(p)))
@@ -233,8 +252,8 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                                                     {group.items.map((item, itemIdx) => {
                                                         const isSelected = permissions.includes(item.value)
                                                         return (
-                                                            <div 
-                                                                key={itemIdx} 
+                                                            <div
+                                                                key={itemIdx}
                                                                 onClick={() => togglePermission(item.value)}
                                                                 className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors border ${isSelected ? 'bg-purple-500/10 border-purple-500/30' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
                                                             >

@@ -1,13 +1,13 @@
 const db = require('../models');
-const { Customer } = db;
+const { Customer, Transaksi, TransaksiDetail, TransaksiPayment, Store, User, Staff } = db;
 const { Op } = require('sequelize');
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 
 /**
- * Get All Customers — dengan pagination dan search
+ * Get All Customers — dengan pagination, search, dan sort
  */
-const getAllCustomers = async ({ page = 1, limit = 10, search }) => {
+const getAllCustomers = async ({ page = 1, limit = 10, search, sort }) => {
     try {
         const offset = (page - 1) * limit;
 
@@ -20,10 +20,44 @@ const getAllCustomers = async ({ page = 1, limit = 10, search }) => {
             ];
         }
 
+        // Parse sort param, e.g. "name:asc", "created_at:desc", "transaction_count:desc"
+        const ALLOWED_SORT_COLUMNS = ['name', 'phone', 'email', 'created_at'];
+        let orderClause = [['created_at', 'DESC']];
+
+        if (sort) {
+            const [sortKey, sortDir] = sort.split(':');
+            const direction = sortDir?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+            if (sortKey === 'transaction_count') {
+                orderClause = [[db.sequelize.literal(`(
+                    SELECT COUNT(*)
+                    FROM transaksi AS t
+                    WHERE t.customer_id = "Customer"."id"
+                    AND t.deleted_at IS NULL
+                )`), direction]];
+            } else if (ALLOWED_SORT_COLUMNS.includes(sortKey)) {
+                orderClause = [[sortKey, direction]];
+            }
+        }
+
         const { count: total, rows: customers } = await Customer.findAndCountAll({
             where: whereClause,
-            attributes: ['id', 'name', 'phone', 'email', 'address', 'is_active', 'created_at'],
-            order: [['created_at', 'DESC']],
+            attributes: [
+                'id', 'name', 'phone', 'email', 'address', 'is_active', 'created_at',
+                'province_code', 'province_name',
+                'regency_code', 'regency_name',
+                'district_code', 'district_name',
+                [
+                    db.sequelize.literal(`(
+                        SELECT COUNT(*)
+                        FROM transaksi AS t
+                        WHERE t.customer_id = "Customer"."id"
+                        AND t.deleted_at IS NULL
+                    )`),
+                    'transaction_count'
+                ]
+            ],
+            order: orderClause,
             limit,
             offset
         });
@@ -158,4 +192,69 @@ const deleteCustomer = async (id) => {
     }
 };
 
-module.exports = { getAllCustomers, createCustomer, updateCustomer, deleteCustomer };
+/**
+ * Get Customer Transactions
+ */
+const getCustomerTransactions = async (id, { page = 1, limit = 10 }) => {
+    try {
+        const customer = await Customer.findByPk(id);
+        if (!customer) throw new AppError('Customer not found', 404);
+
+        const offset = (page - 1) * limit;
+
+        const { count: total, rows: transactions } = await Transaksi.findAndCountAll({
+            where: { customer_id: id },
+            include: [
+                {
+                    model: TransaksiDetail,
+                    as: 'details',
+                    include: [
+                        {
+                            model: Staff,
+                            as: 'staff',
+                            attributes: ['name']
+                        }
+                    ]
+                },
+                {
+                    model: TransaksiPayment,
+                    as: 'payments'
+                },
+                {
+                    model: Store,
+                    as: 'store',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'username']
+                }
+            ],
+            order: [['transaction_date', 'DESC']],
+            limit,
+            offset
+        });
+
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            customer: { id: customer.id, name: customer.name },
+            items: transactions,
+            pagination: {
+                page,
+                limit,
+                total,
+                total_pages: totalPages,
+                has_next: page < totalPages,
+                has_prev: page > 1
+            }
+        };
+    } catch (error) {
+        if (error instanceof AppError) throw error;
+        logger.error({ type: 'get_customer_transactions_failed', message: error.message });
+        throw new AppError('Failed to get customer transactions', 500);
+    }
+};
+
+module.exports = { getAllCustomers, createCustomer, updateCustomer, deleteCustomer, getCustomerTransactions };

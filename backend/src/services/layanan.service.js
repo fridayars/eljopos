@@ -88,6 +88,8 @@ const getAllServices = async (opts, storeId) => {
             name: s.name,
             price: Number(s.price),
             cost_price: Number(s.cost_price),
+            biaya_overhead: s.biaya_overhead || 0,
+            insentif_teknisi: s.insentif_teknisi || 0,
             description: s.description || '',
             count_product: s.produkLayanan ? s.produkLayanan.length : 0,
             is_active: s.is_active
@@ -292,6 +294,7 @@ const createService = async (data, storeId) => {
             price: data.price,
             cost_price: data.cost_price || 0,
             biaya_overhead: data.biaya_overhead || 0,
+            insentif_teknisi: data.insentif_teknisi || 0,
             description: data.description || null,
             is_active: data.is_active !== undefined ? data.is_active : true
         }, { transaction });
@@ -344,6 +347,7 @@ const updateService = async (id, data, storeId) => {
             price: data.price,
             cost_price: data.cost_price || 0,
             biaya_overhead: data.biaya_overhead || 0,
+            insentif_teknisi: data.insentif_teknisi || 0,
             description: data.description || null,
             is_active: data.is_active !== undefined ? data.is_active : service.is_active
         }, { transaction });
@@ -450,6 +454,7 @@ const getServiceById = async (id, storeId) => {
             price: Number(service.price),
             cost_price: Number(service.cost_price),
             biaya_overhead: service.biaya_overhead || 0,
+            insentif_teknisi: service.insentif_teknisi || 0,
             description: service.description || null,
             store_id: service.store_id,
             store_name: service.store?.name || '',

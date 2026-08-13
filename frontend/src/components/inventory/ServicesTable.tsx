@@ -11,6 +11,7 @@ function ServiceActionDropdown({
     userPermissions,
     isOpen,
     setIsOpen,
+    isLastThree,
 }: {
     service: ServiceProduct;
     onEdit: (service: ServiceProduct) => void;
@@ -20,6 +21,7 @@ function ServiceActionDropdown({
     userPermissions: string[];
     isOpen: boolean;
     setIsOpen: (open: boolean) => void;
+    isLastThree?: boolean;
 }) {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +48,9 @@ function ServiceActionDropdown({
 
             {isOpen && (
                 <div
-                    className="absolute right-0 top-full mt-2 w-48 rounded-xl z-[100] overflow-hidden shadow-2xl border border-purple-500/20"
+                    className={`absolute left-0 w-48 rounded-xl z-[100] overflow-hidden shadow-2xl border border-purple-500/20 ${
+                        isLastThree ? 'bottom-full mb-2' : 'top-full mt-2'
+                    }`}
                     style={{ background: 'var(--surface-overlay)', backdropFilter: 'blur(10px)' }}
                 >
                     <div className="py-1">
@@ -334,12 +338,25 @@ export function ServicesTable({
                     {/* Service List / Table */}
                     <div className="grid gap-4">
                     {displayServices.length > 0 ? (
-                        displayServices.map((service) => (
+                        displayServices.map((service, index) => (
                             <div
                                 key={service.id}
                                 className={`bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition-all relative ${openDropdownId === service.id ? 'z-50' : 'z-0'}`}
                             >
-                                <div className="flex items-start justify-between">
+                                <div className="flex items-start">
+                                    <div className="flex items-center gap-2 mr-4 mt-0.5">
+                                        <ServiceActionDropdown
+                                            service={service}
+                                            onEdit={onEdit}
+                                            onDelete={onDelete}
+                                            onDetail={onDetail}
+                                            onToggleStatus={onToggleStatus}
+                                            userPermissions={userPermissions}
+                                            isOpen={openDropdownId === service.id}
+                                            setIsOpen={(open) => setOpenDropdownId(open ? service.id : null)}
+                                            isLastThree={index >= Math.max(0, displayServices.length - 3)}
+                                        />
+                                    </div>
                                     <div className="flex-1">
                                         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-2">
                                             <h3 className="text-lg text-gray-200">{service.name}</h3>
@@ -383,18 +400,6 @@ export function ServicesTable({
                                                 </p>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 ml-4">
-                                        <ServiceActionDropdown
-                                            service={service}
-                                            onEdit={onEdit}
-                                            onDelete={onDelete}
-                                            onDetail={onDetail}
-                                            onToggleStatus={onToggleStatus}
-                                            userPermissions={userPermissions}
-                                            isOpen={openDropdownId === service.id}
-                                            setIsOpen={(open) => setOpenDropdownId(open ? service.id : null)}
-                                        />
                                     </div>
                                 </div>
                             </div>

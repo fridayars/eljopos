@@ -23,7 +23,10 @@ export interface TransactionItemPayload {
     kategori_name: string
     price: number
     quantity: number
+    staff_id?: string
     subtotal: number
+    discount_type?: 'percentage' | 'amount'
+    discount_value?: number
 }
 
 export interface PaymentMethodPayload {

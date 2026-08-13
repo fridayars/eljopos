@@ -23,7 +23,16 @@ router.get('/summary-kartu', authMiddleware, grafikPenjualanValidation, validate
 // GET /api/laporan/arus-uang
 router.get('/arus-uang', authMiddleware, grafikPenjualanValidation, validate, transaksiController.getArusUangTable);
 
+// GET /api/laporan/grafik-pengeluaran
+router.get('/grafik-pengeluaran', authMiddleware, grafikPenjualanValidation, validate, transaksiController.getGrafikPengeluaran);
+
 // GET /api/laporan/tabel-penjualan
 router.get('/tabel-penjualan', authMiddleware, grafikPenjualanValidation, validate, transaksiController.getTabelPenjualan);
+
+// GET /api/laporan/incentive/detail
+router.get('/incentive/detail', authMiddleware, grafikPenjualanValidation, validate, transaksiController.getTechnicianIncentiveDetail);
+
+// GET /api/laporan/incentive
+router.get('/incentive', authMiddleware, grafikPenjualanValidation, validate, transaksiController.getTechnicianIncentiveReport);
 
 module.exports = router;

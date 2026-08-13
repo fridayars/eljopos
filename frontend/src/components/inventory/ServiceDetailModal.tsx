@@ -72,7 +72,7 @@ export function ServiceDetailModal({
                         </div>
 
                         {/* Price Info */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-4">
                             <div className="bg-white/5 border border-purple-500/20 rounded-xl p-4">
                                 <p className="text-xs text-gray-500 mb-1">Harga Modal</p>
                                 <p className="text-lg text-gray-300">{formatCurrency(service.capitalPrice)}</p>
@@ -81,9 +81,15 @@ export function ServiceDetailModal({
                                 <p className="text-xs text-gray-500 mb-1">Harga Jual</p>
                                 <p className="text-lg text-cyan-400">{formatCurrency(service.price)}</p>
                             </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
                             <div className="bg-white/5 border border-purple-500/20 rounded-xl p-4">
                                 <p className="text-xs text-gray-500 mb-1">Biaya Overhead</p>
                                 <p className="text-lg text-amber-400">{formatCurrency(service.biaya_overhead || 0)}</p>
+                            </div>
+                            <div className="bg-white/5 border border-purple-500/20 rounded-xl p-4">
+                                <p className="text-xs text-gray-500 mb-1">Insentif Teknisi</p>
+                                <p className="text-lg text-emerald-400">{formatCurrency(service.insentif_teknisi || 0)}</p>
                             </div>
                         </div>
 

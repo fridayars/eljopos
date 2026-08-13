@@ -53,6 +53,7 @@ export interface ServiceProduct {
     count_product: number
     capitalPrice: number
     biaya_overhead: number
+    insentif_teknisi: number
     price: number
     categoryId: string
     categoryName: string
@@ -114,6 +115,7 @@ const initialServiceProducts: ServiceProduct[] = [
         count_product: 1,
         capitalPrice: 350000,
         biaya_overhead: 0,
+        insentif_teknisi: 0,
         price: 500000,
         categoryId: '1',
         categoryName: 'Cleaning Service',
@@ -125,6 +127,7 @@ const initialServiceProducts: ServiceProduct[] = [
         count_product: 0,
         capitalPrice: 150000,
         biaya_overhead: 0,
+        insentif_teknisi: 0,
         price: 250000,
         categoryId: '1',
         categoryName: 'Cleaning Service',
@@ -615,6 +618,7 @@ export const getServiceProducts = async (params: GetServiceProductsParams = {}):
             count_product: s.count_product || 0,
             capitalPrice: s.cost_price || 0,
             biaya_overhead: s.biaya_overhead || 0,
+            insentif_teknisi: s.insentif_teknisi || 0,
             price: s.price || 0,
             categoryId: s.kategori_layanan_id || '',
             categoryName: s.kategori_name || '',
@@ -662,6 +666,7 @@ export const getServiceDetail = async (id: string): Promise<{ success: boolean; 
                 count_product: (s.produkLayanan || []).length,
                 capitalPrice: s.cost_price || 0,
                 biaya_overhead: s.biaya_overhead || 0,
+                insentif_teknisi: s.insentif_teknisi || 0,
                 price: s.price || 0,
                 categoryId: s.kategori_layanan_id || '',
                 categoryName: s.kategori_name || '',
@@ -688,6 +693,7 @@ export const addServiceProduct = async (service: Omit<ServiceProduct, 'id'>): Pr
             price: service.price,
             cost_price: service.capitalPrice,
             biaya_overhead: service.biaya_overhead || 0,
+            insentif_teknisi: service.insentif_teknisi || 0,
             description: service.detailService || undefined,
             is_active: service.is_active !== undefined ? service.is_active : true,
         }
@@ -711,6 +717,7 @@ export const updateServiceProduct = async (id: string, service: Partial<ServiceP
             price: service.price,
             cost_price: service.capitalPrice,
             biaya_overhead: service.biaya_overhead || 0,
+            insentif_teknisi: service.insentif_teknisi || 0,
             description: service.detailService || undefined,
             is_active: service.is_active !== undefined ? service.is_active : true,
         }

@@ -12,16 +12,16 @@ const { Product, KategoriProduk, Store, Layanan, KategoriLayanan, ProdukLayanan,
  */
 const parseSafeNumber = (val) => {
     if (val === null || val === undefined) return 0;
-    
+
     let num;
     if (typeof val === 'object' && val.result !== undefined) {
         val = val.result;
     }
-    
+
     if (typeof val === 'string') {
         let clean = val.trim().toLowerCase();
         if (clean === 'nan' || clean === '') return 0;
-        
+
         // Remove currency symbols (e.g., Rp) and spaces, keep digits, commas, dots, and minus
         clean = clean.replace(/[^0-9,.-]/g, '');
 
@@ -54,7 +54,7 @@ const parseSafeNumber = (val) => {
             // Only dot: could be thousand (1.200) or decimal (1.5)
             const dots = clean.split('.').length - 1;
             if (dots > 1) {
-                 clean = clean.replace(/\./g, '');
+                clean = clean.replace(/\./g, '');
             } else {
                 // Single dot: check if followed by exactly 3 digits (likely thousand)
                 const parts = clean.split('.');
@@ -462,10 +462,11 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 const is_active = String(row.getCell('H').value || '').toUpperCase() === 'YES';
                 const product_sku = row.getCell('I').value ? String(row.getCell('I').value).trim() : null;
                 const product_name = row.getCell('J').value ? String(row.getCell('J').value).trim() : null;
+                const insentif_teknisi = parseSafeNumber(row.getCell('K').value);
 
                 if (id || name) {
                     // start new service (detected by id OR name)
-                    currentService = { id, kategori_name, name, price, cost_price, biaya_overhead, description, is_active, products: [], row: rowNumber };
+                    currentService = { id, kategori_name, name, price, cost_price, biaya_overhead, insentif_teknisi, description, is_active, products: [], row: rowNumber };
                     if (product_sku) currentService.products.push({ sku: product_sku, name: product_name });
                     incomingServices.push(currentService);
                 } else if (currentService) {
@@ -502,14 +503,14 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 if (!existing) {
                     sToInsert.push({ ...is, kategori_id });
                 } else {
-                    sToUpdate.push({ existing, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, description: is.description, is_active: is.is_active, products: is.products } });
+                    sToUpdate.push({ existing, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, insentif_teknisi: is.insentif_teknisi, description: is.description, is_active: is.is_active, products: is.products } });
                 }
             } else {
                 const nameKey = `${is.name}::${storeId}`;
                 const existingByName = activeServiceByName[nameKey];
                 if (existingByName) {
                     sPreservedIds.add(existingByName.id);
-                    sToUpdate.push({ existing: existingByName, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, description: is.description, is_active: is.is_active, products: is.products } });
+                    sToUpdate.push({ existing: existingByName, data: { kategori_layanan_id: kategori_id, name: is.name, price: is.price, cost_price: is.cost_price, biaya_overhead: is.biaya_overhead, insentif_teknisi: is.insentif_teknisi, description: is.description, is_active: is.is_active, products: is.products } });
                 } else {
                     sToInsert.push({ ...is, kategori_id });
                 }
@@ -590,6 +591,7 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 price: Number(ins.price || 0),
                 cost_price: Number(ins.cost_price || 0),
                 biaya_overhead: Number(ins.biaya_overhead || 0),
+                insentif_teknisi: Number(ins.insentif_teknisi || 0),
                 description: ins.description,
                 is_active: ins.is_active
             }));
@@ -613,12 +615,13 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
                 price: Number(upd.data.price || 0),
                 cost_price: Number(upd.data.cost_price || 0),
                 biaya_overhead: Number(upd.data.biaya_overhead || 0),
+                insentif_teknisi: Number(upd.data.insentif_teknisi || 0),
                 description: upd.data.description,
                 is_active: upd.data.is_active
             }));
 
             await Layanan.bulkCreate(serviceUpdateData, {
-                updateOnDuplicate: ['kategori_layanan_id', 'name', 'price', 'cost_price', 'biaya_overhead', 'description', 'is_active', 'updated_at'],
+                updateOnDuplicate: ['kategori_layanan_id', 'name', 'price', 'cost_price', 'biaya_overhead', 'insentif_teknisi', 'description', 'is_active', 'updated_at'],
                 transaction
             });
             sUpdated = sToUpdate.length;
@@ -802,7 +805,8 @@ const exportProducts = async (storeId) => {
             { header: 'description', key: 'description', width: 40 },
             { header: 'is_active', key: 'is_active', width: 10 },
             { header: 'product_sku', key: 'product_sku', width: 20 },
-            { header: 'product_name', key: 'product_name', width: 30 }
+            { header: 'product_name', key: 'product_name', width: 30 },
+            { header: 'insentif_teknisi', key: 'insentif_teknisi', width: 15 }
         ];
 
         serviceSheet.columns = serviceHeaders;
@@ -850,7 +854,8 @@ const exportProducts = async (storeId) => {
                     description: service.description,
                     is_active: service.is_active ? 'YES' : 'NO',
                     product_sku: '',
-                    product_name: ''
+                    product_name: '',
+                    insentif_teknisi: service.insentif_teknisi
                 });
             } else {
                 // If has products, first row contains all data
@@ -865,7 +870,8 @@ const exportProducts = async (storeId) => {
                     description: service.description,
                     is_active: service.is_active ? 'YES' : 'NO',
                     product_sku: firstProduct.product?.sku || '',
-                    product_name: firstProduct.product?.name || ''
+                    product_name: firstProduct.product?.name || '',
+                    insentif_teknisi: service.insentif_teknisi
                 });
 
                 // Subsequent rows only contain product_sku and product_name
@@ -881,7 +887,8 @@ const exportProducts = async (storeId) => {
                         description: '',
                         is_active: '',
                         product_sku: product.product?.sku || '',
-                        product_name: product.product?.name || ''
+                        product_name: product.product?.name || '',
+                        insentif_teknisi: ''
                     });
                 }
             }
@@ -1055,7 +1062,8 @@ const createProduct = async (data, storeId) => {
 
         const product = await Product.create({
             ...data,
-            store_id: storeId
+            store_id: storeId,
+            is_active: true,
         }, { transaction });
 
         await transaction.commit();

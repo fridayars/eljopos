@@ -163,6 +163,7 @@ export function InvoicePrintPage() {
                 .line(detail.store?.name || 'eljoPOS')
                 .bold(false)
                 .line((detail.store as any)?.address || 'Cabang Utama')
+                .line((detail.store as any)?.phone || '')
                 .newline()
                 .rule({ style: 'dashed' })
                 .align('left')
@@ -191,6 +192,23 @@ export function InvoicePrintPage() {
                         [`${item.quantity} x ${formatCurrency(item.price)}`, formatCurrency(item.subtotal)]
                     ]
                 );
+                if (item.discount_value && item.discount_value > 0) {
+                    const isPercentage = item.discount_type === 'percentage' || item.discount_type === '%';
+                    const discStr = isPercentage ? `(${item.discount_value}%)` : '';
+                    const discAmt = isPercentage
+                        ? (item.price * item.quantity * item.discount_value) / 100
+                        : item.discount_value;
+
+                    encoder.table(
+                        [
+                            { width: 18, align: 'left' },
+                            { width: 14, align: 'right' }
+                        ],
+                        [
+                            [`  Disc ${discStr}`, `-${formatCurrency(discAmt)}`]
+                        ]
+                    );
+                }
             });
 
             encoder.rule({ style: 'dashed' });
@@ -319,7 +337,8 @@ export function InvoicePrintPage() {
                 {/* Header */}
                 <div className="text-center w-full mb-4 border-b border-black border-dashed pb-3">
                     <h1 className="font-bold text-base mb-1">{detail.store?.name || 'eljoPOS'}</h1>
-                    <p className="text-[10px] break-words">{(detail.store as any)?.address || 'Cabang Utama'}</p>
+                    <p className="text-[10px] break-words leading-tight">{(detail.store as any)?.address || 'Cabang Utama'}</p>
+                    <p className="text-[10px] leading-tight">{(detail.store as any)?.phone || ''}</p>
                 </div>
 
                 {/* Info Transaksi */}
@@ -351,6 +370,16 @@ export function InvoicePrintPage() {
                                 <span>{item.quantity} x {formatCurrency(item.price)}</span>
                                 <span>{formatCurrency(item.subtotal)}</span>
                             </div>
+                            {item.discount_value ? item.discount_value > 0 && (
+                                <div className="flex justify-between">
+                                    <span>  Disc {item.discount_type === 'percentage' || item.discount_type === '%' ? `(${item.discount_value}%)` : ''}</span>
+                                    <span>- {formatCurrency(
+                                        item.discount_type === 'percentage' || item.discount_type === '%'
+                                            ? (item.price * item.quantity * item.discount_value) / 100
+                                            : item.discount_value
+                                    )}</span>
+                                </div>
+                            ) : null}
                         </div>
                     ))}
                 </div>

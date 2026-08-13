@@ -1,0 +1,550 @@
+import { motion, AnimatePresence } from 'motion/react'
+import { X, Loader2, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import type { Customer } from '../../services/customerService'
+import type { WilayahItem } from '../../services/wilayahService'
+import { getProvinces, getRegencies, getDistricts } from '../../services/wilayahService'
+
+// ─── Reusable Wilayah Dropdown ─────────────────────────────────────────────
+interface WilayahDropdownProps {
+    label: string
+    required?: boolean
+    placeholder: string
+    options: WilayahItem[]
+    value: WilayahItem | null
+    onChange: (item: WilayahItem | null) => void
+    disabled?: boolean
+    isLoading?: boolean
+    error?: string
+    autoOpen?: boolean
+    onAutoOpenConsume?: () => void
+}
+
+function WilayahDropdown({
+    label,
+    required,
+    placeholder,
+    options,
+    value,
+    onChange,
+    disabled = false,
+    isLoading = false,
+    error,
+    autoOpen,
+    onAutoOpenConsume,
+}: WilayahDropdownProps) {
+    const [isOpen, setIsOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const ref = useRef<HTMLDivElement>(null)
+    const searchRef = useRef<HTMLInputElement>(null)
+    const listRef = useRef<HTMLUListElement>(null)
+    const [highlightedIndex, setHighlightedIndex] = useState(0)
+
+    useEffect(() => { setHighlightedIndex(0) }, [searchQuery, isOpen])
+
+    useEffect(() => {
+        if (isOpen && listRef.current) {
+            const activeItem = listRef.current.children[highlightedIndex] as HTMLElement
+            if (activeItem) activeItem.scrollIntoView({ block: 'nearest' })
+        }
+    }, [highlightedIndex, isOpen])
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    useEffect(() => {
+        if (disabled) { setIsOpen(false); setSearchQuery('') }
+    }, [disabled])
+
+    useEffect(() => {
+        if (isOpen) setTimeout(() => searchRef.current?.focus(), 50)
+        else setSearchQuery('')
+    }, [isOpen])
+
+    useEffect(() => {
+        if (autoOpen && !disabled && !isLoading) {
+            setIsOpen(true)
+            if (onAutoOpenConsume) onAutoOpenConsume()
+        }
+    }, [autoOpen, disabled, isLoading, onAutoOpenConsume])
+
+    const isDisabled = disabled || isLoading
+
+    return (
+        <div className="space-y-2" ref={ref}>
+            <label className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                {label} {required && <span className="text-red-400">*</span>}
+            </label>
+            <div
+                tabIndex={isDisabled ? -1 : 0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        if (!isDisabled) setIsOpen((prev) => !prev)
+                    }
+                }}
+                onClick={() => !isDisabled && setIsOpen((prev) => !prev)}
+                className={`relative w-full h-12 rounded-xl px-4 flex items-center justify-between transition-all
+                    ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    ${error
+                        ? 'border-red-500/50'
+                        : isOpen
+                            ? 'border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                            : ''
+                    }`}
+                style={{
+                    background: isDisabled ? 'var(--surface-subtle)' : 'var(--surface-modal)',
+                    border: `1px solid ${error ? 'rgb(239 68 68 / 0.5)' : isOpen ? 'rgb(59 130 246 / 0.5)' : 'var(--border)'}`,
+                }}
+            >
+                <span className="text-sm truncate pr-2" style={{ color: value ? 'var(--foreground)' : 'var(--muted-foreground)' }}>
+                    {isLoading ? 'Memuat data...' : (value?.name || placeholder)}
+                </span>
+                {isLoading
+                    ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" style={{ color: 'var(--muted-foreground)' }} />
+                    : <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--muted-foreground)' }} />
+                }
+            </div>
+
+            {isOpen && !isDisabled && (
+                <div
+                    className="absolute z-[70] left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-2xl"
+                    style={{
+                        background: 'var(--surface-dropdown)',
+                        border: '1px solid var(--border)'
+                    }}
+                >
+                    <div className="p-2 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                        <input
+                            ref={searchRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                const filtered = options.filter(o => o.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    if (filtered.length > 0) { onChange(filtered[highlightedIndex]); setIsOpen(false) }
+                                } else if (e.key === 'ArrowDown') {
+                                    e.preventDefault()
+                                    setHighlightedIndex(prev => Math.min(prev + 1, Math.max(0, filtered.length - 1)))
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault()
+                                    setHighlightedIndex(prev => Math.max(prev - 1, 0))
+                                }
+                            }}
+                            placeholder="Cari..."
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full h-8 rounded-lg px-3 text-sm focus:outline-none transition-all"
+                            style={{
+                                background: 'var(--surface-subtle)',
+                                border: '1px solid var(--border)',
+                                color: 'var(--foreground)',
+                            }}
+                        />
+                    </div>
+                    <ul className="max-h-44 overflow-y-auto" ref={listRef}>
+                        {(() => {
+                            const filtered = options.filter((o) =>
+                                o.name.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            return filtered.length === 0 ? (
+                                <li className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted-foreground)' }}>Tidak ada data</li>
+                            ) : (
+                                filtered.map((item, index) => (
+                                    <li
+                                        key={item.code}
+                                        onClick={() => { onChange(item); setIsOpen(false) }}
+                                        className={`px-4 py-3 text-sm cursor-pointer transition-colors
+                                            ${value?.code === item.code || index === highlightedIndex
+                                                ? 'bg-purple-500/10'
+                                                : 'hover:bg-purple-500/5'
+                                            }`}
+                                        style={{
+                                            color: value?.code === item.code ? 'var(--primary)' : 'var(--foreground)'
+                                        }}
+                                    >
+                                        {item.name}
+                                    </li>
+                                ))
+                            )
+                        })()}
+                    </ul>
+                </div>
+            )}
+            {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+    )
+}
+
+// ─── CustomerModal ────────────────────────────────────────────────────────────
+interface CustomerModalProps {
+    isOpen: boolean
+    onClose: () => void
+    customer: Customer | null
+    onSave: (id: string | null, data: any) => Promise<void>
+}
+
+type WilayahErrors = {
+    province?: string
+    regency?: string
+    district?: string
+}
+
+export function CustomerModal({ isOpen, onClose, customer, onSave }: CustomerModalProps) {
+    const isEdit = !!customer
+
+    const [formData, setFormData] = useState({ name: '', phone: '', email: '', address: '' })
+
+    // Wilayah state
+    const [provinces, setProvinces] = useState<WilayahItem[]>([])
+    const [regencies, setRegencies] = useState<WilayahItem[]>([])
+    const [districts, setDistricts] = useState<WilayahItem[]>([])
+
+    const [selectedProvince, setSelectedProvince] = useState<WilayahItem | null>(null)
+    const [selectedRegency, setSelectedRegency] = useState<WilayahItem | null>(null)
+    const [selectedDistrict, setSelectedDistrict] = useState<WilayahItem | null>(null)
+
+    const [loadingProvinces, setLoadingProvinces] = useState(false)
+    const [loadingRegencies, setLoadingRegencies] = useState(false)
+    const [loadingDistricts, setLoadingDistricts] = useState(false)
+
+    const [autoOpenDropdown, setAutoOpenDropdown] = useState<'regency' | 'district' | null>(null)
+    const [errors, setErrors] = useState<{ name?: string; phone?: string } & WilayahErrors>({})
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Load provinces once
+    useEffect(() => {
+        if (isOpen && provinces.length === 0) {
+            setLoadingProvinces(true)
+            getProvinces().then((res) => {
+                if (res.success) setProvinces(res.data)
+                setLoadingProvinces(false)
+            })
+        }
+    }, [isOpen])
+
+    // Populate form when editing
+    useEffect(() => {
+        if (!isOpen) {
+            // Reset on close
+            setFormData({ name: '', phone: '', email: '', address: '' })
+            setErrors({})
+            setIsSubmitting(false)
+            setSelectedProvince(null)
+            setSelectedRegency(null)
+            setSelectedDistrict(null)
+            setRegencies([])
+            setDistricts([])
+            return
+        }
+
+        if (customer) {
+            setFormData({
+                name: customer.name || '',
+                phone: customer.phone || '',
+                email: customer.email || '',
+                address: customer.address || '',
+            })
+
+            // Pre-populate wilayah if customer has region data
+            if (customer.province_code && customer.province_name) {
+                const prov: WilayahItem = { code: customer.province_code, name: customer.province_name }
+                setSelectedProvince(prov)
+
+                // Load regencies for that province
+                if (customer.regency_code && customer.regency_name) {
+                    setLoadingRegencies(true)
+                    getRegencies(customer.province_code).then((res) => {
+                        if (res.success) {
+                            setRegencies(res.data)
+                            const reg: WilayahItem = { code: customer.regency_code!, name: customer.regency_name! }
+                            setSelectedRegency(reg)
+
+                            if (customer.district_code && customer.district_name) {
+                                setLoadingDistricts(true)
+                                getDistricts(customer.regency_code!).then((dRes) => {
+                                    if (dRes.success) {
+                                        setDistricts(dRes.data)
+                                        setSelectedDistrict({ code: customer.district_code!, name: customer.district_name! })
+                                    }
+                                    setLoadingDistricts(false)
+                                })
+                            }
+                        }
+                        setLoadingRegencies(false)
+                    })
+                }
+            }
+        }
+    }, [isOpen, customer])
+
+    const handleProvinceChange = async (item: WilayahItem | null) => {
+        setSelectedProvince(item)
+        setSelectedRegency(null)
+        setSelectedDistrict(null)
+        setRegencies([])
+        setDistricts([])
+        if (errors.province) setErrors((prev) => ({ ...prev, province: undefined }))
+
+        if (item) {
+            setLoadingRegencies(true)
+            const res = await getRegencies(item.code)
+            if (res.success) setRegencies(res.data)
+            setLoadingRegencies(false)
+            setAutoOpenDropdown('regency')
+        }
+    }
+
+    const handleRegencyChange = async (item: WilayahItem | null) => {
+        setSelectedRegency(item)
+        setSelectedDistrict(null)
+        setDistricts([])
+        if (errors.regency) setErrors((prev) => ({ ...prev, regency: undefined }))
+
+        if (item) {
+            setLoadingDistricts(true)
+            const res = await getDistricts(item.code)
+            if (res.success) setDistricts(res.data)
+            setLoadingDistricts(false)
+            setAutoOpenDropdown('district')
+        }
+    }
+
+    const handleDistrictChange = (item: WilayahItem | null) => {
+        setSelectedDistrict(item)
+        if (errors.district) setErrors((prev) => ({ ...prev, district: undefined }))
+        if (item) setTimeout(() => document.getElementById('btn-submit-customer-modal')?.focus(), 50)
+    }
+
+    const handleChange = (field: string, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }))
+        if (errors[field as keyof typeof errors]) {
+            setErrors((prev) => ({ ...prev, [field]: undefined }))
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        const newErrors: typeof errors = {}
+        if (!formData.name.trim()) newErrors.name = 'Nama wajib diisi'
+        if (!formData.phone.trim()) newErrors.phone = 'Nomor telepon wajib diisi'
+        if (!selectedProvince) newErrors.province = 'Provinsi wajib dipilih'
+        if (!selectedRegency) newErrors.regency = 'Kabupaten/Kota wajib dipilih'
+        if (!selectedDistrict) newErrors.district = 'Kecamatan wajib dipilih'
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors)
+            return
+        }
+
+        setIsSubmitting(true)
+        try {
+            await onSave(customer?.id || null, {
+                ...formData,
+                province_code: selectedProvince!.code,
+                province_name: selectedProvince!.name,
+                regency_code: selectedRegency!.code,
+                regency_name: selectedRegency!.name,
+                district_code: selectedDistrict!.code,
+                district_name: selectedDistrict!.name,
+            })
+            onClose()
+        } catch {
+            // error handled by parent
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                    />
+
+                    {/* Modal */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md z-50"
+                    >
+                        <div
+                            className="backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.3)] overflow-hidden"
+                            style={{ background: 'var(--background)' }}
+                        >
+                            {/* Header */}
+                            <div className="relative p-6 border-b border-purple-500/20">
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10" />
+                                <div className="relative flex items-center justify-between">
+                                    <h2 className="text-xl text-gray-200">
+                                        {isEdit ? 'Edit Pelanggan' : 'Tambah Pelanggan Baru'}
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Form */}
+                            <div className="overflow-y-auto max-h-[calc(100svh-12rem)]">
+                                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                                    {/* Name */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm text-gray-400">
+                                            Nama Customer <span className="text-red-400">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => handleChange('name', e.target.value)}
+                                            placeholder="Ketikkan nama..."
+                                            className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-gray-300 placeholder:text-gray-600 focus:outline-none transition-all ${errors.name
+                                                ? 'border-red-500/50 focus:border-red-500/70'
+                                                : 'border-purple-500/20 focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                                }`}
+                                        />
+                                        {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
+                                    </div>
+
+                                    {/* Phone */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm text-gray-400">
+                                            Nomor Telepon <span className="text-red-400">*</span>
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={formData.phone}
+                                            onChange={(e) => handleChange('phone', e.target.value)}
+                                            placeholder="Cth: 081234567890"
+                                            className={`w-full h-12 bg-white/5 border rounded-xl px-4 text-gray-300 placeholder:text-gray-600 focus:outline-none transition-all ${errors.phone
+                                                ? 'border-red-500/50 focus:border-red-500/70'
+                                                : 'border-purple-500/20 focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                                }`}
+                                        />
+                                        {errors.phone && <p className="text-xs text-red-400">{errors.phone}</p>}
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm text-gray-400">Email</label>
+                                        <input
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={(e) => handleChange('email', e.target.value)}
+                                            placeholder="Alamat email..."
+                                            className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Address */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm text-gray-400">Alamat</label>
+                                        <textarea
+                                            value={formData.address}
+                                            onChange={(e) => handleChange('address', e.target.value)}
+                                            placeholder="Alamat lengkap (nama jalan, RT/RW, no. rumah)..."
+                                            rows={3}
+                                            className="w-full bg-white/5 border border-purple-500/20 rounded-xl px-4 py-3 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all resize-none"
+                                        />
+                                    </div>
+
+                                    {/* Wilayah Dropdowns */}
+                                    <div className="relative">
+                                        <WilayahDropdown
+                                            label="Provinsi"
+                                            required
+                                            placeholder="Pilih provinsi..."
+                                            options={provinces}
+                                            value={selectedProvince}
+                                            onChange={handleProvinceChange}
+                                            isLoading={loadingProvinces}
+                                            error={errors.province}
+                                        />
+                                    </div>
+
+                                    <div className="relative">
+                                        <WilayahDropdown
+                                            label="Kabupaten / Kota"
+                                            required
+                                            placeholder={selectedProvince ? 'Pilih kabupaten/kota...' : 'Pilih provinsi dulu'}
+                                            options={regencies}
+                                            value={selectedRegency}
+                                            onChange={handleRegencyChange}
+                                            disabled={!selectedProvince}
+                                            isLoading={loadingRegencies}
+                                            error={errors.regency}
+                                            autoOpen={autoOpenDropdown === 'regency'}
+                                            onAutoOpenConsume={() => setAutoOpenDropdown(null)}
+                                        />
+                                    </div>
+
+                                    <div className="relative">
+                                        <WilayahDropdown
+                                            label="Kecamatan"
+                                            required
+                                            placeholder={selectedRegency ? 'Pilih kecamatan...' : 'Pilih kabupaten/kota dulu'}
+                                            options={districts}
+                                            value={selectedDistrict}
+                                            onChange={handleDistrictChange}
+                                            disabled={!selectedRegency}
+                                            isLoading={loadingDistricts}
+                                            error={errors.district}
+                                            autoOpen={autoOpenDropdown === 'district'}
+                                            onAutoOpenConsume={() => setAutoOpenDropdown(null)}
+                                        />
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="pt-2 flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={onClose}
+                                            disabled={isSubmitting}
+                                            className="flex-1 h-12 rounded-xl border border-purple-500/30 text-gray-400 hover:text-gray-200 hover:border-purple-500/50 transition-all cursor-pointer disabled:opacity-50"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            id="btn-submit-customer-modal"
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Menyimpan...
+                                                </>
+                                            ) : (
+                                                isEdit ? 'Simpan Perubahan' : 'Simpan'
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    )
+}

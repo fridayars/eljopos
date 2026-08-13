@@ -280,6 +280,9 @@ export function SalesPage() {
                     quantity: 1,
                     item_type: (product.item_type || 'product') as 'product' | 'layanan',
                     kategori_name: product.kategori_name,
+                    discount_type: '%' as '%' | 'Rp',
+                    discount_value: 0,
+                    staff_id: undefined,
                 },
             ]
         })
@@ -288,6 +291,18 @@ export function SalesPage() {
 
     const handleUpdateQuantity = (id: string, quantity: number) => {
         setCart((prevCart) => prevCart.map((item) => (item.id === id ? { ...item, quantity } : item)))
+    }
+
+    const handleUpdateItemDiscount = (id: string, discountType: '%' | 'Rp', discountValue: number) => {
+        setCart((prevCart) => prevCart.map((item) =>
+            item.id === id ? { ...item, discount_type: discountType, discount_value: discountValue } : item
+        ))
+    }
+
+    const handleUpdateItemStaff = (id: string, staffId: string) => {
+        setCart((prevCart) => prevCart.map((item) =>
+            item.id === id ? { ...item, staff_id: staffId } : item
+        ))
     }
 
     const handleRemoveItem = (id: string) => {
@@ -344,7 +359,17 @@ export function SalesPage() {
     const handleConfirmPayment = async (data: { date: string; cashbox: string; cashPaid: number; payments: { method: string; amount: number }[] }) => {
         setIsTransacting(true)
 
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        // Hitung subtotal per item (setelah diskon per item)
+        const getItemSubtotal = (item: typeof cart[0]) => {
+            const gross = item.price * item.quantity
+            if (!item.discount_value) return gross
+            const disc = item.discount_type === '%'
+                ? (gross * item.discount_value) / 100
+                : item.discount_value
+            return Math.max(0, gross - disc)
+        }
+
+        const subtotal = cart.reduce((sum, item) => sum + getItemSubtotal(item), 0)
         const discountAmount = discountType === '%' ? (subtotal * discountValue) / 100 : discountValue
         const grandTotal = Math.max(0, subtotal - discountAmount)
 
@@ -355,7 +380,10 @@ export function SalesPage() {
             kategori_name: item.kategori_name,
             price: item.price,
             quantity: item.quantity,
-            subtotal: item.price * item.quantity,
+            staff_id: item.staff_id,
+            subtotal: getItemSubtotal(item),
+            discount_type: item.discount_value > 0 ? (item.discount_type === '%' ? 'percentage' : 'amount') : undefined,
+            discount_value: item.discount_value > 0 ? item.discount_value : undefined,
         }))
 
         const payload: CreateTransactionPayload = {
@@ -503,6 +531,8 @@ export function SalesPage() {
                 discountValue={discountValue}
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemoveItem={handleRemoveItem}
+                onUpdateItemDiscount={handleUpdateItemDiscount}
+                onUpdateItemStaff={handleUpdateItemStaff}
                 onSelectCustomer={() => setIsSelectCustomerModalOpen(true)}
                 onRemoveCustomer={handleRemoveCustomer}
                 onAddNewCustomer={() => setIsAddCustomerModalOpen(true)}
@@ -522,10 +552,18 @@ export function SalesPage() {
                 onClose={() => setIsPaymentModalOpen(false)}
                 grandTotal={Math.max(
                     0,
-                    cart.reduce((sum, item) => sum + item.price * item.quantity, 0) -
-                    (discountType === '%'
-                        ? (cart.reduce((sum, item) => sum + item.price * item.quantity, 0) * discountValue) / 100
-                        : discountValue),
+                    (() => {
+                        const getItemSubtotal = (item: typeof cart[0]) => {
+                            const gross = item.price * item.quantity
+                            if (!item.discount_value) return gross
+                            const disc = item.discount_type === '%'
+                                ? (gross * item.discount_value) / 100
+                                : item.discount_value
+                            return Math.max(0, gross - disc)
+                        }
+                        const sub = cart.reduce((sum, item) => sum + getItemSubtotal(item), 0)
+                        return sub - (discountType === '%' ? (sub * discountValue) / 100 : discountValue)
+                    })()
                 )}
                 canChangeDate={canChangeDate}
                 onConfirm={handleConfirmPayment}

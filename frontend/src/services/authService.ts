@@ -58,7 +58,7 @@ export const getStores = async (): Promise<StoresResponse> => {
     })
   }
 
-  const response = await api.get('/master/stores')
+  const response = await api.get('/master/stores/active')
   return response.data
 }
 

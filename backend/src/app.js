@@ -57,9 +57,9 @@ const startServer = async () => {
             const stdout = execSync(`"${process.execPath}" ./node_modules/sequelize-cli/lib/sequelize db:migrate`, { encoding: 'utf8' })
             logger.info({ message: `Migration success:\n${stdout}` })
         } catch (migrationError) {
-            logger.error({ 
-                message: 'Migration gagal dijalankan', 
-                error: migrationError.stdout || migrationError.message 
+            logger.error({
+                message: 'Migration gagal dijalankan',
+                error: migrationError.stdout || migrationError.message
             })
         }
 

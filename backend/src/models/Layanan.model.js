@@ -30,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
         price: DataTypes.DECIMAL(15, 2),
         cost_price: DataTypes.DECIMAL(15, 2),
         biaya_overhead: DataTypes.INTEGER,
+        insentif_teknisi: DataTypes.INTEGER,
         description: DataTypes.TEXT,
         is_active: DataTypes.BOOLEAN,
         created_at: DataTypes.DATE,

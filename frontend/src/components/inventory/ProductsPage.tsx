@@ -99,7 +99,8 @@ function ProductActionDropdown({
     onEdit,
     onDelete,
     onEditStock,
-    onViewStockHistory
+    onViewStockHistory,
+    isLastThree
 }: {
     product: ProductItem;
     userPermissions: string[];
@@ -107,6 +108,7 @@ function ProductActionDropdown({
     onDelete: (product: ProductItem) => void;
     onEditStock: (product: ProductItem) => void;
     onViewStockHistory: (product: ProductItem) => void;
+    isLastThree?: boolean;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,7 +135,9 @@ function ProductActionDropdown({
 
             {isOpen && (
                 <div
-                    className="absolute right-0 top-full mt-2 w-48 py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
+                    className={`absolute left-0 w-48 py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out] ${
+                        isLastThree ? 'bottom-full mb-2' : 'top-full mt-2'
+                    }`}
                     style={{
                         background: 'var(--card)',
                         border: '1px solid var(--border)',
@@ -372,6 +376,9 @@ export function ProductsPage({
                             <table className="w-full text-left whitespace-nowrap">
                                 <thead className="bg-white/5 border-b border-purple-500/20">
                                     <tr>
+                                        <th className="px-4 py-4 text-sm font-medium text-gray-400 text-center w-24">
+                                            Aksi
+                                        </th>
                                         <th className="px-4 py-4 text-sm font-medium text-gray-400 w-16">Foto</th>
                                         <th
                                             className="px-4 py-4 text-sm font-medium text-gray-400 cursor-pointer hover:text-blue-400 transition-colors select-none"
@@ -406,9 +413,6 @@ export function ProductsPage({
                                         <th className="px-4 py-4 text-sm font-medium text-gray-400 text-center w-20">
                                             Status
                                         </th>
-                                        <th className="px-4 py-4 text-sm font-medium text-gray-400 text-center w-24">
-                                            Aksi
-                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-purple-500/10">
@@ -423,13 +427,24 @@ export function ProductsPage({
                                             </td>
                                         </tr>
                                     ) : (
-                                        products.map((product) => (
+                                        products.map((product, index) => (
                                             <motion.tr
                                                 key={product.id}
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 className="hover:bg-white/5 transition-colors group"
                                             >
+                                                <td className="px-4 py-3">
+                                                    <ProductActionDropdown
+                                                        product={product}
+                                                        userPermissions={userPermissions}
+                                                        onEdit={onEditProduct}
+                                                        onDelete={onDeleteProduct}
+                                                        onEditStock={() => setEditingStockProduct(product)}
+                                                        onViewStockHistory={onViewStockHistory}
+                                                        isLastThree={index >= Math.max(0, products.length - 3)}
+                                                    />
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
                                                         {(product.image_url || product.image) ? (
@@ -495,16 +510,6 @@ export function ProductsPage({
                                                                 }`}
                                                         />
                                                     </button>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <ProductActionDropdown
-                                                        product={product}
-                                                        userPermissions={userPermissions}
-                                                        onEdit={onEditProduct}
-                                                        onDelete={onDeleteProduct}
-                                                        onEditStock={() => setEditingStockProduct(product)}
-                                                        onViewStockHistory={onViewStockHistory}
-                                                    />
                                                 </td>
                                             </motion.tr>
                                         ))

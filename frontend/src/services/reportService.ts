@@ -38,6 +38,13 @@ export interface SalesTableItem {
     revenue: number;
 }
 
+export interface ExpenseChartItem {
+    category: string;
+    total: number;
+    count: number;
+    percentage: number;
+}
+
 // =============================================
 // Types — Transaction History (real API)
 // =============================================
@@ -95,6 +102,9 @@ export interface TransactionDetailItem {
     price: number;
     quantity: number;
     subtotal: number;
+    discount_type?: 'percentage' | 'amount' | '%' | 'Rp' | null;
+    discount_value?: number;
+    staff?: { name: string };
 }
 
 export interface TransactionDetailPayment {
@@ -171,6 +181,26 @@ export const getSalesReport = async (params: {
             effectiveParams.store_id = getCurrentStoreId();
         }
         const response = await api.get('/laporan/grafik-penjualan', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: []
+        };
+    }
+};
+
+export const getExpenseChart = async (params: {
+    start_date: string;
+    end_date: string;
+    store_id?: string;
+}): Promise<{ success: boolean; data: ExpenseChartItem[] }> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/grafik-pengeluaran', { params: effectiveParams });
         return response.data;
     } catch (error: any) {
         return {
@@ -361,6 +391,68 @@ export const getSummaryCards = async (params: {
                 estimated_profit: 0
             },
             message: error.response?.data?.message || 'Gagal memuat ringkasan kartu'
+        };
+    }
+};
+
+// ------------------------------------------------------------
+// Incentive Report Service
+// ------------------------------------------------------------
+/**
+ * GET /api/laporan/incentive
+ */
+export const getTechnicianIncentiveReport = async (params: {
+    start_date: string;
+    end_date: string;
+    store_id?: string;
+    page?: number;
+    limit?: number;
+}): Promise<RankingResponse<{ staff_id: string; staff_name: string; total_incentive: number }>> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/incentive', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: {
+                items: [],
+                meta: { page: 1, limit: 10, total: 0, total_pages: 0 }
+            },
+            message: error.response?.data?.message || 'Gagal memuat laporan insentif teknisi'
+        };
+    }
+};
+
+export interface IncentiveDetailItem {
+    receipt_number: string;
+    transaction_date: string;
+    item_name: string;
+    quantity: number;
+    insentif_per_item: number;
+}
+
+export const getTechnicianIncentiveDetail = async (params: {
+    staff_id: string;
+    start_date: string;
+    end_date: string;
+    store_id?: string;
+}): Promise<{ success: boolean; data: IncentiveDetailItem[]; message?: string }> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/incentive/detail', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: [],
+            message: error.response?.data?.message || 'Gagal memuat detail insentif teknisi'
         };
     }
 };

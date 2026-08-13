@@ -173,6 +173,8 @@ h6 {
 [data-theme="light"] [class*="bg-[#121E19]"] { background-color: rgba(16, 185, 129, 0.06) !important; }
 [data-theme="light"] .bg-\[\#1E1212\]\/40,
 [data-theme="light"] [class*="bg-[#1E1212]"] { background-color: rgba(239, 68, 68, 0.06) !important; }
+[data-theme="light"] .bg-\[\#1A1A12\]\/40,
+[data-theme="light"] [class*="bg-[#1A1A12]"] { background-color: rgba(234, 179, 8, 0.06) !important; }
 [data-theme="light"] .bg-\[\#12181E\]\/40,
 [data-theme="light"] [class*="bg-[#12181E]"] { background-color: rgba(6, 182, 212, 0.06) !important; }
 

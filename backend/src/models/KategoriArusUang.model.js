@@ -20,6 +20,7 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
+        // tidak dipakai saat get data, data berlaku untuk semua cabang
         store_id: {
             type: DataTypes.UUID,
             allowNull: false

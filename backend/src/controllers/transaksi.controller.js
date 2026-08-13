@@ -172,6 +172,28 @@ const getSummaryKartu = async (req, res, next) => {
 };
 
 /**
+ * Laporan Grafik Pengeluaran — GET /api/laporan/grafik-pengeluaran
+ */
+const getGrafikPengeluaran = async (req, res, next) => {
+    try {
+        const { start_date, end_date, store_id } = req.query;
+
+        const result = await transaksiService.getGrafikPengeluaran({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Laporan Tabel Arus Uang — GET /api/laporan/arus-uang
  */
 const getArusUangTable = async (req, res, next) => {
@@ -216,15 +238,68 @@ const getTabelPenjualan = async (req, res, next) => {
     }
 };
 
+/**
+ * Laporan Insentif Teknisi — GET /api/laporan/incentive
+ */
+const getTechnicianIncentiveReport = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const { start_date, end_date, store_id } = req.query;
+    const result = await transaksiService.getTechnicianIncentiveReport({
+      start_date,
+      end_date,
+      store_id: store_id || req.user.store_id,
+      page,
+      limit
+    });
+
+    return res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Detail Insentif per Teknisi — GET /api/laporan/incentive/detail
+ */
+const getTechnicianIncentiveDetail = async (req, res, next) => {
+  try {
+    const { staff_id, start_date, end_date, store_id } = req.query;
+    if (!staff_id) {
+      return res.status(400).json({ success: false, message: 'staff_id is required' });
+    }
+    const result = await transaksiService.getTechnicianIncentiveDetail({
+      staff_id,
+      start_date,
+      end_date,
+      store_id: store_id || req.user.store_id
+    });
+
+    return res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-    createTransaksi,
-    getTransaksiDetail,
-    getLaporanPenjualan,
-    deleteTransaksi,
-    getProductRanking,
-    getCustomerRanking,
-    getGrafikPenjualan,
-    getSummaryKartu,
-    getArusUangTable,
-    getTabelPenjualan
+  createTransaksi,
+  getTransaksiDetail,
+  getLaporanPenjualan,
+  deleteTransaksi,
+  getProductRanking,
+  getCustomerRanking,
+  getGrafikPenjualan,
+  getSummaryKartu,
+  getGrafikPengeluaran,
+  getArusUangTable,
+  getTabelPenjualan,
+  getTechnicianIncentiveReport,
+  getTechnicianIncentiveDetail
 };

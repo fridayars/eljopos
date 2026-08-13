@@ -17,4 +17,7 @@ router.put('/:id', authMiddleware, updateCustomerValidation, validate, customerC
 // DELETE /api/master/customers/:id
 router.delete('/:id', authMiddleware, customerController.deleteCustomer);
 
+// GET /api/master/customers/:id/transactions
+router.get('/:id/transactions', authMiddleware, customerController.getCustomerTransactions);
+
 module.exports = router;

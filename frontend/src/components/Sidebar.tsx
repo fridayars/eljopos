@@ -28,8 +28,10 @@ const navItems: NavItem[] = [
         icon: Settings,
         label: 'Pengaturan',
         subItems: [
+            { id: 'settings/stores', label: 'Cabang', permission: 'store.view' },
             { id: 'settings/users', label: 'User', permission: 'user.view' },
-            { id: 'settings/role', label: 'Role', permission: 'role.view' }
+            { id: 'settings/role', label: 'Role', permission: 'role.view' },
+            { id: 'settings/staff', label: 'Staff', permission: 'staff.view' },
         ]
     },
 ]

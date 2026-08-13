@@ -8,14 +8,16 @@ const getAllCustomers = async (req, res, next) => {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 10;
         const search = req.query.search;
+        const sort = req.query.sort;
 
-        const result = await customerService.getAllCustomers({ page, limit, search });
+        const result = await customerService.getAllCustomers({ page, limit, search, sort });
 
         return res.json({ success: true, data: result });
     } catch (error) {
         next(error);
     }
 };
+
 
 /**
  * Create Customer — POST /api/master/customers
@@ -56,4 +58,19 @@ const deleteCustomer = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllCustomers, createCustomer, updateCustomer, deleteCustomer };
+/**
+ * Get Customer Transactions — GET /api/master/customers/:id/transactions
+ */
+const getCustomerTransactions = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const result = await customerService.getCustomerTransactions(req.params.id, { page, limit });
+
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { getAllCustomers, createCustomer, updateCustomer, deleteCustomer, getCustomerTransactions };

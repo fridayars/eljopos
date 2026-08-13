@@ -230,12 +230,23 @@ export function EditServiceModal({
                                         min="0"
                                     />
                                 </div>
-                                <div className="md:col-span-2">
+                                <div className="md:col-span-1">
                                     <label className="block text-sm text-gray-400 mb-2">Biaya Overhead (Rp)</label>
                                     <input
                                         type="number"
                                         value={service.biaya_overhead}
                                         onChange={(e) => onChange({ ...service, biaya_overhead: Number(e.target.value) })}
+                                        className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                                        min="0"
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div className="md:col-span-1">
+                                    <label className="block text-sm text-gray-400 mb-2">Insentif Teknisi (Rp)</label>
+                                    <input
+                                        type="number"
+                                        value={service.insentif_teknisi}
+                                        onChange={(e) => onChange({ ...service, insentif_teknisi: Number(e.target.value) })}
                                         className="w-full h-12 bg-white/5 border border-purple-500/20 rounded-xl px-4 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
                                         min="0"
                                         placeholder="0"

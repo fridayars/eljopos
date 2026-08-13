@@ -29,5 +29,6 @@ router.use('/wilayah', require('./wilayah.route'))
 router.use('/arus-uang', require('./arusUang.route'))
 router.use('/kategori-arus-uang', require('./kategoriArusUang.route'))
 router.use('/logs', require('./log.route'))
+router.use('/staff', require('./staff.route'))
 
 module.exports = router
