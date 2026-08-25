@@ -43,6 +43,17 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
             ]
         },
         {
+            label: 'Pelanggan',
+            items: [
+                { value: 'customer.view', label: 'Lihat' },
+                { value: 'customer.create', label: 'Tambah' },
+                { value: 'customer.edit', label: 'Edit' },
+                { value: 'customer.delete', label: 'Hapus' },
+                { value: 'customer.claim_warranty', label: 'Klaim Garansi' },
+                { value: 'customer.claim_warranty_changedate', label: 'Ubah Tanggal Klaim' },
+            ]
+        },
+        {
             label: 'Cabang',
             items: [
                 { value: 'store.view', label: 'Lihat' },
@@ -100,6 +111,15 @@ export function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
                 { value: 'report.deletetransaction', label: 'Hapus Transaksi' },
                 { value: 'report.profittransaction', label: 'Profit Transaksi' },
                 { value: 'report.incentive', label: 'Laporan Insentif' },
+                { value: 'report.warranty', label: 'Laporan Klaim Garansi' },
+            ]
+        },
+        {
+            label: 'Teknisi',
+            items: [
+                { value: 'teknisi.view', label: 'Lihat' },
+                { value: 'teknisi.upload', label: 'Upload Bukti' },
+                { value: 'teknisi.view_insentif', label: 'Nominal Insentif' },
             ]
         }
     ]

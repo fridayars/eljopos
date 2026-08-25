@@ -10,6 +10,7 @@ const JENIS_MUTASI_STOK = {
     IMPORT_DATA: 'IMPORT_DATA',           // Penyesuaian stok dari import data excel/csv awal
     HAPUS_TRANSAKSI: 'HAPUS_TRANSAKSI',   // Penambahan stok kembali karena transaksi dibatalkan/dihapus
     STOK_OPNAME: 'STOK_OPNAME',           // Penyesuaian stok dari hasil stok opname (bisa +/-)
+    KLAIM_GARANSI: 'KLAIM_GARANSI',       // Pengurangan stok karena klaim garansi (ganti sparepart)
 };
 
 module.exports = {

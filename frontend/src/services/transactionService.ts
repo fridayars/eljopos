@@ -27,6 +27,7 @@ export interface TransactionItemPayload {
     subtotal: number
     discount_type?: 'percentage' | 'amount'
     discount_value?: number
+    batas_garansi?: string
 }
 
 export interface PaymentMethodPayload {

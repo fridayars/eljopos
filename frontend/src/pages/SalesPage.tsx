@@ -71,7 +71,8 @@ function CategoryFilterSelect({
 
             {isOpen && (
                 <div
-                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out] bg-[#1a1625] border border-purple-500/20"
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out] border border-purple-500/20"
+                    style={{ background: 'var(--surface-dropdown)' }}
                 >
                     <ul className="max-h-60 overflow-y-auto">
                         {allOptions.map((cat) => (
@@ -99,7 +100,15 @@ export function SalesPage() {
     const [activeTab, setActiveTab] = useState<'produk' | 'layanan'>('layanan')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategoryId, setSelectedCategoryId] = useState('all')
-    const [cart, setCart] = useState<CartItem[]>([])
+    const [cart, setCart] = useState<CartItem[]>(() => {
+        try {
+            const savedCart = localStorage.getItem('sales_cart')
+            return savedCart ? JSON.parse(savedCart) : []
+        } catch (e) {
+            console.error("Failed to parse cart from local storage", e)
+            return []
+        }
+    })
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
     const [discountType, setDiscountType] = useState<'%' | 'Rp'>('%')
@@ -241,6 +250,11 @@ export function SalesPage() {
         fetchItems(1, true)
     }, [activeTab, searchQuery, selectedCategoryId, storeId])
 
+    // Save cart to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('sales_cart', JSON.stringify(cart))
+    }, [cart])
+
     // Intersection Observer for Infinite Scroll
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -302,6 +316,12 @@ export function SalesPage() {
     const handleUpdateItemStaff = (id: string, staffId: string) => {
         setCart((prevCart) => prevCart.map((item) =>
             item.id === id ? { ...item, staff_id: staffId } : item
+        ))
+    }
+
+    const handleUpdateItemBatasGaransi = (id: string, date: string) => {
+        setCart((prevCart) => prevCart.map((item) =>
+            item.id === id ? { ...item, batas_garansi: date } : item
         ))
     }
 
@@ -384,6 +404,7 @@ export function SalesPage() {
             subtotal: getItemSubtotal(item),
             discount_type: item.discount_value > 0 ? (item.discount_type === '%' ? 'percentage' : 'amount') : undefined,
             discount_value: item.discount_value > 0 ? item.discount_value : undefined,
+            batas_garansi: item.batas_garansi,
         }))
 
         const payload: CreateTransactionPayload = {
@@ -533,6 +554,7 @@ export function SalesPage() {
                 onRemoveItem={handleRemoveItem}
                 onUpdateItemDiscount={handleUpdateItemDiscount}
                 onUpdateItemStaff={handleUpdateItemStaff}
+                onUpdateItemBatasGaransi={handleUpdateItemBatasGaransi}
                 onSelectCustomer={() => setIsSelectCustomerModalOpen(true)}
                 onRemoveCustomer={handleRemoveCustomer}
                 onAddNewCustomer={() => setIsAddCustomerModalOpen(true)}

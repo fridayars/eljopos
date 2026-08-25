@@ -1,5 +1,6 @@
 import { Search, Plus, Edit, Trash2, Download, Upload, MoreVertical, Eye, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { ServiceProduct, ServiceCategory } from '../../services/productService';
 
 function ServiceActionDropdown({
@@ -24,34 +25,67 @@ function ServiceActionDropdown({
     isLastThree?: boolean;
 }) {
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [rect, setRect] = useState<DOMRect | null>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+                buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         };
+        const handleScroll = () => setIsOpen(false);
+
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
+            window.addEventListener('scroll', handleScroll, true);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', handleScroll, true);
+        };
     }, [isOpen]);
 
+    const handleToggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isOpen && buttonRef.current) {
+            setRect(buttonRef.current.getBoundingClientRect());
+        }
+        setIsOpen(!isOpen);
+    };
+
+    let dropdownStyle: React.CSSProperties = { position: 'fixed', zIndex: 999999 };
+    if (rect) {
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if (isLastThree || spaceBelow < 200) {
+            dropdownStyle.bottom = window.innerHeight - rect.top + 8;
+            dropdownStyle.left = rect.left;
+        } else {
+            dropdownStyle.top = rect.bottom + 8;
+            dropdownStyle.left = rect.left;
+        }
+    }
+
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                ref={buttonRef}
+                onClick={handleToggle}
                 className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-gray-200 transition-all cursor-pointer"
             >
                 <MoreVertical className="w-5 h-5" />
             </button>
 
-            {isOpen && (
+            {isOpen && createPortal(
                 <div
-                    className={`absolute left-0 w-48 rounded-xl z-[100] overflow-hidden shadow-2xl border border-purple-500/20 ${
-                        isLastThree ? 'bottom-full mb-2' : 'top-full mt-2'
-                    }`}
-                    style={{ background: 'var(--surface-overlay)', backdropFilter: 'blur(10px)' }}
+                    ref={dropdownRef}
+                    className="w-48 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20"
+                    style={{ 
+                        ...dropdownStyle,
+                        background: 'var(--surface-overlay)', 
+                        backdropFilter: 'blur(10px)' 
+                    }}
                 >
                     <div className="py-1">
                         <button
@@ -114,7 +148,8 @@ function ServiceActionDropdown({
                             </button>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -223,6 +258,7 @@ interface ServicesTableProps {
     onToggleStatus: (id: string, newStatus: boolean) => void;
     onExport: () => void;
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    isImporting?: boolean;
     hasMore: boolean;
     isLoadingMore: boolean;
     onLoadMore: () => void;
@@ -243,6 +279,7 @@ export function ServicesTable({
     onToggleStatus,
     onExport,
     onImport,
+    isImporting = false,
     hasMore,
     isLoadingMore,
     onLoadMore,
@@ -300,14 +337,15 @@ export function ServicesTable({
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {userPermissions.includes('service.import') && (
-                                    <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
-                                        <Upload className="w-5 h-5" />
-                                        <span className="text-sm">Import</span>
+                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all ${isImporting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                        {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                                        <span className="text-sm">{isImporting ? 'Mengimpor...' : 'Import'}</span>
                                         <input
                                             type="file"
-                                            accept=".xlsx,.xls"
-                                            onChange={onImport}
+                                            accept=".xlsx, .xls"
                                             className="hidden"
+                                            onChange={onImport}
+                                            disabled={isImporting}
                                         />
                                     </label>
                                 )}

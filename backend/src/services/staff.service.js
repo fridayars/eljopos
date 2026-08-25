@@ -1,9 +1,12 @@
 const { Op } = require('sequelize');
+const bcrypt = require('bcrypt');
 const db = require('../models');
 const AppError = require('../utils/app.error');
 const logger = require('../utils/logger.util');
 
 const Staff = db.Staff;
+const User = db.User;
+const Role = db.Role;
 
 /**
  * Get all active staff (dropdown)
@@ -39,6 +42,16 @@ const getStaff = async (query) => {
             limit,
             offset,
             order: [['created_at', 'DESC']],
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'username', 'email', 'role_id'],
+                include: [{
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name']
+                }]
+            }]
         });
 
         return {
@@ -58,20 +71,44 @@ const getStaff = async (query) => {
  * Create new staff
  */
 const createStaff = async (payload) => {
+    const t = await db.sequelize.transaction();
     try {
-        const { name } = payload;
+        const { name, username, email, password, role_id } = payload;
 
-        const existing = await Staff.findOne({ where: { name } });
+        const existing = await Staff.findOne({ where: { name }, transaction: t });
         if (existing) {
             throw new AppError('Nama staff sudah digunakan', 400);
         }
 
-        const newStaff = await Staff.create({ name, is_active: true });
+        let newUserId = null;
+        if (username && email && password && role_id) {
+            const existingUsername = await User.findOne({ where: { username }, transaction: t });
+            if (existingUsername) throw new AppError('Username sudah digunakan', 400);
 
+            const existingEmail = await User.findOne({ where: { email }, transaction: t });
+            if (existingEmail) throw new AppError('Email sudah digunakan', 400);
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const newUser = await User.create({
+                username,
+                email,
+                password: hashedPassword,
+                role_id,
+                is_active: true
+            }, { transaction: t });
+            newUserId = newUser.id;
+        } else if (username || email || password || role_id) {
+            throw new AppError('Harap lengkapi semua data user (username, email, password, role) atau kosongkan semua jika tidak ingin membuat user', 400);
+        }
+
+        const newStaff = await Staff.create({ name, user_id: newUserId, is_active: true }, { transaction: t });
+
+        await t.commit();
         logger.info({ type: 'staff_created', staff_id: newStaff.id, name: newStaff.name });
 
         return newStaff;
     } catch (error) {
+        await t.rollback();
         logger.error({ type: 'create_staff_failed', message: error.message, stack: error.stack, payload });
         if (error instanceof AppError) throw error;
         throw new AppError('Gagal membuat staff: ' + error.message, 500);
@@ -82,24 +119,74 @@ const createStaff = async (payload) => {
  * Update staff
  */
 const updateStaff = async (id, payload) => {
+    const t = await db.sequelize.transaction();
     try {
-        const { name } = payload;
+        const { name, username, email, password, role_id } = payload;
 
-        const staff = await Staff.findByPk(id);
+        const staff = await Staff.findByPk(id, { transaction: t });
         if (!staff) throw new AppError('Staff tidak ditemukan', 404);
 
         if (name && name !== staff.name) {
-            const existing = await Staff.findOne({ where: { name } });
+            const existing = await Staff.findOne({ where: { name }, transaction: t });
             if (existing) throw new AppError('Nama staff sudah digunakan', 400);
             staff.name = name;
         }
 
-        await staff.save();
+        if (username || email || role_id || password) {
+            if (staff.user_id) {
+                // Update existing user
+                const user = await User.findByPk(staff.user_id, { transaction: t });
+                if (user) {
+                    if (username && username !== user.username) {
+                        const existingUser = await User.findOne({ where: { username }, transaction: t });
+                        if (existingUser) throw new AppError('Username sudah digunakan', 400);
+                        user.username = username;
+                    }
+                    if (email && email !== user.email) {
+                        const existingEmail = await User.findOne({ where: { email }, transaction: t });
+                        if (existingEmail) throw new AppError('Email sudah digunakan', 400);
+                        user.email = email;
+                    }
+                    if (password) {
+                        user.password = await bcrypt.hash(password, 10);
+                    }
+                    if (role_id) {
+                        user.role_id = role_id;
+                    }
+                    await user.save({ transaction: t });
+                }
+            } else {
+                // Create new user for existing staff
+                if (!username || !email || !password || !role_id) {
+                    throw new AppError('Harap lengkapi semua data user (username, email, password, role) untuk mendaftarkan user baru', 400);
+                }
+                const existingUser = await User.findOne({ where: { username }, transaction: t });
+                if (existingUser) throw new AppError('Username sudah digunakan', 400);
+
+                const existingEmail = await User.findOne({ where: { email }, transaction: t });
+                if (existingEmail) throw new AppError('Email sudah digunakan', 400);
+
+                const hashedPassword = await bcrypt.hash(password, 10);
+                const newUser = await User.create({
+                    username,
+                    email,
+                    password: hashedPassword,
+                    role_id,
+                    is_active: staff.is_active
+                }, { transaction: t });
+
+                staff.user_id = newUser.id;
+            }
+        }
+
+        await staff.save({ transaction: t });
+        await t.commit();
 
         logger.info({ type: 'staff_updated', target_staff_id: staff.id });
 
         return staff;
     } catch (error) {
+        await t.rollback();
         logger.error({ type: 'update_staff_failed', target_staff_id: id, message: error.message, stack: error.stack });
         if (error instanceof AppError) throw error;
         throw new AppError('Gagal memperbarui staff: ' + error.message, 500);

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { CustomerSelector } from './CustomerSelector'
 import type { Customer } from '../../services/customerService'
 import { getAllActiveStaff, type Staff } from '../../services/staffService'
+import { CustomSelect } from '../ui/CustomSelect'
 
 export interface CartItem {
     id: string
@@ -15,6 +16,7 @@ export interface CartItem {
     discount_type: '%' | 'Rp'
     discount_value: number
     staff_id?: string
+    batas_garansi?: string
 }
 
 interface CartProps {
@@ -26,6 +28,7 @@ interface CartProps {
     onRemoveItem: (id: string) => void
     onUpdateItemDiscount: (id: string, discountType: '%' | 'Rp', discountValue: number) => void
     onUpdateItemStaff: (id: string, staffId: string) => void
+    onUpdateItemBatasGaransi: (id: string, date: string) => void
     onSelectCustomer: () => void
     onRemoveCustomer: () => void
     onAddNewCustomer: () => void
@@ -57,6 +60,7 @@ export function Cart({
     onRemoveItem,
     onUpdateItemDiscount,
     onUpdateItemStaff,
+    onUpdateItemBatasGaransi,
     onSelectCustomer,
     onRemoveCustomer,
     onAddNewCustomer,
@@ -89,6 +93,10 @@ export function Cart({
 
     // Check if any layanan item is missing a staff assignment
     const hasLayananWithoutStaff = items.some(item => item.item_type === 'layanan' && !item.staff_id)
+
+    // Get today's date in YYYY-MM-DD format for minimum date validation
+    const today = new Date();
+    const todayString = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
 
     const CartContent = (
         <>
@@ -223,25 +231,29 @@ export function Cart({
                                 )}
                             </div>
 
-                            {/* Staff Selection for Layanan */}
+                            {/* Staff Selection & Batas Garansi for Layanan */}
                             {item.item_type === 'layanan' && (
-                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-purple-500/10">
-                                    <span className="text-xs text-gray-500 shrink-0">Teknisi:</span>
-                                    <select
-                                        value={item.staff_id || ''}
-                                        onChange={(e) => onUpdateItemStaff(item.id, e.target.value)}
-                                        className={`flex-1 h-8 bg-white/5 border rounded-lg px-2 text-xs focus:outline-none transition-all cursor-pointer ${!item.staff_id
-                                            ? 'border-red-500/50 text-red-300 focus:border-red-500'
-                                            : 'border-purple-500/20 text-gray-300 focus:border-purple-500/50'
-                                        }`}
-                                    >
-                                        <option value="" className="bg-[#1a1625] text-gray-500">Pilih Teknisi</option>
-                                        {activeStaffList.map(staff => (
-                                            <option key={staff.id} value={staff.id} className="bg-[#1a1625] text-gray-200">
-                                                {staff.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-purple-500/10">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500 shrink-0 w-16">Teknisi:</span>
+                                        <CustomSelect
+                                            value={item.staff_id || ''}
+                                            onChange={(val) => onUpdateItemStaff(item.id, val)}
+                                            options={activeStaffList.map(staff => ({ value: staff.id, label: staff.name }))}
+                                            placeholder="Pilih Teknisi"
+                                            className="flex-1 h-8"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500 shrink-0 w-16">Batas Garansi:</span>
+                                        <input
+                                            type="date"
+                                            value={item.batas_garansi || ''}
+                                            min={todayString}
+                                            onChange={(e) => onUpdateItemBatasGaransi(item.id, e.target.value)}
+                                            className="flex-1 h-8 bg-white/5 border border-purple-500/20 rounded-lg px-2 text-gray-300 text-xs focus:outline-none focus:border-purple-500/50 transition-all"
+                                        />
+                                    </div>
                                 </div>
                             )}
 

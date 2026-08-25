@@ -51,8 +51,10 @@ export function ProductInventoryPage() {
     const [totalPages, setTotalPages] = useState(1)
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
-    const pageSize = 10
+    const [hasMore, setHasMore] = useState(true)
     const [isFetchingProducts, setIsFetchingProducts] = useState(false)
+    const [isImporting, setIsImporting] = useState(false)
+    const pageSize = 10
 
     const fetchProducts = useCallback(async (page: number, reset: boolean = false) => {
         setIsFetchingProducts(true);
@@ -239,12 +241,19 @@ export function ProductInventoryPage() {
     }
 
     const handleImportProducts = async (file: File) => {
-        const response = await importProductsFile(file)
-        if (response.success) {
-            toast.success(response.message || 'Produk berhasil diimport')
-            fetchProducts(1, true)
-        } else {
-            toast.error(response.message || 'Gagal mengimport produk')
+        setIsImporting(true);
+        try {
+            const response = await importProductsFile(file)
+            if (response.success) {
+                toast.success(response.message || 'Produk berhasil diimport')
+                fetchProducts(1, true)
+            } else {
+                toast.error(response.message || 'Gagal mengimport produk')
+            }
+        } catch {
+            toast.error('Terjadi kesalahan saat mengimpor produk');
+        } finally {
+            setIsImporting(false);
         }
     }
 
@@ -474,6 +483,7 @@ export function ProductInventoryPage() {
                                 onDeleteProduct={handleRequestDeleteProduct}
                                 onToggleStatus={handleToggleProductStatus}
                                 onImportProducts={handleImportProducts}
+                                isImporting={isImporting}
                                 onExportProducts={handleExportProducts}
                                 onOpenTransfer={() => setIsTransferOpen(true)}
                                 onOpenAdd={startAddProduct}

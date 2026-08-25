@@ -4,6 +4,11 @@ export interface Staff {
     id: string
     name: string
     is_active: boolean
+    user?: {
+        username: string
+        email: string
+        role_id: string
+    } | null
     created_at?: string
     updated_at?: string
 }
@@ -54,7 +59,15 @@ export const getAllActiveStaff = async (): Promise<{ success: boolean; data: Sta
     }
 }
 
-export const createStaff = async (data: { name: string }): Promise<{ success: boolean; message?: string }> => {
+export interface StaffFormData {
+    name: string
+    username?: string
+    email?: string
+    password?: string
+    role_id?: string
+}
+
+export const createStaff = async (data: StaffFormData): Promise<{ success: boolean; message?: string }> => {
     try {
         const response = await api.post('/staff', data)
         return { success: true, message: response.data.message }
@@ -66,7 +79,7 @@ export const createStaff = async (data: { name: string }): Promise<{ success: bo
     }
 }
 
-export const updateStaff = async (id: string, data: { name: string }): Promise<{ success: boolean; message?: string }> => {
+export const updateStaff = async (id: string, data: StaffFormData): Promise<{ success: boolean; message?: string }> => {
     try {
         const response = await api.put(`/staff/${id}`, data)
         return { success: true, message: response.data.message }

@@ -12,6 +12,14 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'staff_id',
                 as: 'staff'
             });
+            TransaksiDetail.hasMany(models.TeknisiUpload, {
+                foreignKey: 'transaksi_detail_id',
+                as: 'uploads'
+            });
+            TransaksiDetail.hasOne(models.KlaimGaransi, {
+                foreignKey: 'transaksi_detail_id',
+                as: 'klaimGaransi'
+            });
         }
     }
     TransaksiDetail.init({
@@ -35,6 +43,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         staff_id: {
             type: DataTypes.UUID,
+            allowNull: true,
+            defaultValue: null
+        },
+        batas_garansi: {
+            type: DataTypes.DATE,
             allowNull: true,
             defaultValue: null
         },

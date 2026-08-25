@@ -46,6 +46,23 @@ export function CustomersPage() {
     // Infinite scroll trigger ref
     const loadMoreRef = useRef<HTMLDivElement>(null)
 
+    const [userPermissions] = useState<string[]>(() => {
+        try {
+            const token = localStorage.getItem('token')
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                return payload.permissions || []
+            }
+        } catch {
+            console.error('Failed to parse token permissions')
+        }
+        return []
+    })
+
+    const canCreate = userPermissions.includes('customer.create')
+    const canEdit = userPermissions.includes('customer.edit')
+    const canDelete = userPermissions.includes('customer.delete')
+
     const fetchCustomers = useCallback(async (page: number, reset: boolean = false) => {
         if (page === 1) setIsLoading(true)
         else setIsLoadingMore(true)
@@ -171,6 +188,16 @@ export function CustomersPage() {
         return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateStr))
     }
 
+    const getFullAddress = (customer: Customer) => {
+        const parts = [
+            customer.address,
+            customer.district_name,
+            customer.regency_name,
+            customer.province_name
+        ].filter(Boolean)
+        return parts.length > 0 ? parts.join(', ') : '-'
+    }
+
     const thClass = (key: SortKey) =>
         `px-6 py-4 cursor-pointer select-none whitespace-nowrap hover:text-indigo-400 transition-colors ${sortKey === key ? 'text-indigo-400' : ''}`
 
@@ -205,13 +232,15 @@ export function CustomersPage() {
                         )}
                     </form>
 
-                    <button
-                        onClick={openAdd}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-sm font-medium transition-all shadow-[0_4px_20px_rgba(99,102,241,0.3)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)] transform hover:-translate-y-0.5"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">Tambah Pelanggan</span>
-                    </button>
+                    {canCreate && (
+                        <button
+                            onClick={openAdd}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-sm font-medium transition-all shadow-[0_4px_20px_rgba(99,102,241,0.3)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)] transform hover:-translate-y-0.5"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">Tambah Pelanggan</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -268,20 +297,24 @@ export function CustomersPage() {
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2" style={{ color: 'var(--muted-foreground)' }}>
-                                                    <button
-                                                        onClick={() => openEdit(customer)}
-                                                        className="p-2 rounded-xl transition-all hover:opacity-80" style={{ background: 'var(--surface-subtle)' }}
-                                                        title="Edit"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => openDelete(customer)}
-                                                        className="p-2 rounded-xl transition-all hover:opacity-80" style={{ background: 'var(--surface-subtle)' }}
-                                                        title="Hapus"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    {canEdit && (
+                                                        <button
+                                                            onClick={() => openEdit(customer)}
+                                                            className="p-2 rounded-xl transition-all hover:opacity-80" style={{ background: 'var(--surface-subtle)' }}
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={() => openDelete(customer)}
+                                                            className="p-2 rounded-xl transition-all hover:opacity-80" style={{ background: 'var(--surface-subtle)' }}
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -293,10 +326,15 @@ export function CustomersPage() {
                                             <td className="px-6 py-4" style={{ color: 'var(--muted-foreground)' }}>
                                                 {customer.email || '-'}
                                             </td>
-                                            <td className="px-6 py-4" style={{ color: 'var(--muted-foreground)' }}>
-                                                {customer.address
-                                                    ? <span className="truncate block max-w-xs">{customer.address}</span>
-                                                    : '-'}
+                                            <td className="px-6 py-4 relative group" style={{ color: 'var(--muted-foreground)' }}>
+                                                {getFullAddress(customer) !== '-' ? (
+                                                    <>
+                                                        <span className="truncate block max-w-[200px] sm:max-w-xs cursor-default">{getFullAddress(customer)}</span>
+                                                        <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 absolute left-6 bottom-full mb-1 z-[100] p-3 rounded-xl text-xs whitespace-normal w-max max-w-sm shadow-[0_4px_20px_rgba(0,0,0,0.3)] pointer-events-none" style={{ background: 'var(--surface-overlay)', color: 'var(--foreground)', border: '1px solid var(--border-subtle)' }}>
+                                                            {getFullAddress(customer)}
+                                                        </div>
+                                                    </>
+                                                ) : '-'}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 {customer.transaction_count! > 0 ? (

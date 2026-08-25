@@ -110,6 +110,7 @@ export const logout = async (): Promise<{ success: boolean }> => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   localStorage.removeItem('store_name')
+  localStorage.removeItem('sales_cart')
 
   return { success: true }
 }

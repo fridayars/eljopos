@@ -64,6 +64,7 @@ export function ServiceInventoryPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [pageSize] = useState(10);
     const [isFetchingServices, setIsFetchingServices] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
 
     // Modals visibility
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -328,6 +329,7 @@ export function ServiceInventoryPage() {
         const file = event.target.files?.[0];
         if (!file) return;
 
+        setIsImporting(true);
         try {
             const res = await importServiceProducts(file);
             if (res.success) {
@@ -340,6 +342,7 @@ export function ServiceInventoryPage() {
             toast.error('Terjadi kesalahan saat mengimpor layanan');
         } finally {
             event.target.value = ''; // Reset input
+            setIsImporting(false);
         }
     };
 
@@ -434,6 +437,7 @@ export function ServiceInventoryPage() {
                                 onToggleStatus={handleToggleStatus}
                                 onExport={handleExportServices}
                                 onImport={handleImportServices}
+                                isImporting={isImporting}
                                 hasMore={currentPage < totalPages}
                                 isLoadingMore={isFetchingServices}
                                 onLoadMore={() => fetchServices(currentPage + 1, false)}

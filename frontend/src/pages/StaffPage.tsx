@@ -3,7 +3,7 @@ import { Plus, Search, Edit, Trash2, UserCheck, XCircle, CheckCircle2 } from 'lu
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { getStaff, createStaff, updateStaff, toggleStaffStatus, deleteStaff } from '../services/staffService'
-import type { Staff } from '../services/staffService'
+import type { Staff, StaffFormData } from '../services/staffService'
 import { StaffModal } from '../components/staff/StaffModal'
 import { DeleteConfirmationModal } from '../components/inventory/DeleteConfirmationModal'
 
@@ -113,7 +113,7 @@ export function StaffPage() {
         setIsDeleteModalOpen(true)
     }
 
-    const handleSaveStaff = async (id: string | null, data: { name: string }) => {
+    const handleSaveStaff = async (id: string | null, data: StaffFormData) => {
         if (id) {
             const res = await updateStaff(id, data)
             if (res.success) {
@@ -242,6 +242,7 @@ export function StaffPage() {
                             >
                                 <tr>
                                     <th className="px-6 py-4">Nama Staff</th>
+                                    <th className="px-6 py-4">Username / Email</th>
                                     <th className="px-6 py-4 text-center">Status</th>
                                     <th className="px-6 py-4 text-right">Aksi</th>
                                 </tr>
@@ -249,7 +250,7 @@ export function StaffPage() {
                             <tbody className="divide-y divide-white/5">
                                 {staffList.length === 0 ? (
                                     <tr>
-                                        <td colSpan={3} className="py-16 text-center text-gray-500">
+                                        <td colSpan={4} className="py-16 text-center text-gray-500">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
                                                     <UserCheck className="w-8 h-8 text-gray-600" />
@@ -284,6 +285,16 @@ export function StaffPage() {
                                                         </div>
                                                         <span className="font-medium" style={{ color: 'var(--foreground)' }}>{s.name}</span>
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {s.user ? (
+                                                        <div>
+                                                            <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{s.user.username}</div>
+                                                            <div className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{s.user.email}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs px-2 py-1 rounded-lg" style={{ background: 'var(--surface-subtle)', color: 'var(--muted-foreground)' }}>Belum punya akun</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     {canEdit ? (
@@ -337,7 +348,7 @@ export function StaffPage() {
                                 )}
                                 {isFetchingMore && (
                                     <tr>
-                                        <td colSpan={3} className="py-6 text-center">
+                                        <td colSpan={5} className="py-6 text-center">
                                             <div className="flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--muted-foreground)' }}>
                                                 <div className="w-4 h-4 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
                                                 Memuat lagi...

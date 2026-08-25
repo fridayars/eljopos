@@ -213,6 +213,26 @@ const getCustomerTransactions = async (id, { page = 1, limit = 10 }) => {
                             model: Staff,
                             as: 'staff',
                             attributes: ['name']
+                        },
+                        {
+                            model: db.KlaimGaransi,
+                            as: 'klaimGaransi',
+                            include: [
+                                {
+                                    model: db.KlaimGaransiBukti,
+                                    as: 'bukti'
+                                },
+                                {
+                                    model: db.Supplier,
+                                    as: 'supplier',
+                                    attributes: ['name']
+                                },
+                                {
+                                    model: db.TipeHp,
+                                    as: 'tipe_hp',
+                                    attributes: ['name']
+                                }
+                            ]
                         }
                     ]
                 },

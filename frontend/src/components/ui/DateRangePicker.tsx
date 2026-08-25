@@ -28,6 +28,11 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
     const initialEnd = parseDate(endDate);
 
     const [currentMonth, setCurrentMonth] = useState(initialStart);
+    const [viewMode, setViewMode] = useState<'date' | 'month' | 'year'>('date');
+    const [yearRangeStart, setYearRangeStart] = useState<number>(() => {
+        const year = initialStart.getFullYear();
+        return year - (year % 12);
+    });
 
     // Selection state
     const [tempStart, setTempStart] = useState<Date | null>(initialStart);
@@ -36,6 +41,11 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
     const [step, setStep] = useState<'start' | 'end'>('start');
 
     const containerRef = useRef<HTMLDivElement>(null);
+
+    const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
 
     // Close when clicking outside
     useEffect(() => {
@@ -78,12 +88,73 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const prevMonthDays = Array.from({ length: firstDay }, (_, i) => i);
 
-    const handlePrevMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    const handlePrev = () => {
+        if (viewMode === 'date') {
+            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+        } else if (viewMode === 'month') {
+            setCurrentMonth(new Date(currentMonth.getFullYear() - 1, currentMonth.getMonth(), 1));
+        } else if (viewMode === 'year') {
+            setYearRangeStart(prev => prev - 12);
+        }
     };
 
-    const handleNextMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    const handleNext = () => {
+        if (viewMode === 'date') {
+            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+        } else if (viewMode === 'month') {
+            setCurrentMonth(new Date(currentMonth.getFullYear() + 1, currentMonth.getMonth(), 1));
+        } else if (viewMode === 'year') {
+            setYearRangeStart(prev => prev + 12);
+        }
+    };
+
+    const handleMonthClick = (monthIndex: number) => {
+        const year = currentMonth.getFullYear();
+        const startOfMonth = new Date(year, monthIndex, 1);
+        const endOfMonth = new Date(year, monthIndex + 1, 0);
+
+        if (step === 'start') {
+            setTempStart(startOfMonth);
+            setTempEnd(null);
+            setStep('end');
+        } else {
+            if (tempStart && endOfMonth < tempStart) {
+                setTempStart(startOfMonth);
+                setTempEnd(null);
+                setStep('end');
+            } else {
+                setTempEnd(endOfMonth);
+                setStep('start');
+                setIsOpen(false);
+                if (tempStart) {
+                    onDateChange(formatToYYYYMMDD(tempStart), formatToYYYYMMDD(endOfMonth));
+                }
+            }
+        }
+    };
+
+    const handleYearClick = (year: number) => {
+        const startOfYear = new Date(year, 0, 1);
+        const endOfYear = new Date(year, 11, 31);
+
+        if (step === 'start') {
+            setTempStart(startOfYear);
+            setTempEnd(null);
+            setStep('end');
+        } else {
+            if (tempStart && endOfYear < tempStart) {
+                setTempStart(startOfYear);
+                setTempEnd(null);
+                setStep('end');
+            } else {
+                setTempEnd(endOfYear);
+                setStep('start');
+                setIsOpen(false);
+                if (tempStart) {
+                    onDateChange(formatToYYYYMMDD(tempStart), formatToYYYYMMDD(endOfYear));
+                }
+            }
+        }
     };
 
     const handleDateClick = (day: number) => {
@@ -136,6 +207,7 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
             setTempStart(parseDate(startDate));
             setTempEnd(parseDate(endDate));
             setStep('start');
+            setViewMode('date');
         }
     }, [startDate, endDate, isOpen]);
 
@@ -178,24 +250,38 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
                         {/* Calendar Header */}
                         <div className="flex items-center justify-between mb-4">
                             <button
-                                onClick={handlePrevMonth}
+                                onClick={handlePrev}
                                 className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
-                            <span className="text-sm font-bold text-gray-200">
-                                {currentMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                            </span>
                             <button
-                                onClick={handleNextMonth}
+                                onClick={() => {
+                                    if (viewMode === 'date') setViewMode('month');
+                                    else if (viewMode === 'month') {
+                                        setYearRangeStart(currentMonth.getFullYear() - (currentMonth.getFullYear() % 12));
+                                        setViewMode('year');
+                                    }
+                                }}
+                                className={`text-sm font-bold transition-colors px-3 py-1 rounded-lg hover:bg-white/5 ${viewMode !== 'year' ? 'text-gray-200 hover:text-cyan-400 cursor-pointer' : 'text-gray-200 cursor-default'}`}
+                                disabled={viewMode === 'year'}
+                            >
+                                {viewMode === 'date' && currentMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                                {viewMode === 'month' && currentMonth.getFullYear()}
+                                {viewMode === 'year' && `${yearRangeStart} - ${yearRangeStart + 11}`}
+                            </button>
+                            <button
+                                onClick={handleNext}
                                 className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
 
-                        {/* Week Days */}
-                        <div className="grid grid-cols-7 gap-1 mb-2">
+                        {viewMode === 'date' && (
+                            <>
+                                {/* Week Days */}
+                                <div className="grid grid-cols-7 gap-1 mb-2">
                             {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((d) => (
                                 <div key={d} className="text-center text-[10px] font-bold text-gray-500 uppercase">
                                     {d}
@@ -259,7 +345,126 @@ export function DateRangePicker({ startDate, endDate, onDateChange, className = 
                                     </div>
                                 );
                             })}
-                        </div>
+                                </div>
+                            </>
+                        )}
+
+                        {viewMode === 'month' && (
+                            <div className="grid grid-cols-3 gap-2">
+                                {months.map((month, index) => {
+                                    const year = currentMonth.getFullYear();
+                                    const mStart = new Date(year, index, 1).getTime();
+                                    const mEnd = new Date(year, index + 1, 0).getTime();
+                                    
+                                    const tStart = tempStart?.getTime();
+                                    const tEnd = tempEnd?.getTime();
+                                    const hDate = hoverDate?.getTime();
+
+                                    let isSelected = false;
+                                    let inRange = false;
+
+                                    if (tStart && tEnd) {
+                                        if (mStart >= tStart && mEnd <= tEnd) inRange = true;
+                                        if (tStart >= mStart && tStart <= mEnd) isSelected = true;
+                                        if (tEnd >= mStart && tEnd <= mEnd) isSelected = true;
+                                    } else if (tStart) {
+                                        if (tStart >= mStart && tStart <= mEnd) isSelected = true;
+                                        if (step === 'end' && hDate) {
+                                            const min = Math.min(tStart, hDate);
+                                            const max = Math.max(tStart, hDate);
+                                            if (mStart >= min && mEnd <= max) inRange = true;
+                                            if (hDate >= mStart && hDate <= mEnd) isSelected = true;
+                                        }
+                                    }
+
+                                    return (
+                                        <button
+                                            key={month}
+                                            onClick={() => handleMonthClick(index)}
+                                            onPointerEnter={() => {
+                                                if (step === 'end' && tempStart) {
+                                                    if (mStart > tempStart.getTime()) {
+                                                        setHoverDate(new Date(year, index + 1, 0));
+                                                    } else {
+                                                        setHoverDate(new Date(year, index, 1));
+                                                    }
+                                                }
+                                            }}
+                                            className={`py-2 text-sm font-medium rounded-lg transition-all
+                                                ${isSelected 
+                                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_10px_rgba(6,182,212,0.5)]' 
+                                                    : inRange 
+                                                        ? 'bg-cyan-500/40 text-white' 
+                                                        : currentMonth.getMonth() === index && !tempStart
+                                                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+                                                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                                }
+                                            `}
+                                        >
+                                            {month}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {viewMode === 'year' && (
+                            <div className="grid grid-cols-3 gap-2">
+                                {Array.from({ length: 12 }, (_, i) => yearRangeStart + i).map((year) => {
+                                    const yStart = new Date(year, 0, 1).getTime();
+                                    const yEnd = new Date(year, 11, 31).getTime();
+
+                                    const tStart = tempStart?.getTime();
+                                    const tEnd = tempEnd?.getTime();
+                                    const hDate = hoverDate?.getTime();
+
+                                    let isSelected = false;
+                                    let inRange = false;
+
+                                    if (tStart && tEnd) {
+                                        if (yStart >= tStart && yEnd <= tEnd) inRange = true;
+                                        if (tStart >= yStart && tStart <= yEnd) isSelected = true;
+                                        if (tEnd >= yStart && tEnd <= yEnd) isSelected = true;
+                                    } else if (tStart) {
+                                        if (tStart >= yStart && tStart <= yEnd) isSelected = true;
+                                        if (step === 'end' && hDate) {
+                                            const min = Math.min(tStart, hDate);
+                                            const max = Math.max(tStart, hDate);
+                                            if (yStart >= min && yEnd <= max) inRange = true;
+                                            if (hDate >= yStart && hDate <= yEnd) isSelected = true;
+                                        }
+                                    }
+
+                                    return (
+                                        <button
+                                            key={year}
+                                            onClick={() => handleYearClick(year)}
+                                            onPointerEnter={() => {
+                                                if (step === 'end' && tempStart) {
+                                                    if (yStart > tempStart.getTime()) {
+                                                        setHoverDate(new Date(year, 11, 31));
+                                                    } else {
+                                                        setHoverDate(new Date(year, 0, 1));
+                                                    }
+                                                }
+                                            }}
+                                            className={`py-2 text-sm font-medium rounded-lg transition-all
+                                                ${isSelected 
+                                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_10px_rgba(6,182,212,0.5)]' 
+                                                    : inRange 
+                                                        ? 'bg-cyan-500/40 text-white' 
+                                                        : currentMonth.getFullYear() === year && !tempStart
+                                                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+                                                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                                }
+                                            `}
+                                        >
+                                            {year}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

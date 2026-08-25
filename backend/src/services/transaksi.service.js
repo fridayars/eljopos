@@ -202,7 +202,8 @@ const createTransaksi = async (data, userId) => {
             discount_type: item.discount_type || null,
             discount_value: item.discount_value || 0,
             snapshot_cost_price: item.snapshot_cost_price || null,
-            snapshot_insentif_teknisi: item.snapshot_insentif_teknisi || null
+            snapshot_insentif_teknisi: item.snapshot_insentif_teknisi || null,
+            batas_garansi: item.batas_garansi || null
         }));
 
         await TransaksiDetail.bulkCreate(detailRecords, { transaction: t });
@@ -353,7 +354,7 @@ const getTransaksiDetail = async (transaksiId) => {
                 {
                     model: TransaksiDetail,
                     as: 'details',
-                    attributes: ['id', 'item_type', 'item_id', 'item_name', 'kategori_name', 'price', 'quantity', 'subtotal', 'discount_type', 'discount_value', 'staff_id'],
+                    attributes: ['id', 'item_type', 'item_id', 'item_name', 'kategori_name', 'price', 'quantity', 'subtotal', 'discount_type', 'discount_value', 'staff_id', 'batas_garansi'],
                     include: [
                         {
                             model: Staff,
@@ -1276,6 +1277,14 @@ const getTechnicianIncentiveReport = async ({ start_date, end_date, store_id, pa
       ? `AND (COALESCE(t.transaction_date, t.created_at) BETWEEN '${start_date} 00:00:00' AND '${end_date} 23:59:59')`
       : '';
     const storeCondition = store_id ? `AND t.store_id = '${store_id}'` : '';
+
+    // Only accumulate incentive for items where a valid (non-soft-deleted) teknisi_upload proof exists
+    const uploadExistsCondition = `AND EXISTS (
+        SELECT 1 FROM teknisi_upload tu
+        WHERE tu.transaksi_detail_id = td.id
+        AND tu.deleted_at IS NULL
+      )`;
+
     const itemsQuery = `
       SELECT
         td.staff_id AS staff_id,
@@ -1286,7 +1295,9 @@ const getTechnicianIncentiveReport = async ({ start_date, end_date, store_id, pa
       LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
       LEFT JOIN staff s ON td.staff_id = s.id
       WHERE td.deleted_at IS NULL
+      AND t.deleted_at IS NULL
       AND td.staff_id IS NOT NULL
+      ${uploadExistsCondition}
       ${storeCondition}
       ${dateCondition}
       GROUP BY td.staff_id, s.name
@@ -1298,7 +1309,9 @@ const getTechnicianIncentiveReport = async ({ start_date, end_date, store_id, pa
       FROM transaksi_detail td
       JOIN transaksi t ON td.transaksi_id = t.id
       WHERE td.deleted_at IS NULL
+      AND t.deleted_at IS NULL
       AND td.staff_id IS NOT NULL
+      ${uploadExistsCondition}
       ${storeCondition}
       ${dateCondition};
     `;
@@ -1331,18 +1344,29 @@ const getTechnicianIncentiveDetail = async ({ staff_id, start_date, end_date, st
       ? `AND (COALESCE(t.transaction_date, t.created_at) BETWEEN '${start_date} 00:00:00' AND '${end_date} 23:59:59')`
       : '';
     const storeCondition = store_id ? `AND t.store_id = '${store_id}'` : '';
+
+    // Only include items where a valid (non-soft-deleted) teknisi_upload proof exists
+    const uploadExistsCondition = `AND EXISTS (
+        SELECT 1 FROM teknisi_upload tu
+        WHERE tu.transaksi_detail_id = td.id
+        AND tu.deleted_at IS NULL
+      )`;
+
     const query = `
       SELECT
         t.receipt_number,
         COALESCE(t.transaction_date, t.created_at) AS transaction_date,
         td.item_name,
         td.quantity,
-        COALESCE(td.snapshot_insentif_teknisi, l.insentif_teknisi, 0) AS insentif_per_item
+        COALESCE(td.snapshot_insentif_teknisi, l.insentif_teknisi, 0) AS insentif_per_item,
+        TRUE AS has_upload
       FROM transaksi_detail td
       JOIN transaksi t ON td.transaksi_id = t.id
       LEFT JOIN layanan l ON td.item_type = 'layanan' AND td.item_id = l.id
       WHERE td.staff_id = '${staff_id}'
       AND td.deleted_at IS NULL
+      AND t.deleted_at IS NULL
+      ${uploadExistsCondition}
       ${storeCondition}
       ${dateCondition}
       ORDER BY COALESCE(t.transaction_date, t.created_at) DESC;
@@ -1353,7 +1377,8 @@ const getTechnicianIncentiveDetail = async ({ staff_id, start_date, end_date, st
       transaction_date: i.transaction_date,
       item_name: i.item_name,
       quantity: parseInt(i.quantity, 10) || 0,
-      insentif_per_item: parseFloat(i.insentif_per_item) || 0
+      insentif_per_item: parseFloat(i.insentif_per_item) || 0,
+      has_upload: !!i.has_upload
     }));
   } catch (error) {
     logger.error({ type: 'get_technician_incentive_detail_failed', message: error.message });
@@ -1362,3 +1387,4 @@ const getTechnicianIncentiveDetail = async ({ staff_id, start_date, end_date, st
 };
 
 module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking, getGrafikPenjualan, getGrafikPengeluaran, getSummaryKartu, getArusUangTable, getTabelPenjualan, getTechnicianIncentiveReport, getTechnicianIncentiveDetail };
+

@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import type { ProductItem, Category } from '../../services/productService'
 import { EditStockModal } from './EditStockModal'
 import { toast } from 'sonner'
+import { createPortal } from 'react-dom'
 
 function CategoryFilterSelect({
     value,
@@ -112,33 +113,65 @@ function ProductActionDropdown({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [rect, setRect] = useState<DOMRect | null>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+                buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        const handleScroll = () => setIsOpen(false);
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            window.addEventListener('scroll', handleScroll, true);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', handleScroll, true);
+        };
+    }, [isOpen]);
+
+    const handleToggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isOpen && buttonRef.current) {
+            setRect(buttonRef.current.getBoundingClientRect());
+        }
+        setIsOpen(!isOpen);
+    };
+
+    let dropdownStyle: React.CSSProperties = { position: 'fixed', zIndex: 999999 };
+    if (rect) {
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if (isLastThree || spaceBelow < 200) {
+            dropdownStyle.bottom = window.innerHeight - rect.top + 8;
+            dropdownStyle.left = rect.left;
+        } else {
+            dropdownStyle.top = rect.bottom + 8;
+            dropdownStyle.left = rect.left;
+        }
+    }
 
     return (
-        <div className="relative flex justify-center" ref={dropdownRef}>
+        <div className="relative flex justify-center">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                ref={buttonRef}
+                onClick={handleToggle}
                 className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                 title="Aksi"
             >
                 <MoreVertical className="w-4 h-4" />
             </button>
 
-            {isOpen && (
+            {isOpen && createPortal(
                 <div
-                    className={`absolute left-0 w-48 py-1 rounded-xl z-[60] overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out] ${
-                        isLastThree ? 'bottom-full mb-2' : 'top-full mt-2'
-                    }`}
+                    ref={dropdownRef}
+                    className="w-48 py-1 rounded-xl overflow-hidden shadow-2xl animate-[fadeIn_0.15s_ease-out]"
                     style={{
+                        ...dropdownStyle,
                         background: 'var(--card)',
                         border: '1px solid var(--border)',
                     }}
@@ -192,7 +225,8 @@ function ProductActionDropdown({
                             </>
                         )}
                     </ul>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -225,6 +259,7 @@ interface ProductsPageProps {
     onSearchChange: (query: string) => void
     selectedCategoryId: string
     onCategoryChange: (categoryId: string) => void
+    isImporting?: boolean
 }
 
 export function ProductsPage({
@@ -247,6 +282,7 @@ export function ProductsPage({
     onSearchChange,
     selectedCategoryId,
     onCategoryChange,
+    isImporting = false,
     onViewStockHistory
 }: ProductsPageProps) {
     const [userPermissions] = useState<string[]>(() => {
@@ -310,10 +346,10 @@ export function ProductsPage({
 
                         <div className="flex flex-wrap items-center gap-2">
                             {userPermissions.includes('product.import') && (
-                                <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all cursor-pointer">
-                                    <Upload className="w-4 h-4" />
-                                    <span className="text-sm">Import</span>
-                                    <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+                                <label className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50 transition-all ${isImporting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                    {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                    <span className="text-sm">{isImporting ? 'Mengimpor...' : 'Import'}</span>
+                                    <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" disabled={isImporting} />
                                 </label>
                             )}
 

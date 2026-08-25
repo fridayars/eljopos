@@ -288,11 +288,11 @@ export function ArusUangPage() {
                                         data.map((item) => (
                                             <tr key={item.id} className="border-t border-white/5 transition-colors hover:bg-white/[0.02]">
                                                 <td className="p-4 text-sm whitespace-nowrap">
-                                                    {new Date(item.date).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                    {new Date(item.date).toLocaleString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </td>
                                                 <td className="p-4 text-sm">
                                                     <div className="font-medium">{item.description || '-'}</div>
-                                                    {item.creator && <div className="text-xs opacity-50 mt-1">Oleh: {item.creator.username}</div>}
+                                                    {item.creator ? <div className="text-xs opacity-50 mt-1">Oleh: {item.creator.username}</div> : null}
                                                 </td>
                                                 <td className="p-4 text-sm">
                                                     {item.kategori ? (

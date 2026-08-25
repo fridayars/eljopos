@@ -3,8 +3,11 @@ const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
     class Staff extends Model {
-        static associate(_models) {
-            // No associations needed for now
+        static associate(models) {
+            Staff.belongsTo(models.User, {
+                foreignKey: 'user_id',
+                as: 'user'
+            });
         }
     }
     Staff.init({
@@ -12,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
+        },
+        user_id: {
+            type: DataTypes.UUID,
+            allowNull: true,
         },
         name: DataTypes.STRING,
         is_active: {

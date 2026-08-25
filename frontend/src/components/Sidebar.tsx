@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LayoutGrid, Users, Package, BarChart3, Settings, Home, Briefcase, ChevronDown, Wallet } from 'lucide-react'
+import { LayoutGrid, Users, Package, BarChart3, Settings, Home, Briefcase, ChevronDown, Wallet, Wrench } from 'lucide-react'
 
 interface SidebarProps {
     activeTab: string
@@ -20,8 +20,9 @@ const navItems: NavItem[] = [
     { id: 'sales', icon: LayoutGrid, label: 'Kasir', permission: 'casier' },
     { id: 'products', icon: Package, label: 'Produk', permission: 'product.view' },
     { id: 'services', icon: Briefcase, label: 'Layanan', permission: 'service.view' },
-    { id: 'customers', icon: Users, label: 'Pelanggan' },
+    { id: 'customers', icon: Users, label: 'Pelanggan', permission: 'customer.view' },
     { id: 'arus-uang', icon: Wallet, label: 'Transaksi Keuangan', permission: 'arusuang.view' },
+    { id: 'teknisi', icon: Wrench, label: 'Teknisi' },
     { id: 'reports', icon: BarChart3, label: 'Laporan', permission: ['report.general', 'report.finance', 'report.transaction'] },
     {
         id: 'settings',

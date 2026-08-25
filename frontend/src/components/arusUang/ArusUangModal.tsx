@@ -69,13 +69,17 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
 
         setIsSaving(true)
         try {
+            const currentTime = new Date();
+            const timeString = currentTime.toTimeString().split(' ')[0];
+            const dateTimeString = `${date}T${timeString}`;
+
             await arusUangService.createManual({
                 type,
                 payment_method: paymentMethod,
                 category_id: categoryId || undefined,
                 amount: parseFloat(amount),
                 description,
-                date
+                date: dateTimeString
             })
             onSuccess()
         } catch (error: any) {

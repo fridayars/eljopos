@@ -433,6 +433,7 @@ export interface IncentiveDetailItem {
     item_name: string;
     quantity: number;
     insentif_per_item: number;
+    has_upload: boolean;
 }
 
 export const getTechnicianIncentiveDetail = async (params: {

@@ -18,6 +18,7 @@ import { ArusUangPage } from './pages/ArusUangPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerTransactionsPage } from './pages/CustomerTransactionsPage'
 import { StaffPage } from './pages/StaffPage'
+import { TeknisiPage } from './pages/TeknisiPage'
 
 const App = () => {
   // Initialize theme from localStorage — applies data-theme to <html>
@@ -74,6 +75,7 @@ const App = () => {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="customers/:id/transactions" element={<CustomerTransactionsPage />} />
           <Route path="arus-uang" element={<ArusUangPage />} />
+          <Route path="teknisi" element={<TeknisiPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings/users" element={<UsersPage />} />
           <Route path="settings/role" element={<RolePage />} />

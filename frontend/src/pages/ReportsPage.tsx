@@ -11,6 +11,9 @@ import {
     ChevronLeft,
     ChevronRight,
     X,
+    CheckCircle,
+    Info,
+    Shield,
 } from 'lucide-react';
 import {
     BarChart,
@@ -47,9 +50,11 @@ import type {
 } from '../services/reportService';
 
 import { TransactionReport } from '../components/reports/TransactionReport';
+import { ExpenseDetailModal } from '../components/reports/ExpenseDetailModal';
+import { WarrantyClaimReport } from '../components/reports/WarrantyClaimReport';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
 
-type ReportCategory = 'general' | 'financial' | 'transaction' | 'rankings' | 'incentive';
+type ReportCategory = 'general' | 'financial' | 'transaction' | 'rankings' | 'incentive' | 'warranty';
 type ReportPeriod = 'daily' | 'monthly' | 'yearly';
 type RankingSubTab = 'product' | 'customer';
 
@@ -142,6 +147,10 @@ export function ReportsPage() {
     const [selectedStaff, setSelectedStaff] = useState<{ staff_id: string; staff_name: string } | null>(null);
     const [incentiveDetail, setIncentiveDetail] = useState<IncentiveDetailItem[]>([]);
     const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+    // Expense Detail Modal State
+    const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+    const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('');
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -430,6 +439,18 @@ export function ReportsPage() {
                                 Laporan Insentif
                             </button>
                         )}
+                        {userPermissions.includes('report.warranty') && (
+                            <button
+                                onClick={() => setSelectedCategory('warranty')}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${selectedCategory === 'warranty'
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.4)] font-bold'
+                                    : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-amber-500/50'
+                                    }`}
+                            >
+                                <Shield className="w-4 h-4" />
+                                Klaim Garansi
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -569,7 +590,14 @@ export function ReportsPage() {
                                         <div className="flex items-center justify-center text-gray-500 italic py-10">Tidak ada pengeluaran</div>
                                     ) : (
                                         expenseChartData.map((item, index) => (
-                                            <div key={index} className="relative group">
+                                            <div 
+                                                key={index} 
+                                                className="relative group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all"
+                                                onClick={() => {
+                                                    setSelectedExpenseCategory(item.category);
+                                                    setIsExpenseModalOpen(true);
+                                                }}
+                                            >
                                                 <div className="flex justify-between text-sm mb-1">
                                                     <span className="text-gray-300 font-medium">{item.category} ({item.count})</span>
                                                     <span className="text-gray-400 font-bold">{item.percentage}% ({formatCurrency(item.total)})</span>
@@ -706,6 +734,15 @@ export function ReportsPage() {
                                     </table>
                                 </div>
                             </div>
+
+                            {/* Expense Detail Modal */}
+                            <ExpenseDetailModal
+                                isOpen={isExpenseModalOpen}
+                                onClose={() => setIsExpenseModalOpen(false)}
+                                categoryName={selectedExpenseCategory}
+                                startDate={startDate}
+                                endDate={endDate}
+                            />
                         </motion.div>
                     )}
 
@@ -924,6 +961,15 @@ export function ReportsPage() {
                                 </div>
                             </div>
 
+                            {/* Upload Validation Info Banner */}
+                            <div className="flex items-start gap-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+                                <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm text-blue-300 font-medium">Validasi Bukti Upload</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Insentif hanya dihitung untuk item yang sudah memiliki bukti upload teknisi dan buktinya belum dihapus. Item tanpa bukti upload tidak termasuk dalam perhitungan.</p>
+                                </div>
+                            </div>
+
                             {/* Incentive Table */}
                             <div className="bg-white/5 backdrop-blur-xl border border-purple-500/10 rounded-2xl p-6 shadow-xl">
                                 <div className="flex justify-between items-center mb-6">
@@ -975,6 +1021,17 @@ export function ReportsPage() {
                                     )}
                                 </div>
                             </div>
+                        </motion.div>
+                    )}
+
+                    {selectedCategory === 'warranty' && userPermissions.includes('report.warranty') && (
+                        <motion.div
+                            key="warranty"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                        >
+                            <WarrantyClaimReport />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -1032,7 +1089,7 @@ export function ReportsPage() {
                                         <div className="space-y-3">
                                             {Object.entries(grouped).map(([invoice, rows]) => {
                                                 const cardTotal = rows.reduce((a, r) => a + (r.insentif_per_item * r.quantity), 0);
-                                                const txDate = new Date(rows[0].transaction_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                                                const txDate = new Date(rows[0].transaction_date).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                                                 return (
                                                     <div key={invoice} className="bg-white/5 border border-purple-500/10 rounded-xl p-4 hover:border-purple-500/25 transition-colors">
                                                         {/* Card Header */}
@@ -1048,6 +1105,7 @@ export function ReportsPage() {
                                                             {rows.map((row, idx) => (
                                                                 <div key={idx} className="flex items-center justify-between text-sm">
                                                                     <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                                                         <span className="text-gray-300 truncate">{row.item_name}</span>
                                                                         <span className="text-xs text-gray-500 shrink-0">×{row.quantity}</span>
                                                                     </div>
@@ -1060,9 +1118,15 @@ export function ReportsPage() {
                                             })}
 
                                             {/* Grand Total */}
-                                            <div className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border border-emerald-500/20 rounded-xl p-4 flex items-center justify-between">
-                                                <span className="text-sm text-gray-400 font-bold">Grand Total ({Object.keys(grouped).length} invoice)</span>
-                                                <span className="text-lg text-emerald-400 font-bold">{formatCurrency(incentiveDetail.reduce((a, r) => a + (r.insentif_per_item * r.quantity), 0))}</span>
+                                            <div className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border border-emerald-500/20 rounded-xl p-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm text-gray-400 font-bold">Grand Total ({Object.keys(grouped).length} invoice)</span>
+                                                    <span className="text-lg text-emerald-400 font-bold">{formatCurrency(incentiveDetail.reduce((a, r) => a + (r.insentif_per_item * r.quantity), 0))}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 mt-2">
+                                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                                    <span className="text-xs text-gray-500">Semua item telah terverifikasi dengan bukti upload</span>
+                                                </div>
                                             </div>
                                         </div>
                                     );

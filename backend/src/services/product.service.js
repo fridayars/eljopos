@@ -654,6 +654,26 @@ const importProducts = async (buffer, storeId, user, fileName = 'unknown') => {
             sDeleted = sDeleteIds.length;
         }
 
+        // --- GLOBAL UPDATE insentif_teknisi FOR ALL STORES ---
+        const uniqueServiceNames = [...new Set(incomingServices.filter(s => s.name && s.insentif_teknisi !== undefined && s.insentif_teknisi !== null).map(s => s.name))];
+        for (const serviceName of uniqueServiceNames) {
+            const serviceData = incomingServices.find(s => s.name === serviceName);
+            if (serviceData) {
+                // Normalize search name by removing spaces and making it lowercase
+                const normalizedSearchName = serviceName.toLowerCase().replace(/\s+/g, '');
+                await Layanan.update(
+                    { insentif_teknisi: Number(serviceData.insentif_teknisi || 0) },
+                    { 
+                        where: Sequelize.where(
+                            Sequelize.fn('REPLACE', Sequelize.fn('LOWER', Sequelize.col('name')), ' ', ''), 
+                            normalizedSearchName
+                        ),
+                        transaction 
+                    }
+                );
+            }
+        }
+
         // Insert LogImport
         const allErrors = [...(errors.length > 0 ? errors : []), ...(serviceErrors.length > 0 ? serviceErrors : [])];
         await LogImport.create({
