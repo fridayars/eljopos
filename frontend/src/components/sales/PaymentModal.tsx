@@ -106,7 +106,7 @@ export function PaymentModal({ isOpen, onClose, grandTotal, canChangeDate = fals
         { method: 'CASH', amount: 0 }
     ])
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('sv-SE')
 
     useEffect(() => {
         // Set current date and reset payments when modal opens

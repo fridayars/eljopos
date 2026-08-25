@@ -137,7 +137,7 @@ function ImageSlideshowModal({ images, onClose, initialIndex = 0 }: ImageSlidesh
 }
 
 export function WarrantyClaimReport() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE');
 
     const [currentStoreId] = useState<string | undefined>(() => {
         try {

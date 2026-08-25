@@ -16,7 +16,7 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
     const [amount, setAmount] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('CASH')
     const [description, setDescription] = useState('')
-    const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
+    const [date, setDate] = useState(() => new Date().toLocaleDateString('sv-SE'))
     const [isSaving, setIsSaving] = useState(false)
 
     const [categories, setCategories] = useState<KategoriArusUang[]>([])
@@ -71,7 +71,12 @@ export function ArusUangModal({ isOpen, onClose, type, onSuccess }: ArusUangModa
         try {
             const currentTime = new Date();
             const timeString = currentTime.toTimeString().split(' ')[0];
-            const dateTimeString = `${date}T${timeString}`;
+            // Append local timezone offset to prevent UTC misinterpretation
+            const tzOffset = -currentTime.getTimezoneOffset();
+            const tzSign = tzOffset >= 0 ? '+' : '-';
+            const tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0');
+            const tzMinutes = String(Math.abs(tzOffset) % 60).padStart(2, '0');
+            const dateTimeString = `${date}T${timeString}${tzSign}${tzHours}:${tzMinutes}`;
 
             await arusUangService.createManual({
                 type,

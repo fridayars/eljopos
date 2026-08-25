@@ -16,7 +16,7 @@ export function ArusUangPage() {
     const [isSyncing, setIsSyncing] = useState(false)
 
     // Filters
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('sv-SE')
     const [startDate, setStartDate] = useState(today)
     const [endDate, setEndDate] = useState(today)
     const [typeFilter, setTypeFilter] = useState('')

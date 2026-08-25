@@ -28,7 +28,7 @@ const formatCurrency = (value: number) => {
 
 export function TransactionReport() {
     // Date range filter
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE');
 
     const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(today);
