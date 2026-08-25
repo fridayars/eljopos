@@ -51,7 +51,7 @@ export function ProductInventoryPage() {
     const [totalPages, setTotalPages] = useState(1)
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
-    const [hasMore, setHasMore] = useState(true)
+
     const [isFetchingProducts, setIsFetchingProducts] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
     const pageSize = 10
