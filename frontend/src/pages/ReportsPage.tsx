@@ -30,6 +30,7 @@ import * as XLSX from 'xlsx';
 
 import {
     getProductRanking,
+    getServiceRanking,
     getCustomerRanking,
     getSalesReport,
     getSummaryCards,
@@ -44,6 +45,7 @@ import type {
     CashFlowItem,
     SalesTableItem,
     ProductRankingItem,
+    ServiceRankingItem,
     CustomerRankingItem,
     ExpenseChartItem,
     IncentiveDetailItem,
@@ -56,7 +58,7 @@ import { DateRangePicker } from '../components/ui/DateRangePicker';
 
 type ReportCategory = 'general' | 'financial' | 'transaction' | 'rankings' | 'incentive' | 'warranty';
 type ReportPeriod = 'daily' | 'monthly' | 'yearly';
-type RankingSubTab = 'product' | 'customer';
+type RankingSubTab = 'product' | 'customer' | 'service';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -134,6 +136,7 @@ export function ReportsPage() {
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     });
     const [productRankings, setProductRankings] = useState<ProductRankingItem[]>([]);
+    const [serviceRankings, setServiceRankings] = useState<ServiceRankingItem[]>([]);
     const [customerRankings, setCustomerRankings] = useState<CustomerRankingItem[]>([]);
     const [rankingPage, setRankingPage] = useState(1);
     const [rankingMeta, setRankingMeta] = useState({ total_pages: 0, total: 0 });
@@ -246,6 +249,20 @@ export function ReportsPage() {
                 });
                 if (res.success) {
                     setProductRankings(res.data.items);
+                    setRankingMeta({
+                        total_pages: res.data.meta.total_pages,
+                        total: res.data.meta.total
+                    });
+                }
+            } else if (rankingSubTab === 'service') {
+                const res = await getServiceRanking({
+                    start_date: startDate,
+                    end_date: endDate,
+                    page: rankingPage,
+                    store_id: currentStoreId
+                });
+                if (res.success) {
+                    setServiceRankings(res.data.items);
                     setRankingMeta({
                         total_pages: res.data.meta.total_pages,
                         total: res.data.meta.total
@@ -804,6 +821,15 @@ export function ReportsPage() {
                                         Peringkat Produk
                                     </button>
                                     <button
+                                        onClick={() => { setRankingSubTab('service'); setRankingPage(1); }}
+                                        className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${rankingSubTab === 'service'
+                                            ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-medium'
+                                            : 'bg-white/5 border border-purple-500/20 text-gray-400 hover:text-gray-200 hover:border-blue-500/50'
+                                            }`}
+                                    >
+                                        Peringkat Layanan
+                                    </button>
+                                    <button
                                         onClick={() => { setRankingSubTab('customer'); setRankingPage(1); }}
                                         className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center ${rankingSubTab === 'customer'
                                             ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] font-medium'
@@ -832,7 +858,7 @@ export function ReportsPage() {
                             <div className="bg-white/5 backdrop-blur-xl border border-purple-500/10 rounded-2xl p-6 shadow-xl">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="text-lg text-gray-200 font-bold">
-                                        {rankingSubTab === 'product' ? 'Tabel Peringkat Produk' : 'Tabel Peringkat Customer'}
+                                        {rankingSubTab === 'product' ? 'Tabel Peringkat Produk' : rankingSubTab === 'service' ? 'Tabel Peringkat Layanan' : 'Tabel Peringkat Customer'}
                                     </h3>
                                     <p className="text-sm text-gray-500 italic">Total: {rankingMeta.total} data</p>
                                 </div>
@@ -844,8 +870,8 @@ export function ReportsPage() {
                                             <thead>
                                                 <tr className="border-b border-purple-500/10">
                                                     <th className="text-left text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">#</th>
-                                                    <th className="text-left text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">{rankingSubTab === 'product' ? 'Nama Produk' : 'Nama Customer'}</th>
-                                                    <th className="text-right text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">{rankingSubTab === 'product' ? 'Total Kuantitas' : 'Total Transaksi'}</th>
+                                                    <th className="text-left text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">{rankingSubTab === 'product' ? 'Nama Produk' : rankingSubTab === 'service' ? 'Nama Layanan' : 'Nama Customer'}</th>
+                                                    <th className="text-right text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">{rankingSubTab === 'product' ? 'Total Kuantitas' : rankingSubTab === 'service' ? 'Total Kuantitas' : 'Total Transaksi'}</th>
                                                     <th className="text-right text-xs text-gray-500 pb-3 font-bold uppercase tracking-widest">Total Nilai</th>
                                                 </tr>
                                             </thead>
@@ -853,6 +879,19 @@ export function ReportsPage() {
                                                 {rankingSubTab === 'product' ? (
                                                     productRankings.length > 0 ? (
                                                         productRankings.map((item, index) => (
+                                                            <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                                                                <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
+                                                                <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>
+                                                                <td className="py-4 text-right text-sm text-cyan-400 font-medium">{item.total_qty}</td>
+                                                                <td className="py-4 text-right text-sm text-green-400 font-medium">{formatCurrency(item.total_value)}</td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr><td colSpan={4} className="py-8 text-center text-gray-500 italic">Tidak ada data untuk periode ini</td></tr>
+                                                    )
+                                                ) : rankingSubTab === 'service' ? (
+                                                    serviceRankings.length > 0 ? (
+                                                        serviceRankings.map((item, index) => (
                                                             <tr key={item.id} className="hover:bg-white/5 transition-colors group">
                                                                 <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
                                                                 <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>

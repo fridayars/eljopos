@@ -11,6 +11,9 @@ router.get('/penjualan', authMiddleware, laporanPenjualanValidation, validate, t
 // GET /api/laporan/ranking-produk
 router.get('/ranking-produk', authMiddleware, laporanPenjualanValidation, validate, transaksiController.getProductRanking);
 
+// GET /api/laporan/ranking-layanan
+router.get('/ranking-layanan', authMiddleware, laporanPenjualanValidation, validate, transaksiController.getServiceRanking);
+
 // GET /api/laporan/ranking-customer
 router.get('/ranking-customer', authMiddleware, laporanPenjualanValidation, validate, transaksiController.getCustomerRanking);
 

@@ -143,6 +143,13 @@ export interface ProductRankingItem {
     total_value: number;
 }
 
+export interface ServiceRankingItem {
+    id: string;
+    name: string;
+    total_qty: number;
+    total_value: number;
+}
+
 export interface CustomerRankingItem {
     id: string;
     name: string;
@@ -274,6 +281,29 @@ export const getProductRanking = async (params: { start_date: string; end_date: 
                 meta: { page: 1, limit: 10, total: 0, total_pages: 0 }
             },
             message: error.response?.data?.message || 'Gagal memuat peringkat produk'
+        };
+    }
+};
+
+/**
+ * GET /api/laporan/ranking-layanan
+ */
+export const getServiceRanking = async (params: { start_date: string; end_date: string; store_id?: string; page?: number; limit?: number }): Promise<RankingResponse<ServiceRankingItem>> => {
+    try {
+        const effectiveParams = { ...params };
+        if (!effectiveParams.store_id) {
+            effectiveParams.store_id = getCurrentStoreId();
+        }
+        const response = await api.get('/laporan/ranking-layanan', { params: effectiveParams });
+        return response.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            data: {
+                items: [],
+                meta: { page: 1, limit: 10, total: 0, total_pages: 0 }
+            },
+            message: error.response?.data?.message || 'Gagal memuat peringkat layanan'
         };
     }
 };

@@ -100,6 +100,29 @@ const getProductRanking = async (req, res, next) => {
     }
 };
 
+const getServiceRanking = async (req, res, next) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const { start_date, end_date, store_id } = req.query;
+
+        const result = await transaksiService.getServiceRanking({
+            start_date,
+            end_date,
+            store_id: store_id || req.user.store_id,
+            page,
+            limit
+        });
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 /**
  * Laporan Peringkat Customer — GET /api/laporan/ranking-customer
  */
@@ -294,10 +317,11 @@ module.exports = {
   getLaporanPenjualan,
   deleteTransaksi,
   getProductRanking,
+  getServiceRanking,
   getCustomerRanking,
   getGrafikPenjualan,
-  getSummaryKartu,
   getGrafikPengeluaran,
+  getSummaryKartu,
   getArusUangTable,
   getTabelPenjualan,
   getTechnicianIncentiveReport,

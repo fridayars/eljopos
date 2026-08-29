@@ -94,9 +94,6 @@ export function Cart({
     // Check if any layanan item is missing a staff assignment
     const hasLayananWithoutStaff = items.some(item => item.item_type === 'layanan' && !item.staff_id)
 
-    // Get today's date in YYYY-MM-DD format for minimum date validation
-    const today = new Date();
-    const todayString = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
 
     const CartContent = (
         <>
@@ -245,11 +242,12 @@ export function Cart({
                                         />
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-500 shrink-0 w-16">Batas Garansi:</span>
+                                        <span className="text-xs text-gray-500 shrink-0 w-16">Batas Garansi (Hari):</span>
                                         <input
-                                            type="date"
+                                            type="number"
                                             value={item.batas_garansi || ''}
-                                            min={todayString}
+                                            min="0"
+                                            placeholder="Jumlah Hari"
                                             onChange={(e) => onUpdateItemBatasGaransi(item.id, e.target.value)}
                                             className="flex-1 h-8 bg-white/5 border border-purple-500/20 rounded-lg px-2 text-gray-300 text-xs focus:outline-none focus:border-purple-500/50 transition-all"
                                         />

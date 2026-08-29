@@ -189,22 +189,38 @@ const createTransaksi = async (data, userId) => {
         const transaksi = await Transaksi.create(transaksiData, { transaction: t });
 
         // 5. Insert detail items (bulk)
-        const detailRecords = items.map(item => ({
-            transaksi_id: transaksi.id,
-            item_type: item.item_type,
-            item_id: item.item_id,
-            item_name: item.item_name,
-            kategori_name: item.kategori_name || null,
-            price: item.price,
-            quantity: item.quantity,
-            staff_id: item.staff_id || null,
-            subtotal: item.subtotal,
-            discount_type: item.discount_type || null,
-            discount_value: item.discount_value || 0,
-            snapshot_cost_price: item.snapshot_cost_price || null,
-            snapshot_insentif_teknisi: item.snapshot_insentif_teknisi || null,
-            batas_garansi: item.batas_garansi || null
-        }));
+        const detailRecords = items.map(item => {
+            let batasGaransiDate = null;
+            if (item.batas_garansi) {
+                if (String(item.batas_garansi).includes('-')) {
+                    batasGaransiDate = item.batas_garansi;
+                } else {
+                    const days = parseInt(item.batas_garansi);
+                    if (!isNaN(days)) {
+                        const baseDate = new Date(resolvedDate || new Date());
+                        baseDate.setDate(baseDate.getDate() + days);
+                        batasGaransiDate = baseDate;
+                    }
+                }
+            }
+
+            return {
+                transaksi_id: transaksi.id,
+                item_type: item.item_type,
+                item_id: item.item_id,
+                item_name: item.item_name,
+                kategori_name: item.kategori_name || null,
+                price: item.price,
+                quantity: item.quantity,
+                staff_id: item.staff_id || null,
+                subtotal: item.subtotal,
+                discount_type: item.discount_type || null,
+                discount_value: item.discount_value || 0,
+                snapshot_cost_price: item.snapshot_cost_price || null,
+                snapshot_insentif_teknisi: item.snapshot_insentif_teknisi || null,
+                batas_garansi: batasGaransiDate
+            };
+        });
 
         await TransaksiDetail.bulkCreate(detailRecords, { transaction: t });
 
@@ -801,6 +817,81 @@ const getProductRanking = async ({ start_date, end_date, store_id, page = 1, lim
     }
 };
 
+const getServiceRanking = async ({ start_date, end_date, store_id, page = 1, limit = 20 }) => {
+    try {
+        const offset = (page - 1) * limit;
+
+        const whereClause = {
+            item_type: 'layanan'
+        };
+
+        const trxWhere = {};
+        if (store_id) trxWhere.store_id = store_id;
+        if (start_date && end_date) {
+            trxWhere[Op.and] = [
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") >= '${start_date}T00:00:00+07:00'`),
+                literal(`COALESCE("transaksi"."transaction_date", "transaksi"."created_at") <= '${end_date}T23:59:59+07:00'`)
+            ];
+        }
+
+        const { count, rows } = await TransaksiDetail.findAndCountAll({
+            where: whereClause,
+            attributes: [
+                'item_id',
+                'item_name',
+                [fn('SUM', col('TransaksiDetail.quantity')), 'total_qty'],
+                [fn('SUM', col('TransaksiDetail.subtotal')), 'total_value']
+            ],
+            include: [{
+                model: Transaksi,
+                as: 'transaksi',
+                attributes: [],
+                where: trxWhere,
+                required: true
+            }],
+            group: ['item_id', 'item_name'],
+            order: [[literal('total_qty'), 'DESC']],
+            limit,
+            offset,
+            raw: true
+        });
+
+        const totalItemsRes = await TransaksiDetail.findAll({
+            where: whereClause,
+            attributes: [[fn('COUNT', fn('DISTINCT', col('item_id'))), 'total']],
+            include: [{
+                model: Transaksi,
+                as: 'transaksi',
+                attributes: [],
+                where: trxWhere,
+                required: true
+            }],
+            raw: true
+        });
+
+        const totalItems = parseInt(totalItemsRes[0].total, 10) || 0;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            items: rows.map(r => ({
+                id: r.item_id,
+                name: r.item_name,
+                total_qty: parseFloat(r.total_qty) || 0,
+                total_value: parseFloat(r.total_value) || 0
+            })),
+            meta: {
+                page,
+                limit,
+                total: totalItems,
+                total_pages: totalPages
+            }
+        };
+    } catch (error) {
+        logger.error({ type: 'get_service_ranking_failed', message: error.message });
+        throw new AppError('Failed to get service ranking', 500);
+    }
+};
+
 /**
  * Laporan Peringkat Customer
  * - Mengambil peringkat customer berdasarkan jumlah transaksi terbanyak
@@ -1386,5 +1477,5 @@ const getTechnicianIncentiveDetail = async ({ staff_id, start_date, end_date, st
   }
 };
 
-module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getCustomerRanking, getGrafikPenjualan, getGrafikPengeluaran, getSummaryKartu, getArusUangTable, getTabelPenjualan, getTechnicianIncentiveReport, getTechnicianIncentiveDetail };
+module.exports = { createTransaksi, getTransaksiDetail, getLaporanPenjualan, deleteTransaksi, getProductRanking, getServiceRanking, getCustomerRanking, getGrafikPenjualan, getGrafikPengeluaran, getSummaryKartu, getArusUangTable, getTabelPenjualan, getTechnicianIncentiveReport, getTechnicianIncentiveDetail };
 
