@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     FileText,
     DollarSign,
@@ -8,8 +8,6 @@ import {
     Calendar,
     Download,
     Award,
-    ChevronLeft,
-    ChevronRight,
     X,
     CheckCircle,
     Info,
@@ -157,6 +155,18 @@ export function ReportsPage() {
 
     const [isLoading, setIsLoading] = useState(true);
 
+    const rankingObserver = useRef<IntersectionObserver | null>(null);
+    const lastRankingElementRef = useCallback((node: any) => {
+        if (isLoading) return;
+        if (rankingObserver.current) rankingObserver.current.disconnect();
+        rankingObserver.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && rankingPage < rankingMeta.total_pages) {
+                setRankingPage(prev => prev + 1);
+            }
+        });
+        if (node) rankingObserver.current.observe(node);
+    }, [isLoading, rankingPage, rankingMeta.total_pages]);
+
     useEffect(() => {
         if (selectedCategory === 'general') {
             fetchReportData();
@@ -248,7 +258,7 @@ export function ReportsPage() {
                     store_id: currentStoreId
                 });
                 if (res.success) {
-                    setProductRankings(res.data.items);
+                    setProductRankings(prev => rankingPage === 1 ? res.data.items : [...prev, ...res.data.items]);
                     setRankingMeta({
                         total_pages: res.data.meta.total_pages,
                         total: res.data.meta.total
@@ -262,7 +272,7 @@ export function ReportsPage() {
                     store_id: currentStoreId
                 });
                 if (res.success) {
-                    setServiceRankings(res.data.items);
+                    setServiceRankings(prev => rankingPage === 1 ? res.data.items : [...prev, ...res.data.items]);
                     setRankingMeta({
                         total_pages: res.data.meta.total_pages,
                         total: res.data.meta.total
@@ -276,7 +286,7 @@ export function ReportsPage() {
                     store_id: currentStoreId
                 });
                 if (res.success) {
-                    setCustomerRankings(res.data.items);
+                    setCustomerRankings(prev => rankingPage === 1 ? res.data.items : [...prev, ...res.data.items]);
                     setRankingMeta({
                         total_pages: res.data.meta.total_pages,
                         total: res.data.meta.total
@@ -863,7 +873,7 @@ export function ReportsPage() {
                                     <p className="text-sm text-gray-500 italic">Total: {rankingMeta.total} data</p>
                                 </div>
                                 <div className="overflow-x-auto min-h-[300px]">
-                                    {isLoading ? (
+                                    {isLoading && rankingPage === 1 ? (
                                         <div className="h-[300px] flex items-center justify-center text-gray-500 italic">Memproses data...</div>
                                     ) : (
                                         <table className="w-full">
@@ -879,7 +889,7 @@ export function ReportsPage() {
                                                 {rankingSubTab === 'product' ? (
                                                     productRankings.length > 0 ? (
                                                         productRankings.map((item, index) => (
-                                                            <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                                                            <tr key={item.id} ref={productRankings.length === index + 1 ? lastRankingElementRef : null} className="hover:bg-white/5 transition-colors group">
                                                                 <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
                                                                 <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>
                                                                 <td className="py-4 text-right text-sm text-cyan-400 font-medium">{item.total_qty}</td>
@@ -892,7 +902,7 @@ export function ReportsPage() {
                                                 ) : rankingSubTab === 'service' ? (
                                                     serviceRankings.length > 0 ? (
                                                         serviceRankings.map((item, index) => (
-                                                            <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                                                            <tr key={item.id} ref={serviceRankings.length === index + 1 ? lastRankingElementRef : null} className="hover:bg-white/5 transition-colors group">
                                                                 <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
                                                                 <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>
                                                                 <td className="py-4 text-right text-sm text-cyan-400 font-medium">{item.total_qty}</td>
@@ -905,7 +915,7 @@ export function ReportsPage() {
                                                 ) : (
                                                     customerRankings.length > 0 ? (
                                                         customerRankings.map((item, index) => (
-                                                            <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                                                            <tr key={item.id} ref={customerRankings.length === index + 1 ? lastRankingElementRef : null} className="hover:bg-white/5 transition-colors group">
                                                                 <td className="py-4 text-sm text-gray-500">{(rankingPage - 1) * 20 + index + 1}</td>
                                                                 <td className="py-4 text-sm text-gray-300 group-hover:text-white transition-colors font-medium">{item.name}</td>
                                                                 <td className="py-4 text-right text-sm text-cyan-400 font-medium">{item.total_transactions}</td>
@@ -921,28 +931,11 @@ export function ReportsPage() {
                                     )}
                                 </div>
 
-                                {/* Pagination Controls */}
-                                {!isLoading && rankingMeta.total_pages > 1 && (
-                                    <div className="mt-8 flex items-center justify-between border-t border-purple-500/10 pt-6">
-                                        <p className="text-xs text-gray-500 italic">
-                                            Menampilkan Halaman <span className="text-gray-300 font-bold">{rankingPage}</span> dari <span className="text-gray-300 font-bold">{rankingMeta.total_pages}</span>
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <button
-                                                disabled={rankingPage === 1}
-                                                onClick={() => setRankingPage(prev => prev - 1)}
-                                                className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-white transition-all"
-                                            >
-                                                <ChevronLeft className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                disabled={rankingPage === rankingMeta.total_pages}
-                                                onClick={() => setRankingPage(prev => prev + 1)}
-                                                className="p-2 rounded-lg bg-white/5 border border-purple-500/20 text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-white transition-all"
-                                            >
-                                                <ChevronRight className="w-5 h-5" />
-                                            </button>
-                                        </div>
+                                {/* Infinite Scroll Loading State */}
+                                {isLoading && rankingPage > 1 && (
+                                    <div className="flex justify-center items-center py-4 space-x-2">
+                                        <div className="w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
+                                        <span className="text-sm text-gray-500">Memuat data...</span>
                                     </div>
                                 )}
                             </div>

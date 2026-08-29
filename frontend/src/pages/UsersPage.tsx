@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, Search, Edit, Trash2, Users, ShieldAlert, ArrowLeft, ArrowRight, CheckCircle2, XCircle } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, Search, Edit, Trash2, Users, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { getUsers, createUser, updateUser, toggleUserStatus, deleteUser, getRoles } from '../services/userService'
@@ -48,15 +48,15 @@ export function UsersPage() {
             ])
 
             if (usersRes.success) {
-                setUsers(usersRes.data.items)
+                setUsers(prev => currentPage === 1 ? usersRes.data.items : [...prev, ...usersRes.data.items])
                 setTotalPages(usersRes.data.total_pages)
             } else {
                 toast.error(usersRes.message || 'Gagal memuat pengguna')
             }
 
-            if (rolesRes.success) {
+            if (rolesRes.success && currentPage === 1) {
                 setRoles(rolesRes.data)
-            } else {
+            } else if (!rolesRes.success && currentPage === 1) {
                 toast.error(rolesRes.message || 'Gagal memuat role')
             }
         } catch (error) {
@@ -65,6 +65,18 @@ export function UsersPage() {
             setIsLoading(false)
         }
     }, [currentPage, searchQuery])
+
+    const observer = useRef<IntersectionObserver | null>(null)
+    const lastUserElementRef = useCallback((node: any) => {
+        if (isLoading) return
+        if (observer.current) observer.current.disconnect()
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && currentPage < totalPages) {
+                setCurrentPage(prev => prev + 1)
+            }
+        })
+        if (node) observer.current.observe(node)
+    }, [isLoading, currentPage, totalPages])
 
     // Load initial data
     useEffect(() => {
@@ -209,7 +221,7 @@ export function UsersPage() {
 
             {/* Table Area */}
             <div className="flex-1 overflow-hidden relative z-10 flex flex-col border rounded-2xl shadow-xl" style={{ background: 'var(--card)', borderColor: 'var(--border-subtle)' }}>
-                {isLoading ? (
+                {isLoading && currentPage === 1 ? (
                     <div className="flex-1 flex items-center justify-center">
                         <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
                     </div>
@@ -241,9 +253,10 @@ export function UsersPage() {
                                     ) : (
                                         users.map((user, idx) => (
                                             <motion.tr 
+                                                ref={users.length === idx + 1 ? lastUserElementRef : null}
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: idx * 0.05 }}
+                                                transition={{ delay: (idx % limit) * 0.05 }}
                                                 key={user.id} 
                                                 className="hover:bg-white/[0.02] transition-colors"
                                             >
@@ -312,30 +325,16 @@ export function UsersPage() {
                             </table>
                         </div>
 
-                        {/* Pagination Footer */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between p-4 border-t mt-auto" style={{ background: 'var(--surface-overlay)', borderColor: 'var(--border-subtle)' }}>
-                                <div className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-                                    Halaman <span className="font-medium" style={{ color: 'var(--foreground)' }}>{currentPage}</span> dari <span className="font-medium" style={{ color: 'var(--foreground)' }}>{totalPages}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        className="p-2 border rounded-xl transition-all disabled:opacity-50" style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                                    >
-                                        <ArrowLeft className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        className="p-2 border rounded-xl transition-all disabled:opacity-50" style={{ background: 'var(--surface-subtle)', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                                    >
-                                        <ArrowRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                                    {isLoading && currentPage > 1 && (
+                                        <tr>
+                                            <td colSpan={5} className="py-6 text-center text-gray-500">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+                                                    <span className="text-sm">Memuat data...</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                     </>
                 )}
             </div>
